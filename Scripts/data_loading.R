@@ -4,67 +4,6 @@ data2025 <- read.csv("Data//btw25_wbz//btw25_wbz_ergebnisse.csv", header = TRUE,
 View(data2025)
 
 ## gemeinsame Briefwahlbezirke unterschiedlicher Gemeinden untersuchen
-# Wie viele verschiedene Gemeinden besitzen dieselbe EF8?
-bw_problem <- data2025 %>%
-  filter(Bezirksart == 5,
-         Kennziffer.Briefwahlzugehörigkeit != "00") %>%
-  group_by(Kennziffer.Briefwahlzugehörigkeit) %>%
-  summarise(
-    n_gemeinden = n_distinct(Gemeinde),
-    gemeinden = paste(sort(unique(Gemeindename)), collapse = ", ")
-  ) %>%
-  arrange(desc(n_gemeinden))
-
-bw_problem
-
-# zusammengelegte Gemeinden
-bw_problem %>%
-  filter(n_gemeinden > 1)
-
-# Anzahl problematischer Briefwahlbezirke
-sum(bw_problem$n_gemeinden > 1)
-
-# Anteil problematischer Briefwahlbezirke an allen Briefwahlbezirken
-mean(bw_problem$n_gemeinden > 1)
-
-# Anteil betroffener Gemeinden 
-betroffene_gemeinden <- bw_problem %>%
-  filter(n_gemeinden > 1) %>%
-  summarise(
-    betroffene_gemeinden = sum(n_gemeinden)
-  ) %>%
-  pull(betroffene_gemeinden)
-betroffene_gemeinden/n_distinct(data2025$Gemeinde)
-
-# betroffene Gemeinden betrachten in den Rohdaten
-data2025 %>% 
-  filter(Kennziffer.Briefwahlzugehörigkeit == 52) %>% 
-  View()
-
-# Welche Briefwahlgruppen bestehen aus mehreren Gemeinden?
-data2025 %>%
-  filter(Bezirksart == 5) %>%
-  group_by(Kennziffer.Briefwahlzugehörigkeit) %>%
-  summarise(
-    n_gemeinden = n_distinct(Gemeinde),
-    gemeinden = paste(unique(Gemeindename), collapse = ", ")
-  ) %>%
-  arrange(desc(n_gemeinden))
-
-# Wie viele Gemeinden sind betroffen?
-data2025 %>%
-  filter(Bezirksart == 5) %>%
-  group_by(Kennziffer.Briefwahlzugehörigkeit) %>%
-  filter(n_distinct(Gemeinde) > 1) %>%
-  summarise(
-    gemeinden = n_distinct(Gemeinde)
-  ) %>%
-  summarise(
-    anzahl_betroffene_gemeinden = sum(gemeinden)
-  )
-
-
-## gemeinsame Briefwahlbezirke unterschiedlicher Gemeinden untersuchen
 ## neuer Ansatz: alle künstlichen Gemeinden (mit 9 vorne) sind keine echten Gemeinden sondern zusammengelegte Briefwahlbezirke über Gemeindegrenzen hinaus
 bw9 <- data2025 %>%
   filter(Bezirksart == 5,
@@ -85,78 +24,71 @@ bw9 %>%
     Gemeinde,
     Kennziffer.Briefwahlzugehörigkeit,
     Gemeindename
-  )
+  ) %>% 
+  View( )
 
-# beteiligte Gemeinden: 9xx-Datensatz mit den normalen Gemeinden desselben Kreises und derselben EF8 verbinden
-bw_groups <-
-  data2025 %>%
-  filter(Bezirksart == 5,
-         Kennziffer.Briefwahlzugehörigkeit != "00") %>%
-  group_by(
-    Land,
-    Regierungsbezirk,
+# beteiligte Gemeinden: 9xx-Datensatz mit den normalen Gemeinden desselben Kreises und derselben Briefwahlzugehörigkeit verbinden
+kgemeinden <- data2025 %>%
+  filter(Gemeinde >= 900) %>%
+  distinct(
     Kreis,
-    Kennziffer.Briefwahlzugehörigkeit
-  ) %>%
+    Kennziffer.Briefwahlzugehörigkeit,
+    Gemeinde,
+    Gemeindename
+  )
+
+egemeinden <- echt <- data2025 %>%
+  filter(Gemeinde < 900) %>%
+  group_by(Kreis, Kennziffer.Briefwahlzugehörigkeit) %>%
   summarise(
-    
-    n_gemeinden =
-      n_distinct(Gemeinde[Gemeinde < 900]),
-    
-    gemeinden =
-      paste(
-        sort(unique(
-          Gemeindename[Gemeinde < 900]
-        )),
-        collapse = ", "
-      ),
-    
-    gemeinsame_gemeinde =
-      unique(Gemeinde[Gemeinde >= 900]),
-    
-    .groups="drop"
+    n_gemeinden = n_distinct(Gemeinde),
+    gemeinden = paste(sort(unique(Gemeindename)), collapse = ", "),
+    gemeindecodes = paste(sort(unique(Gemeinde)), collapse = ", "),
+    .groups = "drop"
   )
 
-# Wie viele verschiedene Gemeinden besitzen dieselbe EF8?
-bw_groups %>%
-  select(
-    gemeinsame_gemeinde,
-    n_gemeinden,
-    gemeinden
+bw_groups <- kgemeinden %>%
+  left_join(
+    egemeinden,
+    by = c("Kreis", "Kennziffer.Briefwahlzugehörigkeit")
   )
 
-# Zusammengelegte Gemeinden
-bw_groups %>%
-  filter(n_gemeinden > 1)
 
 # Anzahl problematischer Briefwahlbezirke
-sum(bw_groups$n_gemeinden > 1)
+nrow(bw_groups)
 
 # Anteil problematischer gemeinsamer Briefwahlbezirke
-mean(bw_groups$n_gemeinden > 1)
+n_briefwahlbezirke <- data2025 %>%
+  group_by(Kreis) %>%
+  summarise(
+    n_briefwahlgruppen = n_distinct(Kennziffer.Briefwahlzugehörigkeit)
+  ) %>%
+  summarise(
+    summe_briefwahlgruppen = sum(n_briefwahlgruppen)
+  )
+nrow(bw_groups)/n_briefwahlbezirke[["summe_briefwahlgruppen"]]
 
 # Anzahl betroffener gemeinden 
-sum(bw_groups$n_gemeinden[bw_groups$n_gemeinden > 1])
+sum(bw_groups$n_gemeinden)
+
+# Anzahl echter Gemeinden (100 Gemeinden zu wenig als offiziell!!)
+n_gemeinden <- data2025 %>%
+  filter(Gemeinde < 900) %>%
+  distinct(Kreis, Gemeinde, Gemeindename) %>%
+  group_by(Kreis) %>%
+  summarise(
+    n_gemeinden = n(),
+    .groups = "drop"
+  ) %>%
+  summarise(
+    summe_gemeinden = sum(n_gemeinden)
+  )
 
 # Anteil betroffener Gemeinden
 sum(
-  bw_groups$n_gemeinden[
-    bw_groups$n_gemeinden > 1
-  ]
-) /
-  n_distinct(
-    data2025$Gemeinde[
-      data2025$Gemeinde < 900
-    ]
-  )
+  bw_groups$n_gemeinden
+) / n_gemeinden[["summe_gemeinden"]]
 
-# Anzahl betroffener Gemeinden 
-bw_groups %>%
-  filter(n_gemeinden > 1) %>%
-  summarise(
-    betroffene_gemeinden =
-      sum(n_gemeinden)
-  )
 
 ## unter Beobachtung: Wahlbezirksauszählungen durch andere Wahlbezirke
 table(data2025$Kennziffer.Urnenwahlbezirke.nach...68.BWO == "")
