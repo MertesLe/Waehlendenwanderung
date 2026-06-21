@@ -1,0 +1,10 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+.RDataTmp
+*.Rproj
+Data/
+.DS_Store
+.RDataTmp*
+# .positai
