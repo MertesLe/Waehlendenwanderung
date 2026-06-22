@@ -31,6 +31,8 @@ bw9 %>%
 kgemeinden <- data2025 %>%
   filter(Gemeinde >= 900) %>%
   distinct(
+    Land,
+    Regierungsbezirk,
     Kreis,
     Kennziffer.Briefwahlzugehörigkeit,
     Gemeinde,
@@ -39,7 +41,7 @@ kgemeinden <- data2025 %>%
 
 egemeinden <- echt <- data2025 %>%
   filter(Gemeinde < 900) %>%
-  group_by(Kreis, Kennziffer.Briefwahlzugehörigkeit) %>%
+  group_by(Land, Regierungsbezirk, Kreis, Kennziffer.Briefwahlzugehörigkeit) %>%
   summarise(
     n_gemeinden = n_distinct(Gemeinde),
     gemeinden = paste(sort(unique(Gemeindename)), collapse = ", "),
@@ -50,7 +52,7 @@ egemeinden <- echt <- data2025 %>%
 bw_groups <- kgemeinden %>%
   left_join(
     egemeinden,
-    by = c("Kreis", "Kennziffer.Briefwahlzugehörigkeit")
+    by = c("Land", "Regierungsbezirk", "Kreis", "Kennziffer.Briefwahlzugehörigkeit")
   )
 
 
@@ -59,9 +61,10 @@ nrow(bw_groups)
 
 # Anteil problematischer gemeinsamer Briefwahlbezirke
 n_briefwahlbezirke <- data2025 %>%
-  group_by(Kreis) %>%
+  group_by(Land, Regierungsbezirk, Kreis) %>%
   summarise(
-    n_briefwahlgruppen = n_distinct(Kennziffer.Briefwahlzugehörigkeit)
+    n_briefwahlgruppen = n_distinct(Kennziffer.Briefwahlzugehörigkeit),
+    .groups = "drop"
   ) %>%
   summarise(
     summe_briefwahlgruppen = sum(n_briefwahlgruppen)
@@ -74,8 +77,8 @@ sum(bw_groups$n_gemeinden)
 # Anzahl echter Gemeinden (100 Gemeinden zu wenig als offiziell!!)
 n_gemeinden <- data2025 %>%
   filter(Gemeinde < 900) %>%
-  distinct(Kreis, Gemeinde, Gemeindename) %>%
-  group_by(Kreis) %>%
+  distinct(Land, Regierungsbezirk, Kreis, Gemeinde, Gemeindename) %>%
+  group_by(Land, Regierungsbezirk, Kreis) %>%
   summarise(
     n_gemeinden = n(),
     .groups = "drop"
@@ -89,6 +92,25 @@ sum(
   bw_groups$n_gemeinden
 ) / n_gemeinden[["summe_gemeinden"]]
 
+# Auffälligkeiten: große gruppen
+data2025 %>%
+  filter(
+    Land == 7,
+    Regierungsbezirk == 1,
+    Kreis == 35,
+    Kennziffer.Briefwahlzugehörigkeit == "01"
+  ) %>% 
+  View()
+
+# wenn leerer output dann gemeinden eindeutig identifiziert
+data2025 %>%
+  filter(Gemeinde < 900) %>%
+  group_by(Land, Regierungsbezirk, Kreis, Gemeinde) %>%
+  summarise(
+    n_namen = n_distinct(Gemeindename),
+    .groups = "drop"
+    ) %>%
+  filter(n_namen > 1)
 
 ## unter Beobachtung: Wahlbezirksauszählungen durch andere Wahlbezirke
 table(data2025$Kennziffer.Urnenwahlbezirke.nach...68.BWO == "")
