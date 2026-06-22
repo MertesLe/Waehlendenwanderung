@@ -102,6 +102,57 @@ data2025 %>%
   ) %>% 
   View()
 
+# Briefwahlergebnis für "künstliche Gemeinde" anschauen
+data2025 %>% 
+  filter(
+    Gemeindename == "Briefwahl VG Cochem"
+  ) %>% 
+  View()
+# --> nicht nur ein Ergebnis! unterschiedlich in "Wahlbezirk" --> bw_groups_new
+kgemeinden <- data2025 %>%
+  filter(Gemeinde >= 900) %>%
+  distinct(
+    Land,
+    Regierungsbezirk,
+    Kreis,
+    Kennziffer.Briefwahlzugehörigkeit,
+    Gemeinde,
+    Gemeindename,
+    Wahlbezirk
+  )
+
+egemeinden <- echt <- data2025 %>%
+  filter(Gemeinde < 900) %>%
+  group_by(Land, Regierungsbezirk, Kreis, Kennziffer.Briefwahlzugehörigkeit) %>%
+  summarise(
+    n_gemeinden = n_distinct(Gemeinde),
+    gemeinden = paste(sort(unique(Gemeindename)), collapse = ", "),
+    gemeindecodes = paste(sort(unique(Gemeinde)), collapse = ", "),
+    .groups = "drop"
+  )
+
+bw_groups_new <- kgemeinden %>%
+  left_join(
+    egemeinden,
+    by = c("Land", "Regierungsbezirk", "Kreis", "Kennziffer.Briefwahlzugehörigkeit")
+  )
+
+# Künstliche Gemeinden über Wahlkreis hinaus (1 Ausnahme:)
+data2025 %>%
+  filter(Gemeinde >= 900) %>%
+  group_by(
+    Land,
+    Regierungsbezirk,
+    Kreis,
+    Kennziffer.Briefwahlzugehörigkeit,
+    Gemeinde
+  ) %>%
+  summarise(
+    n_wahlkreise = n_distinct(Wahlkreis),
+    .groups = "drop"
+  ) %>%
+  filter(n_wahlkreise > 1)
+
 # wenn leerer output dann gemeinden eindeutig identifiziert
 data2025 %>%
   filter(Gemeinde < 900) %>%
@@ -128,37 +179,12 @@ data2025 %>%
 
 # Untersuchung, ob jeweils shift IMMER nur innerhalb der Gemeinde (wenn überall n_gemeinden == 1, dann wahr)
 par68 <- data2025 %>%
-  filter(Kennziffer.Urnenwahlbezirke.nach...68.BWO != "") %>% 
-  count(Kennziffer.Urnenwahlbezirke.nach...68.BWO) %>% 
+  filter(Kennziffer.Urnenwahlbezirke.nach...68.BWO != "0000") %>%
   group_by(Kennziffer.Urnenwahlbezirke.nach...68.BWO) %>%
   summarise(
     n_gemeinden = n_distinct(Gemeinde),
-    gemeinden = paste(unique(Gemeindename), collapse = ", ")
+    gemeinden = paste(unique(Gemeindename), collapse = ", "),
+    .groups = "drop"
   ) %>%
-  ifelse(n_gemeinden == 1, TRUE, FALSE)
-
-# Dokumentation gegen die tatsächlichen Daten zu validieren (Einträge immer null, wenn abgebender Wahlbezirk)
-# Betroffene Wahlbezirke (grundsätzlich n = 2, Ausnahmen möglich)
-par68 %>%
-  group_by(Kennziffer.Urnenwahlbezirke.nach...68.BWO) %>%
-  summarise(
-    n = n()
-  )
-# Innerhalb jeder Gruppe untersuchen, wie viele Null-Bezirke existieren (wichtig hier: Nicht-Null Bezirke in der Anzahl pro Gruppe immer nur = 1)
-par68_check <- par68 %>%
-  mutate(
-    alle_null =
-      Wählende..B. == 0 &
-      Gültige...Erststimmen == 0 &
-      Gültige...Zweitstimmen == 0
-  )
-par68_check %>%
-  group_by(Kennziffer.Urnenwahlbezirke.nach...68.BWO) %>%
-  summarise(
-    anzahl_null = sum(alle_null),
-    anzahl_nicht_null = sum(!alle_null),
-    n = n()
-  )
-# Verdächtige Gruppen prüfen:
-par68_check %>%
-  filter(Kennziffer.Urnenwahlbezirke.nach...68.BWO == "003")
+  mutate(innerhalb_gemeinde = n_gemeinden == 1)
+# In Ordnung, zwar nicht immer TRUE, aber eigentlich (in Worten angegeben) enthalten
