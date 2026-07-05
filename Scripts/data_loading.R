@@ -34,15 +34,7 @@ data2025 <- data2025 %>%
     )
   )
 
-data2025 <- data2025 %>% 
-  mutate(
-    Gemeindeschlüssel = paste0(
-      str_pad(Land, width = 2, pad = "0"),
-      str_pad(Regierungsbezirk, width = 1, pad = "0"),
-      str_pad(Kreis, width = 2, pad = "0"),
-      str_pad(Gemeinde, width = 3, pad = "0")
-    )
-  )
+
 
 ## gemeinsame Briefwahlbezirke unterschiedlicher Gemeinden untersuchen
 ## neuer Ansatz: alle künstlichen Gemeinden (mit 9 vorne) sind keine echten Gemeinden sondern zusammengelegte Briefwahlbezirke über Gemeindegrenzen hinaus
@@ -105,7 +97,7 @@ egemeinden <- data2025 %>%
   summarise(
     n_gemeinden = n_distinct(Gemeinde),
     gemeinden = paste(sort(unique(Gemeindename)), collapse = ", "),
-    gemeindecodes = paste(sort(unique(Gemeindeschlüssel)), collapse = ", "),
+    agg.schlüssel = paste(sort(unique(Gemeindeschlüssel)), collapse = ", "),
     .groups = "drop"
   )
 
@@ -143,325 +135,412 @@ n_gemeinden <- data2025 %>%
 # Anteil betroffener Gemeinden
 sum(bw_groups$n_gemeinden) / n_gemeinden
 
-# wenn leerer output dann gemeinden eindeutig identifiziert
-data2025 %>%
-  filter(Gemeinde < 900) %>%
-  group_by(Land, Regierungsbezirk, Kreis, Gemeinde) %>%
-  summarise(
-    n_namen = n_distinct(Gemeindename),
-    .groups = "drop"
-    ) %>%
-  filter(n_namen > 1)
-
 ## unter Beobachtung: Wahlbezirksauszählungen durch andere Wahlbezirke
-table(data2025$Kennziffer.Urnenwahlbezirke.nach...68.BWO == "")
+table(data2025$Kennziffer.Urnenwahlbezirke.nach...68.BWO == "0000")
 # Anzahl Fälle
 data2025 %>%
-  filter(Kennziffer.Urnenwahlbezirke.nach...68.BWO != "") %>%
+  filter(Kennziffer.Urnenwahlbezirke.nach...68.BWO != "0000") %>%
   count(Kennziffer.Urnenwahlbezirke.nach...68.BWO)
 # Anzahl davon, die tatsächlich nur nullen besitzen
 data2025 %>%
-  filter(Kennziffer.Urnenwahlbezirke.nach...68.BWO != "") %>%
+  filter(Kennziffer.Urnenwahlbezirke.nach...68.BWO != "0000") %>%
   mutate(
     leer = Gültige...Zweitstimmen == 0
   ) %>%
   count(leer)
 
-# Untersuchung, ob jeweils shift IMMER nur innerhalb der Gemeinde (wenn überall n_gemeinden == 1, dann wahr)
+# Shifts innerhalb und außerhalb der Gemeinde. Wichtig ist außerhalb der Gemeinde
 par68 <- data2025 %>%
   filter(Kennziffer.Urnenwahlbezirke.nach...68.BWO != "0000") %>%
   group_by(Kennziffer.Urnenwahlbezirke.nach...68.BWO) %>%
   summarise(
-    n_gemeinden = n_distinct(Gemeinde),
     gemeinden = paste(unique(Gemeindename), collapse = ", "),
+    agg.schlüssel = paste(unique(Gemeindeschlüssel), collapse = ", "),
     .groups = "drop"
   ) %>%
-  mutate(innerhalb_gemeinde = n_gemeinden == 1)
+  filter(grepl(",", agg.schlüssel))
 # In Ordnung, zwar nicht immer TRUE, aber eigentlich (in Worten angegeben) enthalten
 
 
+# Zusammengeführte gemeinden
+alle <- c(bw_groups$agg.schlüssel, par68$agg.schlüssel)
+
+listen <- lapply(
+  alle,
+  function(x) sort(unique(str_trim(strsplit(x, ",")[[1]])))
+)
+
+geaendert <- TRUE
+
+while (geaendert) { # Mengen mit Überlappung rekursiv zusammenführen
+  
+  geaendert <- FALSE
+  neu <- list()
+  
+  while (length(listen) > 0) {
+    
+    aktuelle <- listen[[1]]
+    listen <- listen[-1]
+    
+    i <- 1
+    while (i <= length(listen)) {
+      
+      if (length(intersect(aktuelle, listen[[i]])) > 0) {
+        
+        aktuelle <- sort(unique(c(aktuelle, listen[[i]])))
+        listen <- listen[-i]
+        geaendert <- TRUE
+        i <- 1
+        
+      } else {
+        
+        i <- i + 1
+        
+      }
+    }
+    
+    neu[[length(neu) + 1]] <- aktuelle
+  }
+  
+  listen <- neu
+}
+
+joinedG <- data.frame(
+  agg.schlüssel = sapply(
+    listen,
+    function(x) paste(x, collapse = ", ")
+  ),
+  stringsAsFactors = FALSE
+)
+
+# Ergebnis gleich zur bw_groups Aggregation, siehe:
+identisch <- mapply(
+  function(x, y) {
+    setequal(
+      strsplit(x, ",\\s*")[[1]],
+      strsplit(y, ",\\s*")[[1]]
+    )
+  },
+  joinedG$agg.gemeindeschlüssel,
+  bw_groups$agg.gemeindeschlüssel
+)
+
+all(identisch)
+
+###############################################################################
+#Mapping-Datensatz erstellen
+###############################################################################
+mapping <- data2025 %>% 
+  select(Wahlkreis, Gemeinde, Gemeindeschlüssel) %>% 
+  distinct()
+
+mapping <- mapping %>%
+  left_join(
+    bw_groups %>%
+      select(
+        Wahlkreis,
+        Gemeindeschlüssel,
+        agg.schlüssel
+      ),
+    by = c(
+      "Wahlkreis",
+      "Gemeindeschlüssel"
+    )
+  )
+
+bw_lookup <-
+  bw_groups %>%
+  distinct(agg.schlüssel) %>%
+  mutate(
+    Gemeindeschlüssel =
+      strsplit(agg.schlüssel, ",\\s*")
+  ) %>%
+  tidyr::unnest(Gemeindeschlüssel)
+
+mapping <-
+  mapping %>%
+  left_join(
+    bw_lookup,
+    by = "Gemeindeschlüssel",
+    suffix = c("", ".bw")
+  ) %>%
+  mutate(
+    
+    agg.schlüssel =
+      case_when(
+        
+        # künstliche Gemeinde:
+        Gemeinde >= 900 ~ agg.schlüssel,
+        
+        # echte Gemeinde mit Briefwahlaggregation:
+        !is.na(agg.schlüssel.bw) ~ agg.schlüssel.bw,
+        
+        # normale Gemeinde:
+        TRUE ~ Gemeindeschlüssel
+        
+      )
+    
+  ) %>%
+  select(-agg.schlüssel.bw)
 
 
-# Bundestagswahl 2025 aggregieren
-kgemeinden <- data2025 %>%
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Bundestagswahl 2025 abspeichern
+
+# Bereinigung Bundestagswahl 2021
+data2021 <- data2021%>% 
+  mutate(
+    Gemeindeschlüssel = paste0(
+      str_pad(Land, width = 2, pad = "0"),
+      str_pad(Regierungsbezirk, width = 1, pad = "0"),
+      str_pad(Kreis, width = 2, pad = "0"),
+      str_pad(Gemeinde, width = 3, pad = "0")
+    )
+  )
+
+
+# Künstliche Gemeinden über Wahlkreis hinaus (1 Ausnahme:) (unterschiedlicher Gemeindename)
+# erledigt: in bw_groups korrekt getrennt enthalten
+data2021 %>%
+  filter(Gemeinde >= 900) %>%
+  group_by(
+    Gemeindeschlüssel,
+    Kennziffer.Briefwahlzugehörigkeit
+  ) %>%
+  summarise(
+    n_wahlkreise = n_distinct(Wahlkreis),
+    .groups = "drop"
+  ) %>%
+  filter(n_wahlkreise > 1) %>% 
+  View()
+
+# beteiligte Gemeinden: 9xx-Datensatz mit den normalen Gemeinden desselben Kreises 
+# und derselben Briefwahlzugehörigkeit verbinden
+# --> nicht nur ein Ergebnis pro Gemeinde! unterschiedlich in "Wahlbezirk" --> interessierend nur Gemeinden
+# weil darüber aggregiert wird. Die Wahlbezirke für dieselbe Gemeinde müssen summiert werden
+
+kgemeinden21 <- data2021 %>%
   filter(Gemeinde >= 900) %>%
   distinct(
     Land,
     Regierungsbezirk,
     Kreis,
+    Wahlkreis,
     Kennziffer.Briefwahlzugehörigkeit,
-    Gemeinde,
-    Gemeindename,
-    Wahlbezirk
+    Gemeindeschlüssel,
+    Gemeinde.Name
   )
 
-egemeinden <- data2025 %>%
+egemeinden21 <- data2021 %>%
   filter(Gemeinde < 900) %>%
-  group_by(
-    Land,
-    Regierungsbezirk,
-    Kreis,
-    Kennziffer.Briefwahlzugehörigkeit
-  ) %>%
+  group_by(Land, Regierungsbezirk, Kreis, Wahlkreis, Kennziffer.Briefwahlzugehörigkeit) %>%
   summarise(
     n_gemeinden = n_distinct(Gemeinde),
-    gemeinden = paste(sort(unique(Gemeindename)), collapse = ", "),
-    gemeindecodes = paste(sort(unique(Gemeinde)), collapse = ", "),
-    gemeindeschluessel = paste(sort(unique(Gemeindeschlüssel)), collapse = ", "),
+    gemeinden = paste(sort(unique(Gemeinde.Name)), collapse = ", "),
+    agg.schlüssel = paste(sort(unique(Gemeindeschlüssel)), collapse = ", "),
     .groups = "drop"
   )
 
-bw_groups_new <- kgemeinden %>%
+bw_groups21 <- kgemeinden21 %>%
   left_join(
-    egemeinden,
-    by = c("Land", "Regierungsbezirk", "Kreis", "Kennziffer.Briefwahlzugehörigkeit")
+    egemeinden21,
+    by = c("Land", "Regierungsbezirk", "Kreis", "Wahlkreis", "Kennziffer.Briefwahlzugehörigkeit")
   )
 
-###############################################################################
-# 1) §68-Fälle: In Auszählung aggregierte Gemeinden erfassen
-###############################################################################
-# Zuordnung bestimmen
-par68_groups <-
-  data2025 %>%
-  filter(Kennziffer.Urnenwahlbezirke.nach...68.BWO != "0000")
 
-ziel <- par68_groups %>%
-  filter(Wählende..B. > 0) %>%
-  distinct(
-    Kennziffer.Urnenwahlbezirke.nach...68.BWO,
-    zielschluessel = Gemeindeschlüssel,
-    zielgemeinde = Gemeindename
-  )
+# Anzahl problematischer Briefwahlbezirke
+nrow(bw_groups21)
 
-quelle <- par68_groups %>%
-  filter(Wählende..B. == 0) %>%
-  distinct(
-    Kennziffer.Urnenwahlbezirke.nach...68.BWO,
-    quellschluessel = Gemeindeschlüssel,
-    quellgemeinde = Gemeindename
-  )
-
-par68_mapping <-
-  quelle %>%
-  left_join(
-    ziel,
-    by="Kennziffer.Urnenwahlbezirke.nach...68.BWO"
-  )
-
-data_clean <-
-  data2025 %>%
-  left_join(
-    par68_mapping %>%
-      select(quellschluessel, zielschluessel),
-    by=c("Gemeindeschlüssel"="quellschluessel")
-  ) %>%
-  mutate(
-    AnalyseGemeinde =
-      if_else(
-        is.na(zielschluessel),
-        Gemeindeschlüssel,
-        zielschluessel
-      )
-  ) %>%
-  filter(
-    !(
-      Kennziffer.Urnenwahlbezirke.nach...68.BWO != "0000" &
-        Wählende..B. == 0
-    )
-  )
-
-###############################################################################
-# 2) Mapping: jede Gemeinde -> endgültige Analyseeinheit
-###############################################################################
-
-## Mapping gemeinsamer Briefwahlgruppen
-egemeinden <-
-  data_clean %>%
-  filter(Gemeinde < 900) %>%
-  group_by(
-    Land,
-    Regierungsbezirk,
-    Kreis,
-    Kennziffer.Briefwahlzugehörigkeit
+# Anteil problematischer gemeinsamer Briefwahlbezirke
+n_briefwahlbezirke21 <- data2021 %>%
+  group_by(Land, Regierungsbezirk, Kreis) %>%
+  summarise(
+    n_briefwahlgruppen = n_distinct(Kennziffer.Briefwahlzugehörigkeit),
+    .groups = "drop"
   ) %>%
   summarise(
-    
-    n_gemeinden =
-      n_distinct(AnalyseGemeinde),
-    
-    gemeindeschluessel =
-      paste(
-        sort(unique(AnalyseGemeinde)),
-        collapse=", "
-      ),
-    
-    gemeinden =
-      paste(
-        sort(unique(Gemeindename)),
-        collapse=", "
-      ),
-    
-    .groups="drop"
+    summe_briefwahlgruppen = sum(n_briefwahlgruppen)
   )
+nrow(bw_groups21)/n_briefwahlbezirke21[["summe_briefwahlgruppen"]]
 
-bw_groups <-
-  kgemeinden %>%
-  left_join(
-    egemeinden,
-    by=c(
-      "Land",
-      "Regierungsbezirk",
-      "Kreis",
-      "Kennziffer.Briefwahlzugehörigkeit"
-    )
-  )
+# Anzahl betroffener gemeinden 
+sum(bw_groups21$n_gemeinden)
 
-mapping_bw <-
-  bw_groups %>%
-  rowwise() %>%
+# Anzahl echter Gemeinden (100 Gemeinden zu wenig als offiziell!!)
+n_gemeinden21 <- data2021 %>%
+  filter(Gemeinde < 900) %>%
+  distinct(Gemeindeschlüssel) %>%
+  nrow()
+
+# Anteil betroffener Gemeinden
+sum(bw_groups21$n_gemeinden) / n_gemeinden21
+
+
+## unter Beobachtung: Wahlbezirksauszählungen durch andere Wahlbezirke
+table(data2021$Kennziffer.Urnenwahlbezirke.nach...68.BWO == "0000")
+# Anzahl Fälle
+data2021 %>%
+  filter(Kennziffer.Urnenwahlbezirke.nach...68.BWO != "0000") %>%
+  count(Kennziffer.Urnenwahlbezirke.nach...68.BWO)
+# Anzahl davon, die tatsächlich nur nullen besitzen
+data2021 %>%
+  filter(Kennziffer.Urnenwahlbezirke.nach...68.BWO != "0000") %>%
   mutate(
-    Analysegruppe =
-      paste(
-        sort(strsplit(gemeindeschluessel, ",\\s*")[[1]]),
-        collapse = "_"
-      )
+    leer = E_Gültige == 0
   ) %>%
-  ungroup() %>%
-  select(
-    Analysegruppe,
-    gemeindeschluessel
+  count(leer)
+
+# Shifts innerhalb und außerhalb der Gemeinde. Wichtig ist außerhalb der Gemeinde
+par6821 <- data2021 %>%
+  filter(Kennziffer.Urnenwahlbezirke.nach...68.BWO != "0000") %>%
+  group_by(Kennziffer.Urnenwahlbezirke.nach...68.BWO) %>%
+  summarise(
+    gemeinden = paste(unique(Gemeindename), collapse = ", "),
+    agg.schlüssel = paste(unique(Gemeindeschlüssel), collapse = ", "),
+    .groups = "drop"
   ) %>%
-  separate_rows(
-    gemeindeschluessel,
-    sep = ",\\s*"
-  ) %>%
-  rename(
-    Analyse_ID = gemeindeschluessel
-  ) %>% 
-  distinct()
-
-###############################################################################
-# 3) Mapping an Wahldaten anhängen
-###############################################################################
-
-data_clean <-
-  data_clean %>%
-  left_join(
-    mapping_bw,
-    by=c(
-      "AnalyseGemeinde"="Analyse_ID"
-    )
-  ) %>%
-  mutate(
-    
-    Analysegruppe =
-      if_else(
-        is.na(Analysegruppe),
-        AnalyseGemeinde,
-        Analysegruppe
-      )
-  )
+  filter(grepl(",", agg.schlüssel))
+# In Ordnung, zwar nicht immer TRUE, aber eigentlich (in Worten angegeben) enthalten
 
 
-###############################################################################
-# 5) Aggregation auf endgültige Analyseeinheiten
-###############################################################################
-num_cols <- names(data_clean)[sapply(data_clean, is.numeric)]
+# Zusammengeführte gemeinden
+alle21 <- c(bw_groups21$agg.schlüssel, par6821$agg.schlüssel)
 
-num_cols <- setdiff(
-  num_cols,
-  c(
-    "Wahlkreis",
-    "Land",
-    "Regierungsbezirk",
-    "Kreis",
-    "Verbandsgemeinde",
-    "Gemeinde",
-    "Bezirksart"
-  )
+listen21 <- lapply(
+  alle21,
+  function(x) sort(unique(str_trim(strsplit(x, ",")[[1]])))
 )
 
+geaendert <- TRUE
 
-wahldaten_gemeinde <-
-  data_clean %>%
-  group_by(Analysegruppe) %>%
-  summarise(
+while (geaendert) { # Mengen mit Überlappung rekursiv zusammenführen
+  
+  geaendert <- FALSE
+  neu <- list()
+  
+  while (length(listen) > 0) {
     
-    Gemeinden =
-      paste(
-        sort(unique(Gemeindename)),
-        collapse=", "
-      ),
+    aktuelle <- listen21[[1]]
+    listen <- listen21[-1]
     
-    Gemeindeschluessel =
-      paste(
-        sort(unique(Gemeindeschlüssel)),
-        collapse=", "
-      ),
+    i <- 1
+    while (i <= length(listen21)) {
+      
+      if (length(intersect(aktuelle, listen21[[i]])) > 0) {
+        
+        aktuelle <- sort(unique(c(aktuelle, listen21[[i]])))
+        listen21 <- listen21[-i]
+        geaendert <- TRUE
+        i <- 1
+        
+      } else {
+        
+        i <- i + 1
+        
+      }
+    }
     
-    AnalyseGemeinden =
-      paste(
-        sort(unique(AnalyseGemeinde)),
-        collapse=", "
-      ),
-    
-    n_gemeinden =
-      n_distinct(Gemeindeschlüssel),
-    
-    across(
-      all_of(num_cols),
-      ~sum(.x, na.rm = TRUE)
-    ),
-    
-    .groups="drop"
-  )
+    neu[[length(neu) + 1]] <- aktuelle
+  }
+  
+  listen21 <- neu
+}
+
+joinedG21 <- data.frame(
+  agg.schlüssel = sapply(
+    listen21,
+    function(x) paste(x, collapse = ", ")
+  ),
+  stringsAsFactors = FALSE
+)
+
+# Ergebnis gleich zur bw_groups Aggregation, siehe:
+identisch21 <- mapply(
+  function(x, y) {
+    setequal(
+      strsplit(x, ",\\s*")[[1]],
+      strsplit(y, ",\\s*")[[1]]
+    )
+  },
+  joinedG21$agg.gemeindeschlüssel,
+  bw_groups21$agg.gemeindeschlüssel
+)
+
+all(identisch21)
 
 ###############################################################################
-# Mapping-Tabelle erzeugen
+#Mapping-Datensatz erstellen
 ###############################################################################
-mapping_final <-
-  data_clean %>%
-  distinct(
-    Gemeindeschlüssel,
-    Gemeindename,
-    AnalyseGemeinde
-  )
+mapping21 <- data2021 %>% 
+  select(Wahlkreis, Gemeinde, Gemeindeschlüssel) %>% 
+  distinct()
 
-mapping_briefwahl <-
-  bw_groups %>%
-  mutate(
-    Analysegruppe = gsub(",\\s*", "_", gemeindeschluessel)
-  ) %>%
-  select(
-    Analysegruppe,
-    gemeindeschluessel
-  ) %>%
-  separate_rows(
-    gemeindeschluessel,
-    sep = ",\\s*"
-  ) %>%
-  rename(
-    AnalyseGemeinde = gemeindeschluessel
-  )
-
-mapping_final <-
-  mapping_final %>%
+mapping21 <- mapping21 %>%
   left_join(
-    mapping_briefwahl,
-    by = "AnalyseGemeinde"
-  ) %>%
-  mutate(
-    Analysegruppe =
-      if_else(
-        is.na(Analysegruppe),
-        AnalyseGemeinde,
-        Analysegruppe
-      )
+    bw_groups %>%
+      select(
+        Wahlkreis,
+        Gemeindeschlüssel,
+        agg.schlüssel
+      ),
+    by = c(
+      "Wahlkreis",
+      "Gemeindeschlüssel"
+    )
   )
 
-# Bundestagswahl 2025 abspeichern
+bw_lookup21 <-
+  bw_groups21 %>%
+  distinct(agg.schlüssel) %>%
+  mutate(
+    Gemeindeschlüssel =
+      strsplit(agg.schlüssel, ",\\s*")
+  ) %>%
+  tidyr::unnest(Gemeindeschlüssel)
 
-# Bereinigung Bundestagswahl 2021
+mapping21 <-
+  mapping21 %>%
+  left_join(
+    bw_lookup21,
+    by = "Gemeindeschlüssel",
+    suffix = c("", ".bw")
+  ) %>%
+  mutate(
+    
+    agg.schlüssel =
+      case_when(
+        
+        # künstliche Gemeinde:
+        Gemeinde >= 900 ~ agg.schlüssel,
+        
+        # echte Gemeinde mit Briefwahlaggregation:
+        !is.na(agg.schlüssel.bw) ~ agg.schlüssel.bw,
+        
+        # normale Gemeinde:
+        TRUE ~ Gemeindeschlüssel
+        
+      )
+    
+  ) %>%
+  select(-agg.schlüssel.bw)
 
 # Abchecken: einheitliche Gruppierungen der Wahlgebiete von 2021 zu 2025
 
