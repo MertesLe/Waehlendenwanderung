@@ -230,11 +230,11 @@ all(identisch)
 ###############################################################################
 #Mapping-Datensatz erstellen
 ###############################################################################
-mapping <- data2025 %>% 
+mapping25 <- data2025 %>% 
   select(Wahlkreis, Gemeinde, Gemeindeschlüssel) %>% 
   distinct()
 
-mapping <- mapping %>%
+mapping25 <- mapping25 %>%
   left_join(
     bw_groups %>%
       select(
@@ -257,8 +257,8 @@ bw_lookup <-
   ) %>%
   tidyr::unnest(Gemeindeschlüssel)
 
-mapping <-
-  mapping %>%
+mapping25 <-
+  mapping25 %>%
   left_join(
     bw_lookup,
     by = "Gemeindeschlüssel",
@@ -303,7 +303,6 @@ mapping <-
 
 
 
-# Bundestagswahl 2025 abspeichern
 
 # Bereinigung Bundestagswahl 2021
 data2021 <- data2021%>% 
@@ -413,7 +412,7 @@ par6821 <- data2021 %>%
   filter(Kennziffer.Urnenwahlbezirke.nach...68.BWO != "0000") %>%
   group_by(Kennziffer.Urnenwahlbezirke.nach...68.BWO) %>%
   summarise(
-    gemeinden = paste(unique(Gemeindename), collapse = ", "),
+    gemeinden = paste(unique(Gemeinde.Name), collapse = ", "),
     agg.schlüssel = paste(unique(Gemeindeschlüssel), collapse = ", "),
     .groups = "drop"
   ) %>%
@@ -436,10 +435,10 @@ while (geaendert) { # Mengen mit Überlappung rekursiv zusammenführen
   geaendert <- FALSE
   neu <- list()
   
-  while (length(listen) > 0) {
+  while (length(listen21) > 0) {
     
     aktuelle <- listen21[[1]]
-    listen <- listen21[-1]
+    listen21 <- listen21[-1]
     
     i <- 1
     while (i <= length(listen21)) {
@@ -484,7 +483,7 @@ identisch21 <- mapply(
   bw_groups21$agg.gemeindeschlüssel
 )
 
-all(identisch21)
+all(identisch21) # muss TRUE sein für nachfolgenden Code
 
 ###############################################################################
 #Mapping-Datensatz erstellen
@@ -495,7 +494,7 @@ mapping21 <- data2021 %>%
 
 mapping21 <- mapping21 %>%
   left_join(
-    bw_groups %>%
+    bw_groups21 %>%
       select(
         Wahlkreis,
         Gemeindeschlüssel,
@@ -542,6 +541,189 @@ mapping21 <-
   ) %>%
   select(-agg.schlüssel.bw)
 
+
+
+
+
+
+
+
+
+
 # Abchecken: einheitliche Gruppierungen der Wahlgebiete von 2021 zu 2025
+
+mapping21_echt <-
+  mapping21 %>%
+  filter(substr(Gemeindeschlüssel,
+                nchar(Gemeindeschlüssel)-2,
+                nchar(Gemeindeschlüssel)-2) != "9")
+
+mapping25_echt <-
+  mapping25 %>%
+  filter(substr(Gemeindeschlüssel,
+                nchar(Gemeindeschlüssel)-2,
+                nchar(Gemeindeschlüssel)-2) != "9")
+
+anti_join( # Fehlende Gemeinden: 57 fehlend im Vergleich zu 21 (nrow(mapping25_echt) = 10721)
+  mapping21_echt,
+  mapping25_echt,
+  by="Gemeindeschlüssel"
+) %>% 
+  nrow()
+
+anti_join( # Zusätzliche Gemeinden: 91 zusätzlich im Vergleich zu 21 (nrow(mapping25_echt) = 10721)
+  mapping25_echt,
+  mapping21_echt,
+  by="Gemeindeschlüssel"
+) %>% 
+  nrow()
+
+
+# Aggregationen prüfen
+vergleich <-
+  mapping21 %>%
+  select(
+    Gemeindeschlüssel,
+    agg21 = agg.schlüssel
+  ) %>%
+  inner_join(
+    mapping25 %>%
+      select(
+        Gemeindeschlüssel,
+        agg25 = agg.schlüssel
+      ),
+    by="Gemeindeschlüssel"
+  )
+
+vergleich %>%
+  filter(agg21 != agg25) %>% # klappt da Gemeindeschlüssel in string sortiert wurden
+  View()
+
+
+
+# Daten auf gemeinsame Gemeinden beschränken
+# echte Gemeinden identisch sind. (sind sie nicht, wir ignorieren diese und entfernen echte gemeinden die nicht in beiden jahren vorkommen. diese müssen nicht nur als gemeindeschlüssel sondern auch alle gemeindeschlüssel, die in den strings der agg.schlüssel die fehlende/zusätzliche gemeinde haben müssen entfernt werden.)
+
+g21 <- mapping21 %>%
+  filter(Gemeinde < 900) %>%
+  pull(Gemeindeschlüssel) %>%
+  unique()
+
+g25 <- mapping25 %>%
+  filter(Gemeinde < 900) %>%
+  pull(Gemeindeschlüssel) %>%
+  unique()
+
+entfernen <- union(
+  setdiff(g21, g25),
+  setdiff(g25, g21)
+)
+
+enthaelt_gemeinde <- function(x, entfernen){
+  
+  sapply(strsplit(x, ",\\s*"), function(v){
+    
+    any(v %in% entfernen)
+    
+  })
+  
+}
+
+
+mapping21_clean <-
+  mapping21 %>%
+  filter(
+    !enthaelt_gemeinde(agg.schlüssel, entfernen)
+  )
+
+mapping25_clean <-
+  mapping25 %>%
+  filter(
+    !enthaelt_gemeinde(agg.schlüssel, entfernen)
+  )
+
+
+
+
+
+## Aggregation anpassen
+# 1) Alle eindeutigen Aggregationen aus beiden Jahren
+agg_df <-
+  bind_rows(
+    mapping21_clean %>%
+      select(Wahlkreis, agg.schlüssel),
+    
+    mapping25_clean %>%
+      select(Wahlkreis, agg.schlüssel)
+  ) %>%
+  distinct()
+
+# 2) Funktion: Aggregationen innerhalb eines Wahlkreises vereinigen
+merge_agg <- function(df){
+  
+  repeat{
+    
+    geändert <- FALSE
+    
+    for(i in seq_len(nrow(df)-1)){
+      
+      for(j in seq.int(i+1, nrow(df))){
+        
+        a <- strsplit(df$agg.schlüssel[i], ",\\s*")[[1]]
+        b <- strsplit(df$agg.schlüssel[j], ",\\s*")[[1]]
+        
+        if(length(intersect(a,b)) > 0){
+          
+          neu <-
+            paste(
+              sort(unique(c(a,b))),
+              collapse = ", "
+            )
+          
+          if(df$agg.schlüssel[i] != neu ||
+             df$agg.schlüssel[j] != neu){
+            
+            df$agg.schlüssel[i] <- neu
+            df$agg.schlüssel[j] <- neu
+            
+            geändert <- TRUE
+          }
+        }
+      }
+    }
+    
+    if(!geändert) break
+  }
+  
+  df %>%
+    distinct(agg.schlüssel)
+  
+}
+
+# 3) Für jeden Wahlkreis getrennt ausführen
+agg_final <-
+  agg_df %>%
+  group_by(Wahlkreis) %>%
+  group_modify(~merge_agg(.x)) %>%
+  ungroup()
+
+# 4) Lookup erzeugen:
+#    Jede Gemeinde -> endgültiger agg.schlüssel
+mapping_final <-
+  agg_final %>%
+  mutate(
+    Gemeindeschlüssel = strsplit(agg.schlüssel, ",\\s*")
+  ) %>%
+  unnest(Gemeindeschlüssel)
+
+# Aggregation der Wahldaten
+
+
+# Mapping Größe untersuchen
+
+
+# Bundestagswahl 2025 abspeichern
+
+# Mapping speichern
 
 # Abspeichern Bundestagswahl 2021
