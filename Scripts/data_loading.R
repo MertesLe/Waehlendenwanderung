@@ -1,6 +1,7 @@
 library(dplyr)
 library(stringr)
 library(tidyr)
+library(ggplot2)
 
 data2025 <- read.csv("Data//btw25_wbz//btw25_wbz_ergebnisse.csv", header = TRUE, sep = ";", skip = 4)
 View(data2025)
@@ -33,7 +34,15 @@ data2025 <- data2025 %>%
       str_pad(Gemeinde, width = 3, pad = "0")
     )
   )
-
+data2021 <- data2021 %>% 
+  mutate(
+    Gemeindeschlüssel = paste0(
+      str_pad(Land, width = 2, pad = "0"),
+      str_pad(Regierungsbezirk, width = 1, pad = "0"),
+      str_pad(Kreis, width = 2, pad = "0"),
+      str_pad(Gemeinde, width = 3, pad = "0")
+    )
+  )
 
 
 ## gemeinsame Briefwahlbezirke unterschiedlicher Gemeinden untersuchen
@@ -584,15 +593,17 @@ vergleich <-
   mapping21 %>%
   select(
     Gemeindeschlüssel,
-    agg21 = agg.schlüssel
+    agg21 = agg.schlüssel,
+    Wahlkreis
   ) %>%
   inner_join(
     mapping25 %>%
       select(
         Gemeindeschlüssel,
-        agg25 = agg.schlüssel
+        agg25 = agg.schlüssel,
+        Wahlkreis
       ),
-    by="Gemeindeschlüssel"
+    by= c("Gemeindeschlüssel", "Wahlkreis")
   )
 
 vergleich %>%
@@ -645,81 +656,422 @@ mapping25_clean <-
 
 
 
+# Für spätere Aggregation entsprechende ergebnisse aus den Wahldaten entfernen
+###############################################################################
+# Gültige künstliche Gemeinden bestimmen
+###############################################################################
+
+kuenstlich21_ok <- mapping21_clean %>%
+  filter(Gemeinde >= 900) %>%
+  distinct(Wahlkreis, Gemeindeschlüssel)
+
+kuenstlich25_ok <- mapping25_clean %>%
+  filter(Gemeinde >= 900) %>%
+  distinct(Wahlkreis, Gemeindeschlüssel)
+
+data21_clean <-
+  data2021 %>%
+  anti_join(
+    tibble(
+      Wahlkreis = data2021$Wahlkreis[data2021$Gemeinde < 900 & data2021$Gemeindeschlüssel %in% entfernen],
+      Gemeindeschlüssel = data2021$Gemeindeschlüssel[data2021$Gemeinde < 900 & data2021$Gemeindeschlüssel %in% entfernen]
+    ) %>% distinct(),
+    by = c("Wahlkreis", "Gemeindeschlüssel")
+  ) %>%
+  anti_join(
+    data2021 %>%
+      filter(Gemeinde >= 900) %>%
+      distinct(Wahlkreis, Gemeindeschlüssel) %>%
+      anti_join(kuenstlich21_ok,
+                by = c("Wahlkreis", "Gemeindeschlüssel")),
+    by = c("Wahlkreis", "Gemeindeschlüssel")
+  )
+
+data25_clean <-
+  data2025 %>%
+  anti_join(
+    tibble(
+      Wahlkreis = data2025$Wahlkreis[data2025$Gemeinde < 900 & data2025$Gemeindeschlüssel %in% entfernen],
+      Gemeindeschlüssel = data2025$Gemeindeschlüssel[data2025$Gemeinde < 900 & data2025$Gemeindeschlüssel %in% entfernen]
+    ) %>% distinct(),
+    by = c("Wahlkreis", "Gemeindeschlüssel")
+  ) %>%
+  anti_join(
+    data2025 %>%
+      filter(Gemeinde >= 900) %>%
+      distinct(Wahlkreis, Gemeindeschlüssel) %>%
+      anti_join(kuenstlich25_ok,
+                by = c("Wahlkreis", "Gemeindeschlüssel")),
+    by = c("Wahlkreis", "Gemeindeschlüssel")
+  )
+
+
+
+
+
 
 ## Aggregation anpassen
 # 1) Alle eindeutigen Aggregationen aus beiden Jahren
-agg_df <-
-  bind_rows(
-    mapping21_clean %>%
-      select(Wahlkreis, agg.schlüssel),
-    
-    mapping25_clean %>%
-      select(Wahlkreis, agg.schlüssel)
+mapping2125 <-
+  mapping21_clean %>%
+  select(
+    Gemeindeschlüssel,
+    Wahlkreis,
+    agg21 = agg.schlüssel
   ) %>%
-  distinct()
+  inner_join(
+    mapping25_clean %>%
+      select(
+        Gemeindeschlüssel,
+        Wahlkreis,
+        agg25 = agg.schlüssel
+      ),
+    by = c("Gemeindeschlüssel", "Wahlkreis")
+  )
 
-# 2) Funktion: Aggregationen innerhalb eines Wahlkreises vereinigen
-merge_agg <- function(df){
+split_keys <- function(x) unique(strsplit(x, ",\\s*")[[1]])
+
+collapse_keys <- function(x) paste(sort(unique(x)), collapse = ", ")
+
+mapping21_new <- mapping21_clean
+mapping25_new <- mapping25_clean
+
+geaendert <- TRUE
+
+while(geaendert){
   
-  repeat{
+  geaendert <- FALSE
+  
+  mapping2125 <-
+    mapping21_new %>%
+    select(
+      Gemeindeschlüssel,
+      Wahlkreis,
+      agg21 = agg.schlüssel
+    ) %>%
+    inner_join(
+      mapping25_new %>%
+        select(
+          Gemeindeschlüssel,
+          Wahlkreis,
+          agg25 = agg.schlüssel
+        ),
+      by = c("Gemeindeschlüssel","Wahlkreis")
+    )
+  
+  for(i in seq_len(nrow(mapping2125))){
     
-    geändert <- FALSE
+    if(mapping2125$agg21[i] == mapping2125$agg25[i])
+      next
     
-    for(i in seq_len(nrow(df)-1)){
+    neu <-
+      collapse_keys(
+        c(
+          split_keys(mapping2125$agg21[i]),
+          split_keys(mapping2125$agg25[i])
+        )
+      )
+    
+    neue_keys <- split_keys(neu)
+    
+    ## solange sich durch bereits vorhandene Aggregationen noch neue Gemeinden
+    ## ergeben, erweitern
+    ## transitive Erweiterung
+    repeat{
       
-      for(j in seq.int(i+1, nrow(df))){
-        
-        a <- strsplit(df$agg.schlüssel[i], ",\\s*")[[1]]
-        b <- strsplit(df$agg.schlüssel[j], ",\\s*")[[1]]
-        
-        if(length(intersect(a,b)) > 0){
+      alt_keys <- sort(neue_keys)
+      
+      ## alle bisherigen Aggregationen finden,
+      ## die mindestens eine der Gemeinden enthalten
+      agg_strings <-
+        c(
           
-          neu <-
-            paste(
-              sort(unique(c(a,b))),
-              collapse = ", "
-            )
+          mapping21_new %>%
+            filter(
+              Wahlkreis == mapping2125$Wahlkreis[i],
+              Gemeindeschlüssel %in% neue_keys
+            ) %>%
+            pull(agg.schlüssel),
           
-          if(df$agg.schlüssel[i] != neu ||
-             df$agg.schlüssel[j] != neu){
-            
-            df$agg.schlüssel[i] <- neu
-            df$agg.schlüssel[j] <- neu
-            
-            geändert <- TRUE
-          }
-        }
-      }
+          mapping25_new %>%
+            filter(
+              Wahlkreis == mapping2125$Wahlkreis[i],
+              Gemeindeschlüssel %in% neue_keys
+            ) %>%
+            pull(agg.schlüssel)
+          
+        ) %>%
+        unique()
+      
+      ## daraus sämtliche Gemeinden einsammeln
+      neue_keys <-
+        agg_strings %>%
+        lapply(split_keys) %>%
+        unlist() %>%
+        unique()
+      
+      ## falls neue Gemeinden hinzugekommen sind,
+      ## wiederholen
+      if(identical(sort(neue_keys), alt_keys))
+        break
     }
     
-    if(!geändert) break
+    neu <- collapse_keys(neue_keys)
+    
+    mapping21_new <-
+      mapping21_new %>%
+      mutate(
+        agg.schlüssel =
+          if_else(
+            Wahlkreis == mapping2125$Wahlkreis[i] &
+              agg.schlüssel %in% agg_strings,
+            neu,
+            agg.schlüssel
+          )
+      )
+    
+    mapping25_new <-
+      mapping25_new %>%
+      mutate(
+        agg.schlüssel =
+          if_else(
+            Wahlkreis == mapping2125$Wahlkreis[i] &
+              agg.schlüssel %in% agg_strings,
+            neu,
+            agg.schlüssel
+          )
+      )
+    
+    geaendert <- TRUE
   }
-  
-  df %>%
-    distinct(agg.schlüssel)
-  
 }
 
-# 3) Für jeden Wahlkreis getrennt ausführen
-agg_final <-
-  agg_df %>%
-  group_by(Wahlkreis) %>%
-  group_modify(~merge_agg(.x)) %>%
-  ungroup()
 
-# 4) Lookup erzeugen:
-#    Jede Gemeinde -> endgültiger agg.schlüssel
-mapping_final <-
-  agg_final %>%
-  mutate(
-    Gemeindeschlüssel = strsplit(agg.schlüssel, ",\\s*")
+## checks
+# Sind die einzigartigen Aggregationen identisch? (Nein)
+agg21 <- unique(mapping21_new$agg.schlüssel)
+agg25 <- unique(mapping25_new$agg.schlüssel)
+setequal(agg21, agg25)
+setdiff(agg21, agg25) %>% 
+  View()
+setdiff(agg25, agg21)
+
+# Differenzierende betrachten
+diff21 <- setdiff(
+  unique(mapping21_new$agg.schlüssel),
+  unique(mapping25_new$agg.schlüssel)
+)
+diff25 <- setdiff(
+  unique(mapping25_new$agg.schlüssel),
+  unique(mapping21_new$agg.schlüssel)
+)
+mapping21_new %>%
+  filter(agg.schlüssel %in% diff21) %>%
+  arrange(agg.schlüssel) %>% 
+  View()
+mapping25_new %>%
+  filter(agg.schlüssel %in% diff25) %>%
+  arrange(agg.schlüssel) %>% 
+  View()
+
+# wegen falsche Reihenfolge in character-IDs? (Nein, immer noch bestehendes Problem)
+normalize <- function(x) {
+  paste(
+    sort(unique(strsplit(x, ",\\s*")[[1]])),
+    collapse = ", "
+  )
+}
+mapping21_test <- mapping21_new %>%
+  mutate(agg_norm = sapply(agg.schlüssel, normalize))
+mapping25_test <- mapping25_new %>%
+  mutate(agg_norm = sapply(agg.schlüssel, normalize))
+setequal(
+  unique(mapping21_test$agg_norm),
+  unique(mapping25_test$agg_norm)
+)
+
+# Konsistenzcheck (eindeutiger künstlicher gemeindecode check) (passt da 0 zeilen)
+mapping21_new %>%
+  group_by(Wahlkreis, Gemeindeschlüssel) %>%
+  summarise(
+    n = n_distinct(agg.schlüssel),
+    .groups = "drop"
   ) %>%
-  unnest(Gemeindeschlüssel)
+  filter(n > 1)
+mapping25_new %>%
+  group_by(Wahlkreis, Gemeindeschlüssel) %>%
+  summarise(
+    n = n_distinct(agg.schlüssel),
+    .groups = "drop"
+  ) %>%
+  filter(n > 1)
+
+# Hat jede echte Gemeinde dieselbe Aggregation? Antwort: Ja
+vergleich <-
+  mapping21_new %>%
+  filter(Gemeinde < 900) %>%
+  select(
+    Gemeindeschlüssel,
+    Wahlkreis,
+    agg21 = agg.schlüssel
+  ) %>%
+  inner_join(
+    mapping25_new %>%
+      filter(Gemeinde < 900) %>%
+      select(
+        Gemeindeschlüssel,
+        Wahlkreis,
+        agg25 = agg.schlüssel
+      ),
+    by = c("Gemeindeschlüssel", "Wahlkreis")
+  )
+vergleich %>%
+  filter(agg21 != agg25)
+
+# Kommt ein Gemeindeschlüssel in mehreren Aggregationen vor? Antwort: Nein
+lookup <-
+  mapping21_new %>%
+  distinct(Wahlkreis, agg.schlüssel) %>%
+  tidyr::separate_rows(
+    agg.schlüssel,
+    sep = ",\\s*"
+  ) %>%
+  rename(
+    Gemeindeschlüssel = agg.schlüssel
+  )
+lookup %>%
+  count(
+    Wahlkreis,
+    Gemeindeschlüssel
+  ) %>%
+  filter(n > 1)
+
+
+
+
+
 
 # Aggregation der Wahldaten
+id_vars <- c(
+  "Wahlkreis",
+  "Land",
+  "Regierungsbezirk",
+  "Kreis",
+  "Verbandsgemeinde",
+  "Gemeinde",
+  "Kennziffer.Urnenwahlbezirke.nach...68.BWO",
+  "Kennziffer.Briefwahlzugehörigkeit",
+  "Gemeindename",
+  "Gemeinde.Name",
+  "Wahlbezirk",
+  "Bezirksart",
+  "Ungekürzte.Wahlbezirksbezeichnung",
+  "Bezeichnung.des.Wahlbezirkes.gemäß.Anlage.30.zur.BWO",
+  "Gemeindeschlüssel"
+)
+
+num_vars25 <- setdiff(
+  names(data2025)[sapply(data2025, is.numeric)],
+  id_vars
+)
+
+num_vars21 <- setdiff(
+  names(data2021)[sapply(data2021, is.numeric)],
+  id_vars
+)
+
+data25_agg <- data25_clean %>%
+  left_join(
+    mapping25_new %>%
+      select(
+        Wahlkreis,
+        Gemeindeschlüssel,
+        agg.schlüssel
+      ),
+    by = c("Wahlkreis", "Gemeindeschlüssel")
+  )
+
+data21_agg <- data21_clean %>%
+  left_join(
+    mapping21_new %>%
+      select(
+        Wahlkreis,
+        Gemeindeschlüssel,
+        agg.schlüssel
+      ),
+    by = c("Wahlkreis", "Gemeindeschlüssel")
+  )
+
+wahldaten2025 <- data25_agg %>%
+  group_by(agg.schlüssel) %>%
+  summarise(
+    
+    Wahlkreis = first(Wahlkreis),
+    
+    Gemeinden =
+      paste(sort(unique(Gemeindename)), collapse = ", "),
+    
+    Gemeindeschlüssel =
+      paste(sort(unique(Gemeindeschlüssel)), collapse = ", "),
+    
+    across(
+      all_of(num_vars25),
+      ~sum(.x, na.rm = TRUE)
+    ),
+    
+    .groups = "drop"
+  )
+
+wahldaten2021 <- data21_agg %>%
+  group_by(agg.schlüssel) %>%
+  summarise(
+    
+    Wahlkreis = first(Wahlkreis),
+    
+    Gemeinden =
+      paste(sort(unique(Gemeinde.Name)), collapse = ", "),
+    
+    Gemeindeschlüssel =
+      paste(sort(unique(Gemeindeschlüssel)), collapse = ", "),
+    
+    across(
+      all_of(num_vars21),
+      ~sum(.x, na.rm = TRUE)
+    ),
+    
+    .groups = "drop"
+  )
+
+
+
+
 
 
 # Mapping Größe untersuchen
+wahldaten2025 %>%
+  summarise(
+    n        = n(),
+    Mittel   = mean(Gültige...Erststimmen),
+    Median   = median(Gültige...Erststimmen),
+    SD       = sd(Gültige...Erststimmen),
+    Varianz  = var(Gültige...Erststimmen),
+    Minimum  = min(Gültige...Erststimmen),
+    Q1       = quantile(Gültige...Erststimmen, 0.25),
+    Q3       = quantile(Gültige...Erststimmen, 0.75),
+    Maximum  = max(Gültige...Erststimmen),
+    IQR      = IQR(Gültige...Erststimmen),
+    CV       = sd(Gültige...Erststimmen) / mean(Gültige...Erststimmen)
+  )
+
+options(scipen = 999)
+hist(
+  wahldaten2025$Gültige...Erststimmen,
+  breaks = 100,
+  main = "Histogramm der gültigen Erststimmen",
+  xlab = "Gültige Erststimmen"
+)
+
+
 
 
 # Bundestagswahl 2025 abspeichern
