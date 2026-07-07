@@ -3,9 +3,7 @@ library(stringr)
 library(tidyr)
 
 data2025 <- read.csv("Data//btw25_wbz//btw25_wbz_ergebnisse.csv", header = TRUE, sep = ";", skip = 4)
-View(data2025)
 data2021 <- read.csv("Data//btw21_wbz//btw21_wbz_ergebnisse.csv", header = TRUE, sep = ";")
-View(data2021)
 
 
 # Amtlichen Gemeindeschlüssel (als Key für spätere Joins) generieren:
@@ -215,8 +213,8 @@ identisch <- mapply(
       strsplit(y, ",\\s*")[[1]]
     )
   },
-  joinedG$agg.gemeindeschlüssel,
-  bw_groups$agg.gemeindeschlüssel
+  joinedG$agg.schlüssel,
+  bw_groups$agg.schlüssel
 )
 
 all(identisch)
@@ -252,7 +250,7 @@ bw_lookup <-
   tidyr::unnest(Gemeindeschlüssel)
 
 mapping25 <-
-  mapping25 %>%
+  joinedG %>%
   left_join(
     bw_lookup,
     by = "Gemeindeschlüssel",
@@ -310,7 +308,7 @@ data2021 <- data2021%>%
   )
 
 
-# Künstliche Gemeinden über Wahlkreis hinaus (1 Ausnahme:) (unterschiedlicher Gemeindename)
+# Künstliche Gemeinden über Wahlkreis hinaus (3 Ausnahmen) (unterschiedlicher Gemeindename, Wahlkreis)
 # erledigt: in bw_groups korrekt getrennt enthalten
 data2021 %>%
   filter(Gemeinde >= 900) %>%
@@ -473,8 +471,8 @@ identisch21 <- mapply(
       strsplit(y, ",\\s*")[[1]]
     )
   },
-  joinedG21$agg.gemeindeschlüssel,
-  bw_groups21$agg.gemeindeschlüssel
+  joinedG21$agg.schlüssel,
+  bw_groups21$agg.schlüssel
 )
 
 all(identisch21) # muss TRUE sein für nachfolgenden Code
@@ -501,7 +499,7 @@ mapping21 <- mapping21 %>%
   )
 
 bw_lookup21 <-
-  bw_groups21 %>%
+  joinedG21 %>%
   distinct(agg.schlüssel) %>%
   mutate(
     Gemeindeschlüssel =
