@@ -4,7 +4,7 @@ library(stringr)
 library(tidyr)
 library(purrr)
 
-pfad <- "Data/gebietsänderungen"
+pfad <- "Data/raw/gebietsänderungen"
 
 dateien <- list.files(
   pfad,
@@ -12,9 +12,9 @@ dateien <- list.files(
   full.names = TRUE
 )
 
-# Zeitraum der Analyse
-start <- as.Date("2021-09-26") # Bundestagswahl 2021
-ende  <- as.Date("2025-02-23") # Bundestagswahl 2025
+# Zeitraum der Analyse (Zeitpunkt: Gebietsstand als Wahlgrundlage)
+start <- as.Date("2021-06-30") # Bundestagswahl 2021
+ende  <- as.Date("2024-12-31") # Bundestagswahl 2025
 
 read_changes <- function(datei){
   

@@ -1,4 +1,4 @@
-inkartest <- read.csv("Data//inkar_2025//inkar_2025.csv", header = TRUE, sep = ";")
+inkartest <- read.csv("Data//raw//inkar_2025//inkar_2025.csv", header = TRUE, sep = ";")
 View(inkartest)
 
 library(data.table)

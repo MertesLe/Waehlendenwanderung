@@ -2,8 +2,8 @@ library(dplyr)
 library(stringr)
 library(tidyr)
 
-data2025 <- read.csv("Data//btw25_wbz//btw25_wbz_ergebnisse.csv", header = TRUE, sep = ";", skip = 4)
-data2021 <- read.csv("Data//btw21_wbz//btw21_wbz_ergebnisse.csv", header = TRUE, sep = ";")
+data2025 <- read.csv("Data//raw//btw25_wbz//btw25_wbz_ergebnisse.csv", header = TRUE, sep = ";", skip = 4)
+data2021 <- read.csv("Data//raw//btw21_wbz//btw21_wbz_ergebnisse.csv", header = TRUE, sep = ";")
 
 
 # Amtlichen Gemeindeschlüssel (als Key für spätere Joins) generieren:
