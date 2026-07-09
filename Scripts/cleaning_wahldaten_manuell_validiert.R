@@ -585,20 +585,28 @@ einschluss_ausweisungen <- bind_rows(
   data2021 %>%
     transmute(
       Jahr = 2021,
+      Wahlkreis,
       Land,
       Regierungsbezirk,
       Kreis,
+      Gemeinde,
       Gemeindeschlüssel,
-      gemeindename = Gemeinde.Name
+      gemeindename = Gemeinde.Name,
+      par68 = Kennziffer.Urnenwahlbezirke.nach...68.BWO != "0000",
+      Bezirksart
     ),
   data2025 %>%
     transmute(
       Jahr = 2025,
+      Wahlkreis,
       Land,
       Regierungsbezirk,
       Kreis,
+      Gemeinde,
       Gemeindeschlüssel,
-      gemeindename = Gemeindename
+      gemeindename = Gemeindename,
+      par68 = Kennziffer.Urnenwahlbezirke.nach...68.BWO != "0000",
+      Bezirksart
     )
 ) %>%
   filter(
@@ -608,11 +616,15 @@ einschluss_ausweisungen <- bind_rows(
   ) %>%
   distinct(
     Jahr,
+    Wahlkreis,
     Land,
     Regierungsbezirk,
     Kreis,
+    Gemeinde,
     Gemeindeschlüssel,
-    gemeindename
+    gemeindename,
+    par68,
+    Bezirksart
   ) %>%
   mutate(
     einschluss_name = lapply(gemeindename, extract_einschlussnamen)
@@ -622,9 +634,33 @@ einschluss_ausweisungen <- bind_rows(
     einschluss_name_clean = clean_gemeindename(einschluss_name)
   )
 
-mapping_textausweisungen <- einschluss_ausweisungen %>%
+vorlaeufiges_mapping <- bind_rows(
+  mapping21_clean %>%
+    mutate(Jahr = 2021),
+  mapping25_clean %>%
+    mutate(Jahr = 2025)
+) %>%
+  select(
+    Jahr,
+    Wahlkreis,
+    Gemeinde,
+    Gemeindeschlüssel,
+    agg.vorlaeufig = agg.schlüssel
+  )
+
+textausweisungen_namensdiagnose <- einschluss_ausweisungen %>%
   left_join(
     gemeinde_namen_lookup %>%
+      group_by(
+        Land,
+        Regierungsbezirk,
+        Kreis,
+        gemeindename_clean
+      ) %>%
+      mutate(
+        n_gemeindeschluessel_match = n_distinct(Gemeindeschlüssel)
+      ) %>%
+      ungroup() %>%
       rename(
         einschluss_gemeindeschlüssel = Gemeindeschlüssel
       ),
@@ -636,24 +672,183 @@ mapping_textausweisungen <- einschluss_ausweisungen %>%
     ),
     relationship = "many-to-many"
   ) %>%
-  filter(
-    !is.na(einschluss_gemeindeschlüssel),
-    einschluss_gemeindeschlüssel != Gemeindeschlüssel
+  left_join(
+    vorlaeufiges_mapping %>%
+      select(
+        Jahr,
+        Wahlkreis,
+        Gemeindeschlüssel,
+        agg.ausweisende_gemeinde = agg.vorlaeufig
+      ),
+    by = c(
+      "Jahr",
+      "Wahlkreis",
+      "Gemeindeschlüssel"
+    )
+  ) %>%
+  left_join(
+    vorlaeufiges_mapping %>%
+      select(
+        Jahr,
+        Wahlkreis,
+        einschluss_gemeindeschlüssel = Gemeindeschlüssel,
+        agg.einschluss_gemeinde = agg.vorlaeufig
+      ),
+    by = c(
+      "Jahr",
+      "Wahlkreis",
+      "einschluss_gemeindeschlüssel"
+    )
   ) %>%
   mutate(
-    agg.schlüssel = mapply(
-      function(gemeinde, einschluss) {
-        collapse_keys(c(gemeinde, einschluss))
+    namensmatch_status = case_when(
+      is.na(einschluss_gemeindeschlüssel) ~ "kein Namensmatch im selben Kreis",
+      n_gemeindeschluessel_match > 1 ~ "mehrdeutiger Namensmatch im selben Kreis",
+      einschluss_gemeindeschlüssel == Gemeindeschlüssel ~ "Selbstmatch",
+      TRUE ~ "eindeutiger Namensmatch im selben Kreis"
+    ),
+    einschluss_in_gleichem_jahr_wahlkreis = !is.na(agg.einschluss_gemeinde),
+    bereits_vorlaeufig_abgedeckt =
+      !is.na(agg.ausweisende_gemeinde) &
+      !is.na(agg.einschluss_gemeinde) &
+      agg.ausweisende_gemeinde == agg.einschluss_gemeinde,
+    ausweisende_agg_enthaelt_einschluss = mapply(
+      function(agg, key) {
+        !is.na(agg) &&
+          !is.na(key) &&
+          key %in% split_keys(agg)
       },
-      Gemeindeschlüssel,
+      agg.ausweisende_gemeinde,
       einschluss_gemeindeschlüssel,
       USE.NAMES = FALSE
     )
+  )
+
+textausweisungen_inkonsistenzen <- textausweisungen_namensdiagnose %>%
+  filter(
+    namensmatch_status != "eindeutiger Namensmatch im selben Kreis" |
+      !bereits_vorlaeufig_abgedeckt
+  )
+
+build_final_lookup <- function(components) {
+  components %>%
+    mutate(
+      Gemeindeschlüssel = strsplit(agg.schlüssel, ",\\s*")
+    ) %>%
+    tidyr::unnest(Gemeindeschlüssel) %>%
+    rename(
+      agg.final = agg.schlüssel
+    ) %>%
+    distinct(Gemeindeschlüssel, agg.final)
+}
+
+build_prelim_to_final <- function(final_lookup) {
+  bind_rows(
+    mapping21_clean %>%
+      distinct(agg.schlüssel),
+    mapping25_clean %>%
+      distinct(agg.schlüssel)
   ) %>%
-  select(
+    distinct() %>%
+    mutate(
+      Gemeindeschlüssel = strsplit(agg.schlüssel, ",\\s*")
+    ) %>%
+    tidyr::unnest(Gemeindeschlüssel) %>%
+    left_join(
+      final_lookup,
+      by = "Gemeindeschlüssel"
+    ) %>%
+    group_by(agg.schlüssel) %>%
+    summarise(
+      n_missing_final = sum(is.na(agg.final)),
+      agg.final = collapse_keys(
+        unlist(
+          lapply(agg.final, split_keys),
+          use.names = FALSE
+        )
+      ),
+      .groups = "drop"
+    )
+}
+
+apply_final_mapping <- function(mapping_clean, prelim_to_final) {
+  mapping_clean %>%
+    left_join(
+      prelim_to_final %>%
+        select(agg.schlüssel, agg.final),
+      by = "agg.schlüssel"
+    ) %>%
+    mutate(
+      agg.schlüssel = agg.final
+    ) %>%
+    select(-agg.final)
+}
+
+final_components_basis <- bind_rows(
+  mapping21_clean %>%
+    distinct(agg.schlüssel),
+  mapping25_clean %>%
+    distinct(agg.schlüssel),
+  mapping_gebietsaenderungen %>%
+    distinct(agg.schlüssel)
+) %>%
+  filter(!is.na(agg.schlüssel), agg.schlüssel != "") %>%
+  pull(agg.schlüssel) %>%
+  connected_components()
+
+final_lookup_basis <- build_final_lookup(final_components_basis)
+
+final_lookup_basis_check <- final_lookup_basis %>%
+  count(Gemeindeschlüssel) %>%
+  filter(n > 1)
+
+stopifnot(nrow(final_lookup_basis_check) == 0)
+
+prelim_to_final_basis <- build_prelim_to_final(final_lookup_basis)
+
+stopifnot(all(prelim_to_final_basis$n_missing_final == 0))
+
+mapping21_basis <- apply_final_mapping(mapping21_clean, prelim_to_final_basis)
+mapping25_basis <- apply_final_mapping(mapping25_clean, prelim_to_final_basis)
+
+diff21_basis <- setdiff(
+  unique(mapping21_basis$agg.schlüssel),
+  unique(mapping25_basis$agg.schlüssel)
+)
+
+diff25_basis <- setdiff(
+  unique(mapping25_basis$agg.schlüssel),
+  unique(mapping21_basis$agg.schlüssel)
+)
+
+restfaelle_basis <- bind_rows(
+  mapping21_basis %>%
+    filter(agg.schlüssel %in% diff21_basis) %>%
+    mutate(Jahr = 2021),
+  mapping25_basis %>%
+    filter(agg.schlüssel %in% diff25_basis) %>%
+    mutate(Jahr = 2025)
+) %>%
+  distinct(
+    Jahr,
+    Wahlkreis,
+    Gemeinde,
+    Gemeindeschlüssel,
     agg.schlüssel
   ) %>%
-  distinct()
+  arrange(Jahr, Wahlkreis, Gemeindeschlüssel)
+
+mapping_manuelle_textkorrekturen <- tibble::tribble(
+  ~agg.basis, ~agg.schlüssel, ~grund,
+  "07138010", "07138010, 07138047", "Datzeroth wird 2025 separat ausgewiesen, 2021 aber bei Niederbreitbach (einschl. Datzeroth)."
+)
+
+unabgedeckte_basis_differenzen <- setdiff(
+  c(diff21_basis, diff25_basis),
+  mapping_manuelle_textkorrekturen$agg.basis
+)
+
+stopifnot(length(unabgedeckte_basis_differenzen) == 0)
 
 final_components <- bind_rows(
   mapping21_clean %>%
@@ -662,7 +857,7 @@ final_components <- bind_rows(
     distinct(agg.schlüssel),
   mapping_gebietsaenderungen %>%
     distinct(agg.schlüssel),
-  mapping_textausweisungen %>%
+  mapping_manuelle_textkorrekturen %>%
     distinct(agg.schlüssel)
 ) %>%
   filter(!is.na(agg.schlüssel), agg.schlüssel != "") %>%
@@ -735,6 +930,53 @@ mapping25_new <- mapping25_clean %>%
     agg.schlüssel = agg.final
   ) %>%
   select(-agg.final)
+
+mapping_wahldaten_final <- bind_rows(
+  mapping21_new %>%
+    mutate(Jahr = 2021),
+  mapping25_new %>%
+    mutate(Jahr = 2025)
+) %>%
+  distinct(
+    Jahr,
+    Wahlkreis,
+    Gemeinde,
+    Gemeindeschlüssel,
+    agg.schlüssel
+  ) %>%
+  arrange(Jahr, Wahlkreis, Gemeindeschlüssel)
+
+mapping_gemeinden_final <- mapping_wahldaten_final %>%
+  filter(Gemeinde < 900) %>%
+  distinct(
+    Gemeindeschlüssel,
+    agg.schlüssel
+  ) %>%
+  arrange(Gemeindeschlüssel)
+
+mapping_gemeinden_final_check <- mapping_gemeinden_final %>%
+  count(Gemeindeschlüssel) %>%
+  filter(n > 1)
+
+stopifnot(nrow(mapping_gemeinden_final_check) == 0)
+
+dir.create("Data/cleaned", recursive = TRUE, showWarnings = FALSE)
+saveRDS(
+  mapping_wahldaten_final,
+  file = "Data/cleaned/mapping_wahldaten_final_manuell_validiert.rds"
+)
+saveRDS(
+  mapping_gemeinden_final,
+  file = "Data/cleaned/mapping_gemeinden_final_manuell_validiert.rds"
+)
+saveRDS(
+  textausweisungen_namensdiagnose,
+  file = "Data/cleaned/textausweisungen_namensdiagnose.rds"
+)
+saveRDS(
+  textausweisungen_inkonsistenzen,
+  file = "Data/cleaned/textausweisungen_inkonsistenzen.rds"
+)
 
 
 ## checks

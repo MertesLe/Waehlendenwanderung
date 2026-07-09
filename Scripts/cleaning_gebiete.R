@@ -4,6 +4,8 @@ library(stringr)
 library(tidyr)
 library(purrr)
 
+source("functions.R", encoding = "UTF-8")
+
 pfad <- "Data/raw/gebietsänderungen"
 
 dateien <- list.files(
@@ -57,8 +59,8 @@ read_changes <- function(datei){
           format = "%d.%m.%Y"
         ),
       
-      AGS_alt = as.character(AGS_alt),
-      AGS_neu = as.character(AGS_neu)
+      AGS_alt = normalize_ags(AGS_alt),
+      AGS_neu = normalize_ags(AGS_neu)
       
     ) %>%
     filter(
@@ -90,19 +92,6 @@ gebietsänderungen <-
   distinct() %>%
   arrange(Datum)
 
-
-
-# Aggregation der zusammengehörigen Gemeindeschlüssel
-collapse_keys <- function(x) {
-  
-  x <- x[!is.na(x) & x != ""]
-  
-  paste(
-    sort(unique(x)),
-    collapse = ", "
-  )
-}
-
 gebiets_edges <- gebietsänderungen %>%
   filter(
     !is.na(AGS_alt),
@@ -111,88 +100,16 @@ gebiets_edges <- gebietsänderungen %>%
     AGS_neu != "",
     AGS_alt != AGS_neu
   ) %>%
-  distinct()
-
-listen <- Map(
-  function(alt, neu) {
-    sort(unique(c(alt, neu)))
-  },
-  gebiets_edges$AGS_alt,
-  gebiets_edges$AGS_neu
-)
-
-# Nur tatsächlich überlappende Gruppen transitiv zusammenführen
-repeat {
-  
-  neue_liste <- list()
-  bereits_verwendet <- rep(FALSE, length(listen))
-  wurde_zusammengefuehrt <- FALSE
-  
-  for (i in seq_along(listen)) {
-    
-    # Gruppe wurde bereits einer anderen Zusammenhangsgruppe hinzugefügt
-    if (bereits_verwendet[i]) {
-      next
-    }
-    
-    aktuelle_gruppe <- listen[[i]]
-    bereits_verwendet[i] <- TRUE
-    
-    # Solange weitere Gruppen mit der aktuellen Gruppe überlappen,
-    # wird die aktuelle Gruppe erweitert.
-    repeat {
-      
-      ueberlappende_gruppen <- which(
-        !bereits_verwendet &
-          vapply(
-            listen,
-            function(x) {
-              length(intersect(aktuelle_gruppe, x)) > 0
-            },
-            logical(1)
-          )
-      )
-      
-      # Keine weitere Überschneidung gefunden
-      if (length(ueberlappende_gruppen) == 0) {
-        break
-      }
-      
-      # Alle Schlüssel der überlappenden Gruppen aufnehmen
-      aktuelle_gruppe <- sort(
-        unique(
-          c(
-            aktuelle_gruppe,
-            unlist(
-              listen[ueberlappende_gruppen],
-              use.names = FALSE
-            )
-          )
-        )
-      )
-      
-      bereits_verwendet[ueberlappende_gruppen] <- TRUE
-      wurde_zusammengefuehrt <- TRUE
-    }
-    
-    neue_liste[[length(neue_liste) + 1L]] <- aktuelle_gruppe
-  }
-  
-  listen <- neue_liste
-  
-  # Sobald in einem kompletten Durchgang keine Gruppen mehr zusammengeführt wurden, stopp.
-  if (!wurde_zusammengefuehrt) {
-    break
-  }
-}
-
-agg <- tibble(
-  agg.schlüssel = vapply(
-    listen,
-    collapse_keys,
-    character(1)
+  distinct() %>%
+  mutate(
+    agg.schlüssel = purrr::map2_chr(
+      AGS_alt,
+      AGS_neu,
+      ~ collapse_keys(c(.x, .y))
+    )
   )
-) %>%
+
+agg <- connected_components(gebiets_edges$agg.schlüssel) %>%
   distinct() %>%
   arrange(agg.schlüssel)
 
@@ -210,3 +127,8 @@ mapping_gebietsänderungen <- agg %>%
   ) %>%
   arrange(Gemeindeschlüssel)
 
+dir.create("Data/cleaned", recursive = TRUE, showWarnings = FALSE)
+saveRDS(
+  mapping_gebietsänderungen,
+  file = "Data/cleaned/mapping_gebietsaenderungen.rds"
+)
