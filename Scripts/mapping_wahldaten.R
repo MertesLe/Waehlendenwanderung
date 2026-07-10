@@ -515,7 +515,7 @@ data25_clean <- data2025
 mapping_gebietsaenderungen_pfad <- "Data/cleaned/mapping_gebietsaenderungen.rds"
 
 if (!file.exists(mapping_gebietsaenderungen_pfad)) {
-  source("Scripts/cleaning_gebiete.R", encoding = "UTF-8")
+  source("Scripts/mapping_gebiete.R", encoding = "UTF-8")
 }
 
 mapping_gebietsaenderungen <- readRDS(mapping_gebietsaenderungen_pfad)
@@ -1207,7 +1207,23 @@ hist(
 
 
 # Bundestagswahl 2025 abspeichern
+saveRDS(
+  wahldaten2025,
+  file = "Data/cleaned/wahldaten2025_gemappt.rds"
+)
 
 # Mapping speichern
+saveRDS(
+  mapping_wahldaten_final,
+  file = "Data/cleaned/mapping_wahldaten_final_manuell_validiert.rds"
+)
+saveRDS(
+  mapping_gemeinden_final,
+  file = "Data/cleaned/mapping_gemeinden_final_manuell_validiert.rds"
+)
 
 # Abspeichern Bundestagswahl 2021
+saveRDS(
+  wahldaten2021,
+  file = "Data/cleaned/wahldaten2021_gemappt.rds"
+)

@@ -13,6 +13,7 @@ dateien <- list.files(
   pattern = "\\.xlsx$",
   full.names = TRUE
 )
+dateien <- dateien[!startsWith(basename(dateien), "~$")]
 
 # Zeitraum der Analyse (Zeitpunkt: Gebietsstand als Wahlgrundlage)
 start <- as.Date("2021-06-30") # Bundestagswahl 2021
