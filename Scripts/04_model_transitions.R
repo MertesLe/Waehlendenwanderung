@@ -8,7 +8,14 @@ source("paths.R", encoding = "UTF-8")
 ensure_data_dirs()
 
 transitions <- readRDS(file.path(data_dir_model_nslphom, "vorlaeufig_transition_matrices_long.rds"))
-struktur <- readRDS(file.path(data_dir_cleaned, "vorlaeufig_inkar_agg_delta.rds"))
+struktur <- readRDS(file.path(data_dir_cleaned, "vorlaeufig_inkar_kovariaten_2023.rds"))
+
+struktur_covariates <- c(
+  "arbeitslosigkeit_2023",
+  "auslaenderanteil_2023",
+  "kaufkraft_2023"
+)
+struktur_covariates_z <- paste0(struktur_covariates, "_z")
 
 afd_source_summary <- transitions %>%
   filter(to == "AfD") %>%
@@ -45,18 +52,18 @@ model_data <- transitions %>%
     by = "agg_schluessel"
   ) %>%
   filter(
-    !is.na(delta_arbeitslosigkeit),
-    !is.na(delta_auslaenderanteil),
-    !is.na(delta_kaufkraft),
+    !is.na(arbeitslosigkeit_2023),
+    !is.na(auslaenderanteil_2023),
+    !is.na(kaufkraft_2023),
     origin_count > 0,
     destination_count > 0
   ) %>%
   mutate(
     afd_2025_source_share = estimated_transition_count / destination_count,
     afd_inflow_label = paste0(from, "_to_AfD"),
-    delta_arbeitslosigkeit_z = as.numeric(scale(delta_arbeitslosigkeit)),
-    delta_auslaenderanteil_z = as.numeric(scale(delta_auslaenderanteil)),
-    delta_kaufkraft_z = as.numeric(scale(delta_kaufkraft))
+    arbeitslosigkeit_2023_z = as.numeric(scale(arbeitslosigkeit_2023)),
+    auslaenderanteil_2023_z = as.numeric(scale(auslaenderanteil_2023)),
+    kaufkraft_2023_z = as.numeric(scale(kaufkraft_2023))
   )
 
 fit_one_model <- function(data, response_col, weight_col) {
@@ -76,11 +83,7 @@ fit_one_model <- function(data, response_col, weight_col) {
 
   fit <- lm(
     stats::reformulate(
-      c(
-        "delta_arbeitslosigkeit_z",
-        "delta_auslaenderanteil_z",
-        "delta_kaufkraft_z"
-      ),
+      struktur_covariates_z,
       response = response_col
     ),
     data = data,
@@ -156,15 +159,15 @@ legacy_model_data <- transitions %>%
     by = "agg_schluessel"
   ) %>%
   filter(
-    !is.na(delta_arbeitslosigkeit),
-    !is.na(delta_auslaenderanteil),
-    !is.na(delta_kaufkraft),
+    !is.na(arbeitslosigkeit_2023),
+    !is.na(auslaenderanteil_2023),
+    !is.na(kaufkraft_2023),
     origin_count > 0
   ) %>%
   mutate(
-    delta_arbeitslosigkeit_z = as.numeric(scale(delta_arbeitslosigkeit)),
-    delta_auslaenderanteil_z = as.numeric(scale(delta_auslaenderanteil)),
-    delta_kaufkraft_z = as.numeric(scale(delta_kaufkraft))
+    arbeitslosigkeit_2023_z = as.numeric(scale(arbeitslosigkeit_2023)),
+    auslaenderanteil_2023_z = as.numeric(scale(auslaenderanteil_2023)),
+    kaufkraft_2023_z = as.numeric(scale(kaufkraft_2023))
   )
 
 legacy_model_coefficients <- legacy_model_data %>%

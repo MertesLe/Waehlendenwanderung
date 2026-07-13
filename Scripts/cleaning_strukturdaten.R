@@ -15,6 +15,7 @@ inkar_metadata_csv <- file.path(data_dir_intermediate, "vorlaeufig_inkar_basis_m
 legacy_basis_rds <- file.path(data_dir_cleaned, "vorlaeufig_inkar_workflow_rohdaten.rds")
 legacy_metadata_rds <- file.path(data_dir_cleaned, "vorlaeufig_inkar_workflow_metadata.rds")
 force_rebuild <- isTRUE(getOption("waehlendenwanderung.inkar_basis_rebuild", FALSE))
+struktur_jahr <- as.integer(getOption("waehlendenwanderung.inkar_struktur_jahr", 2023L))
 
 workflow_kuerzel <- c(
   "xbev",
@@ -67,14 +68,18 @@ read_selected_inkar <- function(path, kuerzel) {
   )[Kuerzel %in% kuerzel]
 }
 
-if (!force_rebuild && file.exists(inkar_basis_rds) && file.exists(inkar_metadata_rds)) {
-  message("INKAR-Basisdaten sind bereits vorhanden: ", inkar_basis_rds)
-} else if (!force_rebuild && file.exists(legacy_basis_rds) && file.exists(legacy_metadata_rds)) {
-  message("Migriere vorhandene INKAR-Basisdaten nach ", data_dir_intermediate, ".")
+make_metadata <- function() {
+  data.table(
+    struktur_jahr = struktur_jahr,
+    hinweis = paste(
+      "Fuer den Regressionsworkflow werden INKAR-Strukturmerkmale als",
+      "Niveauwerte des Jahres", struktur_jahr,
+      "verwendet; es werden keine Veraenderungen zwischen Wahljahren gebildet."
+    )
+  )
+}
 
-  inkar_workflow <- readRDS(legacy_basis_rds)
-  metadata <- readRDS(legacy_metadata_rds)
-
+write_inkar_basis <- function(inkar_workflow, metadata) {
   saveRDS(inkar_workflow, inkar_basis_rds)
   saveRDS(metadata, inkar_metadata_rds)
 
@@ -86,6 +91,56 @@ if (!force_rebuild && file.exists(inkar_basis_rds) && file.exists(inkar_metadata
     metadata,
     inkar_metadata_csv
   )
+}
+
+cache_is_current <- function() {
+  if (!file.exists(inkar_basis_rds) || !file.exists(inkar_metadata_rds)) {
+    return(FALSE)
+  }
+
+  metadata <- readRDS(inkar_metadata_rds)
+
+  if (!"struktur_jahr" %in% names(metadata)) {
+    return(FALSE)
+  }
+
+  inkar_workflow <- readRDS(inkar_basis_rds)
+
+  isTRUE(metadata$struktur_jahr[[1]] == struktur_jahr) &&
+    identical(sort(unique(inkar_workflow[["Zeitbezug"]])), struktur_jahr)
+}
+
+load_existing_basis <- function() {
+  if (file.exists(inkar_basis_rds)) {
+    return(readRDS(inkar_basis_rds))
+  }
+
+  if (file.exists(legacy_basis_rds)) {
+    return(readRDS(legacy_basis_rds))
+  }
+
+  NULL
+}
+
+if (!force_rebuild && cache_is_current()) {
+  message("INKAR-Basisdaten sind bereits vorhanden: ", inkar_basis_rds)
+} else if (!force_rebuild && !is.null(load_existing_basis())) {
+  message("Aktualisiere vorhandene INKAR-Basisdaten auf Strukturjahr ", struktur_jahr, ".")
+
+  inkar_workflow <- load_existing_basis()
+  inkar_workflow <- inkar_workflow[Zeitbezug == struktur_jahr]
+
+  if (nrow(inkar_workflow) == 0) {
+    stop(
+      "Der vorhandene INKAR-Zwischenstand enthaelt keine Werte fuer ",
+      struktur_jahr,
+      ". Setze options(waehlendenwanderung.inkar_basis_rebuild = TRUE), ",
+      "um die Rohdaten neu einzulesen."
+    )
+  }
+
+  metadata <- make_metadata()
+  write_inkar_basis(inkar_workflow, metadata)
 } else {
   message("Lese INKAR-Rohdaten einmalig ein und speichere die kleine Basisdatei.")
 
@@ -108,37 +163,22 @@ if (!force_rebuild && file.exists(inkar_basis_rds) && file.exists(inkar_metadata
       )
   ]
 
-  jahr_vorwahl <- 2021L
-  jahr_nachwahl_proxy <- max(
-    inkar_workflow[Zeitbezug <= 2025, Zeitbezug],
-    na.rm = TRUE
-  )
-
   inkar_workflow <- inkar_workflow[
-    Zeitbezug %in% c(jahr_vorwahl, jahr_nachwahl_proxy)
+    Zeitbezug == struktur_jahr
   ]
 
-  metadata <- data.table(
-    jahr_vorwahl = jahr_vorwahl,
-    jahr_nachwahl_proxy = jahr_nachwahl_proxy,
-    hinweis = paste(
-      "INKAR 2025 enthaelt fuer diese Workflow-Indikatoren keine Werte fuer 2025;",
-      "als Naeherung fuer die Struktur zum Zeitpunkt der Wahl 2025 wird das",
-      "neueste verfuegbare Jahr bis 2025 verwendet."
+  if (nrow(inkar_workflow) == 0) {
+    stop(
+      "Die INKAR-Rohdaten enthalten fuer die ausgewaehlten Workflow-Indikatoren ",
+      "keine Werte fuer ",
+      struktur_jahr,
+      "."
     )
-  )
+  }
 
-  saveRDS(inkar_workflow, inkar_basis_rds)
-  saveRDS(metadata, inkar_metadata_rds)
+  metadata <- make_metadata()
 
-  fwrite(
-    inkar_workflow,
-    inkar_basis_csv
-  )
-  fwrite(
-    metadata,
-    inkar_metadata_csv
-  )
+  write_inkar_basis(inkar_workflow, metadata)
 }
 
 if (!exists("inkar_workflow")) {

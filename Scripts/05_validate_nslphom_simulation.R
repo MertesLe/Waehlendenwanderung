@@ -4,6 +4,8 @@ library(tidyr)
 source("paths.R", encoding = "UTF-8")
 
 ensure_data_dirs()
+validation_output_dir <- getOption("waehlendenwanderung.validation_output_dir", data_dir_validation)
+dir.create(validation_output_dir, recursive = TRUE, showWarnings = FALSE)
 
 if (!requireNamespace("lphom", quietly = TRUE)) {
   stop(
@@ -45,16 +47,19 @@ settings <- list(
   iter_max = getOption("waehlendenwanderung.validation_iter_max", 10L),
   electorate_min = getOption("waehlendenwanderung.validation_electorate_min", 350L),
   electorate_max = getOption("waehlendenwanderung.validation_electorate_max", 1800L),
+  covariate_year = getOption("waehlendenwanderung.validation_covariate_year", 2023L),
   progress_every = getOption("waehlendenwanderung.validation_progress_every", 50L)
 )
 
 # Zwei-Parteien-Simulation:
 # Zuerst wird das Wahlergebnis der ersten Wahl je Gebiet aus einer
-# Multinomialverteilung gezogen. Danach erzeugen bekannte logit-Modelle die
-# lokalen Uebergangswahrscheinlichkeiten A->A und B->A. Die Gegenwahrscheinlich-
-# keiten A->B und B->B ergeben sich daraus. Damit kennen wir die wahren lokalen
-# Matrizen und koennen pruefen, ob nslphom sie aus den aggregierten Randdaten
-# beider Wahlen wiederfindet.
+# Multinomialverteilung gezogen. Danach erzeugen bekannte logit-Modelle mit
+# statischen Strukturmerkmalen im Zwischenjahr 2023 die lokalen
+# Uebergangswahrscheinlichkeiten A->A und B->A. Es werden hier bewusst keine
+# Veraenderungswerte zwischen zwei Jahren simuliert. Die Gegenwahrscheinlichkeiten
+# A->B und B->B ergeben sich daraus. Damit kennen wir die wahren lokalen Matrizen
+# und koennen pruefen, ob nslphom sie aus den aggregierten Randdaten beider
+# Wahlen wiederfindet.
 origin_betas <- c(
   intercept = 0.10,
   x_binary = 0.65,
@@ -197,6 +202,7 @@ make_transition_long <- function(
     )
   ) %>%
     mutate(
+      covariate_year = settings$covariate_year,
       error_vs_true_probability = estimated_probability - true_probability,
       error_vs_realized_probability = estimated_probability - realized_probability,
       abs_error_vs_true_probability = abs(error_vs_true_probability),
@@ -450,21 +456,21 @@ settings_table <- tibble(
   value = vapply(settings, as.character, character(1))
 )
 
-saveRDS(local_errors, file.path(data_dir_validation, "vorlaeufig_nslphom_validation_local_errors.rds"))
-saveRDS(validation_summary, file.path(data_dir_validation, "vorlaeufig_nslphom_validation_summary.rds"))
-saveRDS(beta_estimates, file.path(data_dir_validation, "vorlaeufig_nslphom_validation_beta_estimates.rds"))
-saveRDS(beta_summary, file.path(data_dir_validation, "vorlaeufig_nslphom_validation_beta_summary.rds"))
-saveRDS(run_status, file.path(data_dir_validation, "vorlaeufig_nslphom_validation_run_status.rds"))
-saveRDS(settings_table, file.path(data_dir_validation, "vorlaeufig_nslphom_validation_settings.rds"))
-saveRDS(transition_betas, file.path(data_dir_validation, "vorlaeufig_nslphom_validation_true_betas.rds"))
+saveRDS(local_errors, file.path(validation_output_dir, "vorlaeufig_nslphom_validation_local_errors.rds"))
+saveRDS(validation_summary, file.path(validation_output_dir, "vorlaeufig_nslphom_validation_summary.rds"))
+saveRDS(beta_estimates, file.path(validation_output_dir, "vorlaeufig_nslphom_validation_beta_estimates.rds"))
+saveRDS(beta_summary, file.path(validation_output_dir, "vorlaeufig_nslphom_validation_beta_summary.rds"))
+saveRDS(run_status, file.path(validation_output_dir, "vorlaeufig_nslphom_validation_run_status.rds"))
+saveRDS(settings_table, file.path(validation_output_dir, "vorlaeufig_nslphom_validation_settings.rds"))
+saveRDS(transition_betas, file.path(validation_output_dir, "vorlaeufig_nslphom_validation_true_betas.rds"))
 
-write.csv(local_errors, file.path(data_dir_validation, "vorlaeufig_nslphom_validation_local_errors.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-write.csv(validation_summary, file.path(data_dir_validation, "vorlaeufig_nslphom_validation_summary.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-write.csv(beta_estimates, file.path(data_dir_validation, "vorlaeufig_nslphom_validation_beta_estimates.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-write.csv(beta_summary, file.path(data_dir_validation, "vorlaeufig_nslphom_validation_beta_summary.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-write.csv(run_status, file.path(data_dir_validation, "vorlaeufig_nslphom_validation_run_status.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-write.csv(settings_table, file.path(data_dir_validation, "vorlaeufig_nslphom_validation_settings.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-write.csv(transition_betas, file.path(data_dir_validation, "vorlaeufig_nslphom_validation_true_betas.csv"), row.names = FALSE, fileEncoding = "UTF-8")
+write.csv(local_errors, file.path(validation_output_dir, "vorlaeufig_nslphom_validation_local_errors.csv"), row.names = FALSE, fileEncoding = "UTF-8")
+write.csv(validation_summary, file.path(validation_output_dir, "vorlaeufig_nslphom_validation_summary.csv"), row.names = FALSE, fileEncoding = "UTF-8")
+write.csv(beta_estimates, file.path(validation_output_dir, "vorlaeufig_nslphom_validation_beta_estimates.csv"), row.names = FALSE, fileEncoding = "UTF-8")
+write.csv(beta_summary, file.path(validation_output_dir, "vorlaeufig_nslphom_validation_beta_summary.csv"), row.names = FALSE, fileEncoding = "UTF-8")
+write.csv(run_status, file.path(validation_output_dir, "vorlaeufig_nslphom_validation_run_status.csv"), row.names = FALSE, fileEncoding = "UTF-8")
+write.csv(settings_table, file.path(validation_output_dir, "vorlaeufig_nslphom_validation_settings.csv"), row.names = FALSE, fileEncoding = "UTF-8")
+write.csv(transition_betas, file.path(validation_output_dir, "vorlaeufig_nslphom_validation_true_betas.csv"), row.names = FALSE, fileEncoding = "UTF-8")
 
 # --- BEGIN Sensitivitaetschecks: andere Blockdefinitionen, Parteigruppierung und groessere Aggregationseinheiten ---
 sensitivity_settings <- list(
@@ -473,7 +479,8 @@ sensitivity_settings <- list(
   unit_order_block_size = getOption("waehlendenwanderung.sensitivity_unit_order_block_size", 20L),
   aggregation_group_size = getOption("waehlendenwanderung.sensitivity_aggregation_group_size", 2L),
   party_grouping_n_sim = getOption("waehlendenwanderung.sensitivity_party_grouping_n_sim", 50L),
-  party_grouping_n_units = getOption("waehlendenwanderung.sensitivity_party_grouping_n_units", settings$n_units)
+  party_grouping_n_units = getOption("waehlendenwanderung.sensitivity_party_grouping_n_units", settings$n_units),
+  covariate_year = settings$covariate_year
 )
 
 make_unit_data_from_local_errors <- function(data) {
@@ -1043,6 +1050,7 @@ sensitivity_local_errors <- bind_rows(
   three_party_sensitivity
 ) %>%
   mutate(
+    covariate_year = settings$covariate_year,
     error_vs_true_probability = estimated_probability - true_probability,
     error_vs_realized_probability = estimated_probability - realized_probability,
     abs_error_vs_true_probability = abs(error_vs_true_probability),
@@ -1060,15 +1068,15 @@ sensitivity_settings_table <- tibble(
   value = vapply(sensitivity_settings, as.character, character(1))
 )
 
-saveRDS(sensitivity_local_errors, file.path(data_dir_validation, "vorlaeufig_nslphom_sensitivity_local_errors.rds"))
-saveRDS(sensitivity_summary, file.path(data_dir_validation, "vorlaeufig_nslphom_sensitivity_summary.rds"))
-saveRDS(sensitivity_beta_estimates, file.path(data_dir_validation, "vorlaeufig_nslphom_sensitivity_beta_estimates.rds"))
-saveRDS(sensitivity_beta_summary, file.path(data_dir_validation, "vorlaeufig_nslphom_sensitivity_beta_summary.rds"))
-saveRDS(sensitivity_settings_table, file.path(data_dir_validation, "vorlaeufig_nslphom_sensitivity_settings.rds"))
+saveRDS(sensitivity_local_errors, file.path(validation_output_dir, "vorlaeufig_nslphom_sensitivity_local_errors.rds"))
+saveRDS(sensitivity_summary, file.path(validation_output_dir, "vorlaeufig_nslphom_sensitivity_summary.rds"))
+saveRDS(sensitivity_beta_estimates, file.path(validation_output_dir, "vorlaeufig_nslphom_sensitivity_beta_estimates.rds"))
+saveRDS(sensitivity_beta_summary, file.path(validation_output_dir, "vorlaeufig_nslphom_sensitivity_beta_summary.rds"))
+saveRDS(sensitivity_settings_table, file.path(validation_output_dir, "vorlaeufig_nslphom_sensitivity_settings.rds"))
 
-write.csv(sensitivity_local_errors, file.path(data_dir_validation, "vorlaeufig_nslphom_sensitivity_local_errors.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-write.csv(sensitivity_summary, file.path(data_dir_validation, "vorlaeufig_nslphom_sensitivity_summary.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-write.csv(sensitivity_beta_estimates, file.path(data_dir_validation, "vorlaeufig_nslphom_sensitivity_beta_estimates.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-write.csv(sensitivity_beta_summary, file.path(data_dir_validation, "vorlaeufig_nslphom_sensitivity_beta_summary.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-write.csv(sensitivity_settings_table, file.path(data_dir_validation, "vorlaeufig_nslphom_sensitivity_settings.csv"), row.names = FALSE, fileEncoding = "UTF-8")
+write.csv(sensitivity_local_errors, file.path(validation_output_dir, "vorlaeufig_nslphom_sensitivity_local_errors.csv"), row.names = FALSE, fileEncoding = "UTF-8")
+write.csv(sensitivity_summary, file.path(validation_output_dir, "vorlaeufig_nslphom_sensitivity_summary.csv"), row.names = FALSE, fileEncoding = "UTF-8")
+write.csv(sensitivity_beta_estimates, file.path(validation_output_dir, "vorlaeufig_nslphom_sensitivity_beta_estimates.csv"), row.names = FALSE, fileEncoding = "UTF-8")
+write.csv(sensitivity_beta_summary, file.path(validation_output_dir, "vorlaeufig_nslphom_sensitivity_beta_summary.csv"), row.names = FALSE, fileEncoding = "UTF-8")
+write.csv(sensitivity_settings_table, file.path(validation_output_dir, "vorlaeufig_nslphom_sensitivity_settings.csv"), row.names = FALSE, fileEncoding = "UTF-8")
 # --- END Sensitivitaetschecks: andere Blockdefinitionen, Parteigruppierung und groessere Aggregationseinheiten ---

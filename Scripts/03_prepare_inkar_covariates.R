@@ -30,6 +30,11 @@ weighted_mean_safe <- function(x, w) {
 
 inkar <- as_tibble(readRDS(inkar_basis_rds))
 metadata <- readRDS(inkar_metadata_rds)
+struktur_jahr <- if ("struktur_jahr" %in% names(metadata)) {
+  metadata$struktur_jahr[[1]]
+} else {
+  2023L
+}
 mapping_gemeinden <- readRDS(file.path(data_dir_cleaned, "mapping_gemeinden_final_manuell_validiert.rds"))
 all_aggs <- readRDS(file.path(data_dir_cleaned, "vorlaeufig_nslphom_input_2021.rds")) %>%
   select(agg_schluessel) %>%
@@ -136,30 +141,17 @@ agg_struktur_long <- mapping_gemeinden %>%
     .groups = "drop"
   )
 
-jahr_vorwahl <- metadata$jahr_vorwahl[[1]]
-jahr_nachwahl_proxy <- metadata$jahr_nachwahl_proxy[[1]]
-
 agg_struktur_wide_inner <- agg_struktur_long %>%
-  filter(jahr %in% c(jahr_vorwahl, jahr_nachwahl_proxy)) %>%
-  select(
+  filter(jahr == struktur_jahr) %>%
+  transmute(
     agg_schluessel,
-    jahr,
-    arbeitslosigkeit,
-    auslaenderanteil,
-    kaufkraft
-  ) %>%
-  pivot_wider(
-    names_from = jahr,
-    values_from = c(arbeitslosigkeit, auslaenderanteil, kaufkraft),
-    names_glue = "{.value}_{jahr}"
-  ) %>%
-  mutate(
-    delta_arbeitslosigkeit = .data[[paste0("arbeitslosigkeit_", jahr_nachwahl_proxy)]] -
-      .data[[paste0("arbeitslosigkeit_", jahr_vorwahl)]],
-    delta_auslaenderanteil = .data[[paste0("auslaenderanteil_", jahr_nachwahl_proxy)]] -
-      .data[[paste0("auslaenderanteil_", jahr_vorwahl)]],
-    delta_kaufkraft = .data[[paste0("kaufkraft_", jahr_nachwahl_proxy)]] -
-      .data[[paste0("kaufkraft_", jahr_vorwahl)]]
+    struktur_jahr = .env$struktur_jahr,
+    arbeitslosigkeit_2023 = arbeitslosigkeit,
+    auslaenderanteil_2023 = auslaenderanteil,
+    kaufkraft_2023 = kaufkraft,
+    gewicht_summe_2023 = gewicht_summe,
+    n_gemeinden_mapping,
+    n_gemeinden_mit_inkar
   ) %>%
   arrange(agg_schluessel)
 
@@ -172,26 +164,25 @@ agg_struktur_wide <- all_aggs %>%
 struktur_checks <- agg_struktur_wide %>%
   summarise(
     n_agg = n(),
-    n_missing_delta_arbeitslosigkeit = sum(is.na(delta_arbeitslosigkeit)),
-    n_missing_delta_auslaenderanteil = sum(is.na(delta_auslaenderanteil)),
-    n_missing_delta_kaufkraft = sum(is.na(delta_kaufkraft)),
-    jahr_vorwahl = jahr_vorwahl,
-    jahr_nachwahl_proxy = jahr_nachwahl_proxy
+    n_missing_arbeitslosigkeit_2023 = sum(is.na(arbeitslosigkeit_2023)),
+    n_missing_auslaenderanteil_2023 = sum(is.na(auslaenderanteil_2023)),
+    n_missing_kaufkraft_2023 = sum(is.na(kaufkraft_2023)),
+    struktur_jahr = .env$struktur_jahr
   )
 
 struktur_missing <- agg_struktur_wide %>%
   filter(
-    is.na(delta_arbeitslosigkeit) |
-      is.na(delta_auslaenderanteil) |
-      is.na(delta_kaufkraft)
+    is.na(arbeitslosigkeit_2023) |
+      is.na(auslaenderanteil_2023) |
+      is.na(kaufkraft_2023)
   )
 
 saveRDS(agg_struktur_long, file.path(data_dir_cleaned, "vorlaeufig_inkar_agg_long.rds"))
-saveRDS(agg_struktur_wide, file.path(data_dir_cleaned, "vorlaeufig_inkar_agg_delta.rds"))
+saveRDS(agg_struktur_wide, file.path(data_dir_cleaned, "vorlaeufig_inkar_kovariaten_2023.rds"))
 saveRDS(struktur_checks, file.path(data_dir_validation, "vorlaeufig_inkar_agg_checks.rds"))
 saveRDS(struktur_missing, file.path(data_dir_validation, "vorlaeufig_inkar_agg_missing.rds"))
 
 write.csv(agg_struktur_long, file.path(data_dir_cleaned, "vorlaeufig_inkar_agg_long.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-write.csv(agg_struktur_wide, file.path(data_dir_cleaned, "vorlaeufig_inkar_agg_delta.csv"), row.names = FALSE, fileEncoding = "UTF-8")
+write.csv(agg_struktur_wide, file.path(data_dir_cleaned, "vorlaeufig_inkar_kovariaten_2023.csv"), row.names = FALSE, fileEncoding = "UTF-8")
 write.csv(struktur_checks, file.path(data_dir_validation, "vorlaeufig_inkar_agg_checks.csv"), row.names = FALSE, fileEncoding = "UTF-8")
 write.csv(struktur_missing, file.path(data_dir_validation, "vorlaeufig_inkar_agg_missing.csv"), row.names = FALSE, fileEncoding = "UTF-8")
