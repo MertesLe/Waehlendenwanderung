@@ -2,7 +2,9 @@ library(dplyr)
 library(tidyr)
 library(stringr)
 
-dir.create("Data/cleaned", recursive = TRUE, showWarnings = FALSE)
+source("paths.R", encoding = "UTF-8")
+
+ensure_data_dirs()
 
 get_agg_col <- function(data) {
   grep("^agg\\.", names(data), value = TRUE)[1]
@@ -218,8 +220,8 @@ prepare_vote_year <- function(data, jahr, threshold = 0.05, keep_parties = NULL)
   )
 }
 
-wahldaten2021 <- readRDS("Data/cleaned/wahldaten2021_gemappt.rds")
-wahldaten2025 <- readRDS("Data/cleaned/wahldaten2025_gemappt.rds")
+wahldaten2021 <- readRDS(file.path(data_dir_cleaned, "wahldaten2021_gemappt.rds"))
+wahldaten2025 <- readRDS(file.path(data_dir_cleaned, "wahldaten2025_gemappt.rds"))
 
 initial2021 <- prepare_vote_year(wahldaten2021, 2021)
 initial2025 <- prepare_vote_year(wahldaten2025, 2025)
@@ -246,14 +248,14 @@ stopifnot(all(abs(prepared2025$check$differenz_input_zu_referenz) < 1e-8))
 stopifnot(all(abs(prepared2021$check$differenz_stimmen_zu_waehlenden) < 1e-8))
 stopifnot(all(abs(prepared2025$check$differenz_stimmen_zu_waehlenden) < 1e-8))
 
-saveRDS(prepared2021$wide, "Data/cleaned/vorlaeufig_nslphom_input_2021.rds")
-saveRDS(prepared2025$wide, "Data/cleaned/vorlaeufig_nslphom_input_2025.rds")
-saveRDS(bind_rows(prepared2021$long, prepared2025$long), "Data/cleaned/vorlaeufig_nslphom_input_long.rds")
-saveRDS(bind_rows(prepared2021$national, prepared2025$national), "Data/cleaned/vorlaeufig_partei_schwellenwerte.rds")
-saveRDS(bind_rows(prepared2021$check, prepared2025$check), "Data/cleaned/vorlaeufig_nslphom_input_checks.rds")
+saveRDS(prepared2021$wide, file.path(data_dir_cleaned, "vorlaeufig_nslphom_input_2021.rds"))
+saveRDS(prepared2025$wide, file.path(data_dir_cleaned, "vorlaeufig_nslphom_input_2025.rds"))
+saveRDS(bind_rows(prepared2021$long, prepared2025$long), file.path(data_dir_cleaned, "vorlaeufig_nslphom_input_long.rds"))
+saveRDS(bind_rows(prepared2021$national, prepared2025$national), file.path(data_dir_cleaned, "vorlaeufig_partei_schwellenwerte.rds"))
+saveRDS(bind_rows(prepared2021$check, prepared2025$check), file.path(data_dir_validation, "vorlaeufig_nslphom_input_checks.rds"))
 
-write.csv(prepared2021$wide, "Data/cleaned/vorlaeufig_nslphom_input_2021.csv", row.names = FALSE, fileEncoding = "UTF-8")
-write.csv(prepared2025$wide, "Data/cleaned/vorlaeufig_nslphom_input_2025.csv", row.names = FALSE, fileEncoding = "UTF-8")
-write.csv(bind_rows(prepared2021$long, prepared2025$long), "Data/cleaned/vorlaeufig_nslphom_input_long.csv", row.names = FALSE, fileEncoding = "UTF-8")
-write.csv(bind_rows(prepared2021$national, prepared2025$national), "Data/cleaned/vorlaeufig_partei_schwellenwerte.csv", row.names = FALSE, fileEncoding = "UTF-8")
-write.csv(bind_rows(prepared2021$check, prepared2025$check), "Data/cleaned/vorlaeufig_nslphom_input_checks.csv", row.names = FALSE, fileEncoding = "UTF-8")
+write.csv(prepared2021$wide, file.path(data_dir_cleaned, "vorlaeufig_nslphom_input_2021.csv"), row.names = FALSE, fileEncoding = "UTF-8")
+write.csv(prepared2025$wide, file.path(data_dir_cleaned, "vorlaeufig_nslphom_input_2025.csv"), row.names = FALSE, fileEncoding = "UTF-8")
+write.csv(bind_rows(prepared2021$long, prepared2025$long), file.path(data_dir_cleaned, "vorlaeufig_nslphom_input_long.csv"), row.names = FALSE, fileEncoding = "UTF-8")
+write.csv(bind_rows(prepared2021$national, prepared2025$national), file.path(data_dir_cleaned, "vorlaeufig_partei_schwellenwerte.csv"), row.names = FALSE, fileEncoding = "UTF-8")
+write.csv(bind_rows(prepared2021$check, prepared2025$check), file.path(data_dir_validation, "vorlaeufig_nslphom_input_checks.csv"), row.names = FALSE, fileEncoding = "UTF-8")

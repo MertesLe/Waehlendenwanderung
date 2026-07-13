@@ -3,6 +3,9 @@ library(stringr)
 library(tidyr)
 
 source("functions.R", encoding = "UTF-8")
+source("paths.R", encoding = "UTF-8")
+
+ensure_data_dirs()
 
 data2025 <- read.csv("Data//raw//btw25_wbz//btw25_wbz_ergebnisse.csv", header = TRUE, sep = ";", skip = 4)
 data2021 <- read.csv("Data//raw//btw21_wbz//btw21_wbz_ergebnisse.csv", header = TRUE, sep = ";")
@@ -512,7 +515,7 @@ data25_clean <- data2025
 
 
 ## Aggregation anpassen
-mapping_gebietsaenderungen_pfad <- "Data/cleaned/mapping_gebietsaenderungen.rds"
+mapping_gebietsaenderungen_pfad <- file.path(data_dir_cleaned, "mapping_gebietsaenderungen.rds")
 
 if (!file.exists(mapping_gebietsaenderungen_pfad)) {
   source("Scripts/mapping_gebiete.R", encoding = "UTF-8")
@@ -960,22 +963,21 @@ mapping_gemeinden_final_check <- mapping_gemeinden_final %>%
 
 stopifnot(nrow(mapping_gemeinden_final_check) == 0)
 
-dir.create("Data/cleaned", recursive = TRUE, showWarnings = FALSE)
 saveRDS(
   mapping_wahldaten_final,
-  file = "Data/cleaned/mapping_wahldaten_final_manuell_validiert.rds"
+  file = file.path(data_dir_cleaned, "mapping_wahldaten_final_manuell_validiert.rds")
 )
 saveRDS(
   mapping_gemeinden_final,
-  file = "Data/cleaned/mapping_gemeinden_final_manuell_validiert.rds"
+  file = file.path(data_dir_cleaned, "mapping_gemeinden_final_manuell_validiert.rds")
 )
 saveRDS(
   textausweisungen_namensdiagnose,
-  file = "Data/cleaned/textausweisungen_namensdiagnose.rds"
+  file = file.path(data_dir_validation, "textausweisungen_namensdiagnose.rds")
 )
 saveRDS(
   textausweisungen_inkonsistenzen,
-  file = "Data/cleaned/textausweisungen_inkonsistenzen.rds"
+  file = file.path(data_dir_validation, "textausweisungen_inkonsistenzen.rds")
 )
 
 
@@ -1209,21 +1211,21 @@ hist(
 # Bundestagswahl 2025 abspeichern
 saveRDS(
   wahldaten2025,
-  file = "Data/cleaned/wahldaten2025_gemappt.rds"
+  file = file.path(data_dir_cleaned, "wahldaten2025_gemappt.rds")
 )
 
 # Mapping speichern
 saveRDS(
   mapping_wahldaten_final,
-  file = "Data/cleaned/mapping_wahldaten_final_manuell_validiert.rds"
+  file = file.path(data_dir_cleaned, "mapping_wahldaten_final_manuell_validiert.rds")
 )
 saveRDS(
   mapping_gemeinden_final,
-  file = "Data/cleaned/mapping_gemeinden_final_manuell_validiert.rds"
+  file = file.path(data_dir_cleaned, "mapping_gemeinden_final_manuell_validiert.rds")
 )
 
 # Abspeichern Bundestagswahl 2021
 saveRDS(
   wahldaten2021,
-  file = "Data/cleaned/wahldaten2021_gemappt.rds"
+  file = file.path(data_dir_cleaned, "wahldaten2021_gemappt.rds")
 )

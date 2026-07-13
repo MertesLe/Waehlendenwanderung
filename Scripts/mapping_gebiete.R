@@ -5,6 +5,9 @@ library(tidyr)
 library(purrr)
 
 source("functions.R", encoding = "UTF-8")
+source("paths.R", encoding = "UTF-8")
+
+ensure_data_dirs()
 
 pfad <- "Data/raw/gebietsänderungen"
 
@@ -128,8 +131,7 @@ mapping_gebietsänderungen <- agg %>%
   ) %>%
   arrange(Gemeindeschlüssel)
 
-dir.create("Data/cleaned", recursive = TRUE, showWarnings = FALSE)
 saveRDS(
   mapping_gebietsänderungen,
-  file = "Data/cleaned/mapping_gebietsaenderungen.rds"
+  file = file.path(data_dir_cleaned, "mapping_gebietsaenderungen.rds")
 )

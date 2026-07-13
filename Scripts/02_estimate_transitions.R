@@ -1,7 +1,9 @@
 library(dplyr)
 library(tidyr)
 
-dir.create("Data/cleaned", recursive = TRUE, showWarnings = FALSE)
+source("paths.R", encoding = "UTF-8")
+
+ensure_data_dirs()
 
 if (!requireNamespace("lphom", quietly = TRUE)) {
   stop(
@@ -247,9 +249,9 @@ fit_block <- function(block_id, block_index, input2021, input2025) {
   )
 }
 
-input2021 <- readRDS("Data/cleaned/vorlaeufig_nslphom_input_2021.rds") %>%
+input2021 <- readRDS(file.path(data_dir_cleaned, "vorlaeufig_nslphom_input_2021.rds")) %>%
   arrange(agg_schluessel)
-input2025 <- readRDS("Data/cleaned/vorlaeufig_nslphom_input_2025.rds") %>%
+input2025 <- readRDS(file.path(data_dir_cleaned, "vorlaeufig_nslphom_input_2025.rds")) %>%
   arrange(agg_schluessel)
 
 stopifnot(identical(input2021$agg_schluessel, input2025$agg_schluessel))
@@ -315,11 +317,11 @@ transition_wide <- transition_long %>%
 checks <- nslphom_fit$checks %>%
   arrange(nslphom_block)
 
-saveRDS(nslphom_fit, "Data/cleaned/vorlaeufig_nslphom_fit.rds")
-saveRDS(transition_long, "Data/cleaned/vorlaeufig_transition_matrices_long.rds")
-saveRDS(transition_wide, "Data/cleaned/vorlaeufig_transition_matrices_wide.rds")
-saveRDS(checks, "Data/cleaned/vorlaeufig_transition_checks.rds")
+saveRDS(nslphom_fit, file.path(data_dir_model_nslphom, "vorlaeufig_nslphom_fit.rds"))
+saveRDS(transition_long, file.path(data_dir_model_nslphom, "vorlaeufig_transition_matrices_long.rds"))
+saveRDS(transition_wide, file.path(data_dir_model_nslphom, "vorlaeufig_transition_matrices_wide.rds"))
+saveRDS(checks, file.path(data_dir_model_nslphom, "vorlaeufig_transition_checks.rds"))
 
-write.csv(transition_long, "Data/cleaned/vorlaeufig_transition_matrices_long.csv", row.names = FALSE, fileEncoding = "UTF-8")
-write.csv(transition_wide, "Data/cleaned/vorlaeufig_transition_matrices_wide.csv", row.names = FALSE, fileEncoding = "UTF-8")
-write.csv(checks, "Data/cleaned/vorlaeufig_transition_checks.csv", row.names = FALSE, fileEncoding = "UTF-8")
+write.csv(transition_long, file.path(data_dir_model_nslphom, "vorlaeufig_transition_matrices_long.csv"), row.names = FALSE, fileEncoding = "UTF-8")
+write.csv(transition_wide, file.path(data_dir_model_nslphom, "vorlaeufig_transition_matrices_wide.csv"), row.names = FALSE, fileEncoding = "UTF-8")
+write.csv(checks, file.path(data_dir_model_nslphom, "vorlaeufig_transition_checks.csv"), row.names = FALSE, fileEncoding = "UTF-8")

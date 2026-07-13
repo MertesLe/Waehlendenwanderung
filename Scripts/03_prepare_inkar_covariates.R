@@ -3,10 +3,14 @@ library(dplyr)
 library(tidyr)
 
 source("functions.R", encoding = "UTF-8")
+source("paths.R", encoding = "UTF-8")
 
-dir.create("Data/cleaned", recursive = TRUE, showWarnings = FALSE)
+ensure_data_dirs()
 
-if (!file.exists("Data/cleaned/vorlaeufig_inkar_workflow_rohdaten.rds")) {
+inkar_basis_rds <- file.path(data_dir_intermediate, "vorlaeufig_inkar_basis_gemeinden_kreise.rds")
+inkar_metadata_rds <- file.path(data_dir_intermediate, "vorlaeufig_inkar_basis_metadata.rds")
+
+if (!file.exists(inkar_basis_rds) || !file.exists(inkar_metadata_rds)) {
   source("Scripts/cleaning_strukturdaten.R", encoding = "UTF-8")
 }
 
@@ -24,10 +28,10 @@ weighted_mean_safe <- function(x, w) {
   sum(x[ok] * w[ok]) / sum(w[ok])
 }
 
-inkar <- as_tibble(readRDS("Data/cleaned/vorlaeufig_inkar_workflow_rohdaten.rds"))
-metadata <- readRDS("Data/cleaned/vorlaeufig_inkar_workflow_metadata.rds")
-mapping_gemeinden <- readRDS("Data/cleaned/mapping_gemeinden_final_manuell_validiert.rds")
-all_aggs <- readRDS("Data/cleaned/vorlaeufig_nslphom_input_2021.rds") %>%
+inkar <- as_tibble(readRDS(inkar_basis_rds))
+metadata <- readRDS(inkar_metadata_rds)
+mapping_gemeinden <- readRDS(file.path(data_dir_cleaned, "mapping_gemeinden_final_manuell_validiert.rds"))
+all_aggs <- readRDS(file.path(data_dir_cleaned, "vorlaeufig_nslphom_input_2021.rds")) %>%
   select(agg_schluessel) %>%
   distinct() %>%
   arrange(agg_schluessel)
@@ -182,12 +186,12 @@ struktur_missing <- agg_struktur_wide %>%
       is.na(delta_kaufkraft)
   )
 
-saveRDS(agg_struktur_long, "Data/cleaned/vorlaeufig_inkar_agg_long.rds")
-saveRDS(agg_struktur_wide, "Data/cleaned/vorlaeufig_inkar_agg_delta.rds")
-saveRDS(struktur_checks, "Data/cleaned/vorlaeufig_inkar_agg_checks.rds")
-saveRDS(struktur_missing, "Data/cleaned/vorlaeufig_inkar_agg_missing.rds")
+saveRDS(agg_struktur_long, file.path(data_dir_cleaned, "vorlaeufig_inkar_agg_long.rds"))
+saveRDS(agg_struktur_wide, file.path(data_dir_cleaned, "vorlaeufig_inkar_agg_delta.rds"))
+saveRDS(struktur_checks, file.path(data_dir_validation, "vorlaeufig_inkar_agg_checks.rds"))
+saveRDS(struktur_missing, file.path(data_dir_validation, "vorlaeufig_inkar_agg_missing.rds"))
 
-write.csv(agg_struktur_long, "Data/cleaned/vorlaeufig_inkar_agg_long.csv", row.names = FALSE, fileEncoding = "UTF-8")
-write.csv(agg_struktur_wide, "Data/cleaned/vorlaeufig_inkar_agg_delta.csv", row.names = FALSE, fileEncoding = "UTF-8")
-write.csv(struktur_checks, "Data/cleaned/vorlaeufig_inkar_agg_checks.csv", row.names = FALSE, fileEncoding = "UTF-8")
-write.csv(struktur_missing, "Data/cleaned/vorlaeufig_inkar_agg_missing.csv", row.names = FALSE, fileEncoding = "UTF-8")
+write.csv(agg_struktur_long, file.path(data_dir_cleaned, "vorlaeufig_inkar_agg_long.csv"), row.names = FALSE, fileEncoding = "UTF-8")
+write.csv(agg_struktur_wide, file.path(data_dir_cleaned, "vorlaeufig_inkar_agg_delta.csv"), row.names = FALSE, fileEncoding = "UTF-8")
+write.csv(struktur_checks, file.path(data_dir_validation, "vorlaeufig_inkar_agg_checks.csv"), row.names = FALSE, fileEncoding = "UTF-8")
+write.csv(struktur_missing, file.path(data_dir_validation, "vorlaeufig_inkar_agg_missing.csv"), row.names = FALSE, fileEncoding = "UTF-8")
