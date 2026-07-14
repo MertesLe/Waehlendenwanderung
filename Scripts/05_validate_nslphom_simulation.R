@@ -274,6 +274,44 @@ summarise_local_errors <- function(local_errors) {
     )
 }
 
+calculate_estimation_error <- function(data) {
+  data %>%
+    filter(
+      !failed,
+      !is.na(true_transition_count),
+      !is.na(estimated_transition_count)
+    ) %>%
+    group_by(
+      sim_id,
+      unit_id
+    ) %>%
+    summarise(
+      total_true_count = sum(true_transition_count, na.rm = TRUE),
+      total_estimated_count = sum(estimated_transition_count, na.rm = TRUE),
+      absolute_joint_count_error = sum(
+        abs(true_transition_count - estimated_transition_count),
+        na.rm = TRUE
+      ),
+      estimation_error = 100 * 0.5 * absolute_joint_count_error / total_true_count,
+      .groups = "drop"
+    )
+}
+
+summarise_estimation_error <- function(estimation_error) {
+  estimation_error %>%
+    summarise(
+      n_sim = n_distinct(sim_id),
+      n_units = n(),
+      mean_ei = mean(estimation_error, na.rm = TRUE),
+      median_ei = median(estimation_error, na.rm = TRUE),
+      p90_ei = as.numeric(stats::quantile(estimation_error, 0.90, na.rm = TRUE)),
+      p95_ei = as.numeric(stats::quantile(estimation_error, 0.95, na.rm = TRUE)),
+      max_ei = max(estimation_error, na.rm = TRUE),
+      mean_total_true_count = mean(total_true_count, na.rm = TRUE),
+      .groups = "drop"
+    )
+}
+
 summarise_beta_recovery <- function(beta_estimates) {
   beta_estimates %>%
     left_join(
@@ -446,6 +484,8 @@ local_errors <- bind_rows(lapply(simulation_results, `[[`, "local_errors"))
 beta_estimates <- bind_rows(lapply(simulation_results, `[[`, "beta_estimates"))
 run_status <- bind_rows(lapply(simulation_results, `[[`, "run_status"))
 validation_summary <- summarise_local_errors(local_errors)
+estimation_error <- calculate_estimation_error(local_errors)
+estimation_error_summary <- summarise_estimation_error(estimation_error)
 beta_summary <- summarise_beta_recovery(
   beta_estimates %>%
     filter(!failed)
@@ -458,6 +498,8 @@ settings_table <- tibble(
 
 saveRDS(local_errors, file.path(validation_output_dir, "vorlaeufig_nslphom_validation_local_errors.rds"))
 saveRDS(validation_summary, file.path(validation_output_dir, "vorlaeufig_nslphom_validation_summary.rds"))
+saveRDS(estimation_error, file.path(validation_output_dir, "vorlaeufig_nslphom_validation_ei_unit.rds"))
+saveRDS(estimation_error_summary, file.path(validation_output_dir, "vorlaeufig_nslphom_validation_ei_summary.rds"))
 saveRDS(beta_estimates, file.path(validation_output_dir, "vorlaeufig_nslphom_validation_beta_estimates.rds"))
 saveRDS(beta_summary, file.path(validation_output_dir, "vorlaeufig_nslphom_validation_beta_summary.rds"))
 saveRDS(run_status, file.path(validation_output_dir, "vorlaeufig_nslphom_validation_run_status.rds"))
@@ -466,6 +508,8 @@ saveRDS(transition_betas, file.path(validation_output_dir, "vorlaeufig_nslphom_v
 
 write.csv(local_errors, file.path(validation_output_dir, "vorlaeufig_nslphom_validation_local_errors.csv"), row.names = FALSE, fileEncoding = "UTF-8")
 write.csv(validation_summary, file.path(validation_output_dir, "vorlaeufig_nslphom_validation_summary.csv"), row.names = FALSE, fileEncoding = "UTF-8")
+write.csv(estimation_error, file.path(validation_output_dir, "vorlaeufig_nslphom_validation_ei_unit.csv"), row.names = FALSE, fileEncoding = "UTF-8")
+write.csv(estimation_error_summary, file.path(validation_output_dir, "vorlaeufig_nslphom_validation_ei_summary.csv"), row.names = FALSE, fileEncoding = "UTF-8")
 write.csv(beta_estimates, file.path(validation_output_dir, "vorlaeufig_nslphom_validation_beta_estimates.csv"), row.names = FALSE, fileEncoding = "UTF-8")
 write.csv(beta_summary, file.path(validation_output_dir, "vorlaeufig_nslphom_validation_beta_summary.csv"), row.names = FALSE, fileEncoding = "UTF-8")
 write.csv(run_status, file.path(validation_output_dir, "vorlaeufig_nslphom_validation_run_status.csv"), row.names = FALSE, fileEncoding = "UTF-8")
@@ -753,6 +797,50 @@ summarise_sensitivity_errors <- function(data) {
       mae_vs_realized_probability = mean(abs_error_vs_realized_probability, na.rm = TRUE),
       rmse_vs_realized_probability = sqrt(mean(error_vs_realized_probability^2, na.rm = TRUE)),
       cor_vs_realized_probability = safe_cor(estimated_probability, realized_probability),
+      .groups = "drop"
+    )
+}
+
+calculate_sensitivity_estimation_error <- function(data) {
+  data %>%
+    filter(
+      !failed,
+      !is.na(true_transition_count),
+      !is.na(estimated_transition_count)
+    ) %>%
+    group_by(
+      sensitivity_type,
+      variant,
+      sim_id,
+      unit_id
+    ) %>%
+    summarise(
+      total_true_count = sum(true_transition_count, na.rm = TRUE),
+      total_estimated_count = sum(estimated_transition_count, na.rm = TRUE),
+      absolute_joint_count_error = sum(
+        abs(true_transition_count - estimated_transition_count),
+        na.rm = TRUE
+      ),
+      estimation_error = 100 * 0.5 * absolute_joint_count_error / total_true_count,
+      .groups = "drop"
+    )
+}
+
+summarise_sensitivity_estimation_error <- function(estimation_error) {
+  estimation_error %>%
+    group_by(
+      sensitivity_type,
+      variant
+    ) %>%
+    summarise(
+      n_sim = n_distinct(sim_id),
+      n_units = n(),
+      mean_ei = mean(estimation_error, na.rm = TRUE),
+      median_ei = median(estimation_error, na.rm = TRUE),
+      p90_ei = as.numeric(stats::quantile(estimation_error, 0.90, na.rm = TRUE)),
+      p95_ei = as.numeric(stats::quantile(estimation_error, 0.95, na.rm = TRUE)),
+      max_ei = max(estimation_error, na.rm = TRUE),
+      mean_total_true_count = mean(total_true_count, na.rm = TRUE),
       .groups = "drop"
     )
 }
@@ -1058,6 +1146,8 @@ sensitivity_local_errors <- bind_rows(
   )
 
 sensitivity_summary <- summarise_sensitivity_errors(sensitivity_local_errors)
+sensitivity_estimation_error <- calculate_sensitivity_estimation_error(sensitivity_local_errors)
+sensitivity_estimation_error_summary <- summarise_sensitivity_estimation_error(sensitivity_estimation_error)
 sensitivity_beta_estimates <- estimate_sensitivity_betas(
   two_party_sensitivity %>%
     filter(sensitivity_type %in% c("block_definition", "aggregation_level"))
@@ -1070,12 +1160,16 @@ sensitivity_settings_table <- tibble(
 
 saveRDS(sensitivity_local_errors, file.path(validation_output_dir, "vorlaeufig_nslphom_sensitivity_local_errors.rds"))
 saveRDS(sensitivity_summary, file.path(validation_output_dir, "vorlaeufig_nslphom_sensitivity_summary.rds"))
+saveRDS(sensitivity_estimation_error, file.path(validation_output_dir, "vorlaeufig_nslphom_sensitivity_ei_unit.rds"))
+saveRDS(sensitivity_estimation_error_summary, file.path(validation_output_dir, "vorlaeufig_nslphom_sensitivity_ei_summary.rds"))
 saveRDS(sensitivity_beta_estimates, file.path(validation_output_dir, "vorlaeufig_nslphom_sensitivity_beta_estimates.rds"))
 saveRDS(sensitivity_beta_summary, file.path(validation_output_dir, "vorlaeufig_nslphom_sensitivity_beta_summary.rds"))
 saveRDS(sensitivity_settings_table, file.path(validation_output_dir, "vorlaeufig_nslphom_sensitivity_settings.rds"))
 
 write.csv(sensitivity_local_errors, file.path(validation_output_dir, "vorlaeufig_nslphom_sensitivity_local_errors.csv"), row.names = FALSE, fileEncoding = "UTF-8")
 write.csv(sensitivity_summary, file.path(validation_output_dir, "vorlaeufig_nslphom_sensitivity_summary.csv"), row.names = FALSE, fileEncoding = "UTF-8")
+write.csv(sensitivity_estimation_error, file.path(validation_output_dir, "vorlaeufig_nslphom_sensitivity_ei_unit.csv"), row.names = FALSE, fileEncoding = "UTF-8")
+write.csv(sensitivity_estimation_error_summary, file.path(validation_output_dir, "vorlaeufig_nslphom_sensitivity_ei_summary.csv"), row.names = FALSE, fileEncoding = "UTF-8")
 write.csv(sensitivity_beta_estimates, file.path(validation_output_dir, "vorlaeufig_nslphom_sensitivity_beta_estimates.csv"), row.names = FALSE, fileEncoding = "UTF-8")
 write.csv(sensitivity_beta_summary, file.path(validation_output_dir, "vorlaeufig_nslphom_sensitivity_beta_summary.csv"), row.names = FALSE, fileEncoding = "UTF-8")
 write.csv(sensitivity_settings_table, file.path(validation_output_dir, "vorlaeufig_nslphom_sensitivity_settings.csv"), row.names = FALSE, fileEncoding = "UTF-8")
