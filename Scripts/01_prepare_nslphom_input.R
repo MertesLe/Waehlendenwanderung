@@ -53,7 +53,7 @@ get_first_vote_columns <- function(data, jahr, invalid_col, valid_col) {
   setdiff(cols, c(invalid_col, valid_col))
 }
 
-prepare_vote_year <- function(data, jahr, threshold = 0.05, keep_parties = NULL) {
+prepare_vote_year <- function(data, jahr, threshold = 0.10, keep_parties = NULL) {
   agg_col <- get_agg_col(data)
   a_col <- first_existing(data, c("^Wahlberechtigte"))
   b_col <- first_existing(data, c("^W.hlende"))
@@ -91,6 +91,7 @@ prepare_vote_year <- function(data, jahr, threshold = 0.05, keep_parties = NULL)
     ) %>%
     left_join(party_lookup, by = "source_col") %>%
     mutate(
+      threshold = threshold,
       national_share_valid = votes / valid_total,
       keep_party_year = national_share_valid >= threshold
     )
@@ -223,6 +224,8 @@ prepare_vote_year <- function(data, jahr, threshold = 0.05, keep_parties = NULL)
 wahldaten2021 <- readRDS(file.path(data_dir_cleaned, "wahldaten2021_gemappt.rds"))
 wahldaten2025 <- readRDS(file.path(data_dir_cleaned, "wahldaten2025_gemappt.rds"))
 
+# Parteien bleiben separat, wenn sie bundesweit in mindestens einer der beiden
+# Wahlen mindestens 10 Prozent der gueltigen Erststimmen erreichen.
 initial2021 <- prepare_vote_year(wahldaten2021, 2021)
 initial2025 <- prepare_vote_year(wahldaten2025, 2025)
 
