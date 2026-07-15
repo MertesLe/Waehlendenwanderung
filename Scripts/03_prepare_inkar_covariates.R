@@ -35,6 +35,44 @@ struktur_jahr <- if ("struktur_jahr" %in% names(metadata)) {
 } else {
   2023L
 }
+indikator_config <- if ("inkar_indikatoren" %in% names(metadata)) {
+  as_tibble(metadata$inkar_indikatoren)
+} else {
+  tibble(
+    Kuerzel = c(
+      "xbev",
+      "q_arbeitslosigkeit",
+      "q_kaufkraft",
+      "a_ausl_bev"
+    ),
+    variable = c(
+      "bevoelkerung",
+      "arbeitslosigkeit",
+      "kaufkraft",
+      "auslaenderanteil"
+    ),
+    Raumbezug = c(
+      "Gemeinden",
+      "Gemeinden",
+      "Gemeinden",
+      "Kreise"
+    )
+  )
+}
+gemeinde_config <- indikator_config %>%
+  filter(Raumbezug == "Gemeinden")
+kreis_config <- indikator_config %>%
+  filter(Raumbezug == "Kreise")
+struktur_variablen <- setdiff(unique(indikator_config$variable), "bevoelkerung")
+struktur_spalten <- paste0(struktur_variablen, "_", struktur_jahr)
+
+if (!"bevoelkerung" %in% indikator_config$variable) {
+  stop(
+    "Die INKAR-Indikator-Konfiguration muss eine Variable 'bevoelkerung' ",
+    "enthalten, weil sie als Aggregationsgewicht verwendet wird."
+  )
+}
+
 mapping_gemeinden <- readRDS(file.path(data_dir_cleaned, "mapping_gemeinden_final_manuell_validiert.rds"))
 all_aggs <- readRDS(file.path(data_dir_cleaned, "vorlaeufig_nslphom_input_2021.rds")) %>%
   select(agg_schluessel) %>%
@@ -52,19 +90,14 @@ mapping_gemeinden <- mapping_gemeinden %>%
   distinct()
 
 gemeinde_indikatoren <- inkar %>%
-  filter(
-    Raumbezug == "Gemeinden",
-    Kuerzel %in% c("xbev", "q_arbeitslosigkeit", "q_kaufkraft")
+  inner_join(
+    gemeinde_config,
+    by = c("Kuerzel", "Raumbezug")
   ) %>%
   transmute(
     gemeindeschluessel = Kennziffer,
     jahr = Zeitbezug,
-    variable = recode(
-      Kuerzel,
-      xbev = "bevoelkerung",
-      q_arbeitslosigkeit = "arbeitslosigkeit",
-      q_kaufkraft = "kaufkraft"
-    ),
+    variable,
     wert = Wert
   ) %>%
   group_by(
@@ -81,33 +114,43 @@ gemeinde_indikatoren <- inkar %>%
     values_from = wert
   )
 
-kreis_auslaender <- inkar %>%
-  filter(
-    Raumbezug == "Kreise",
-    Kuerzel == "a_ausl_bev"
-  ) %>%
-  transmute(
-    kreis_schluessel = Kennziffer,
-    jahr = Zeitbezug,
-    auslaenderanteil = Wert
-  ) %>%
-  group_by(
-    kreis_schluessel,
-    jahr
-  ) %>%
-  summarise(
-    auslaenderanteil = mean(auslaenderanteil, na.rm = TRUE),
-    .groups = "drop"
-  )
-
 gemeinde_struktur <- gemeinde_indikatoren %>%
   mutate(
     kreis_schluessel = paste0(substr(gemeindeschluessel, 1, 5), "000")
-  ) %>%
-  left_join(
-    kreis_auslaender,
-    by = c("kreis_schluessel", "jahr")
   )
+
+if (nrow(kreis_config) > 0) {
+  kreis_indikatoren <- inkar %>%
+    inner_join(
+      kreis_config,
+      by = c("Kuerzel", "Raumbezug")
+    ) %>%
+    transmute(
+      kreis_schluessel = Kennziffer,
+      jahr = Zeitbezug,
+      variable,
+      wert = Wert
+    ) %>%
+    group_by(
+      kreis_schluessel,
+      jahr,
+      variable
+    ) %>%
+    summarise(
+      wert = mean(wert, na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    pivot_wider(
+      names_from = variable,
+      values_from = wert
+    )
+
+  gemeinde_struktur <- gemeinde_struktur %>%
+    left_join(
+      kreis_indikatoren,
+      by = c("kreis_schluessel", "jahr")
+    )
+}
 
 inkar_gemeinden <- unique(gemeinde_struktur$gemeindeschluessel)
 
@@ -135,21 +178,30 @@ agg_struktur_long <- mapping_gemeinden %>%
     n_gemeinden_mapping = n_distinct(gemeindeschluessel),
     n_gemeinden_mit_inkar = n_distinct(gemeindeschluessel[!is.na(bevoelkerung)]),
     gewicht_summe = sum(bevoelkerung, na.rm = TRUE),
-    arbeitslosigkeit = weighted_mean_safe(arbeitslosigkeit, bevoelkerung),
-    auslaenderanteil = weighted_mean_safe(auslaenderanteil, bevoelkerung),
-    kaufkraft = weighted_mean_safe(kaufkraft, bevoelkerung),
+    across(
+      all_of(struktur_variablen),
+      ~ weighted_mean_safe(.x, bevoelkerung)
+    ),
     .groups = "drop"
   )
 
 agg_struktur_wide_inner <- agg_struktur_long %>%
   filter(jahr == struktur_jahr) %>%
-  transmute(
+  mutate(
+    struktur_jahr = .env$struktur_jahr
+  ) %>%
+  rename_with(
+    ~ paste0(.x, "_", struktur_jahr),
+    all_of(struktur_variablen)
+  ) %>%
+  rename(
+    !!paste0("gewicht_summe_", struktur_jahr) := gewicht_summe
+  ) %>%
+  select(
     agg_schluessel,
-    struktur_jahr = .env$struktur_jahr,
-    arbeitslosigkeit_2023 = arbeitslosigkeit,
-    auslaenderanteil_2023 = auslaenderanteil,
-    kaufkraft_2023 = kaufkraft,
-    gewicht_summe_2023 = gewicht_summe,
+    struktur_jahr,
+    all_of(struktur_spalten),
+    all_of(paste0("gewicht_summe_", struktur_jahr)),
     n_gemeinden_mapping,
     n_gemeinden_mit_inkar
   ) %>%
@@ -164,17 +216,20 @@ agg_struktur_wide <- all_aggs %>%
 struktur_checks <- agg_struktur_wide %>%
   summarise(
     n_agg = n(),
-    n_missing_arbeitslosigkeit_2023 = sum(is.na(arbeitslosigkeit_2023)),
-    n_missing_auslaenderanteil_2023 = sum(is.na(auslaenderanteil_2023)),
-    n_missing_kaufkraft_2023 = sum(is.na(kaufkraft_2023)),
+    across(
+      all_of(struktur_spalten),
+      ~ sum(is.na(.x)),
+      .names = "n_missing_{.col}"
+    ),
     struktur_jahr = .env$struktur_jahr
   )
 
 struktur_missing <- agg_struktur_wide %>%
   filter(
-    is.na(arbeitslosigkeit_2023) |
-      is.na(auslaenderanteil_2023) |
-      is.na(kaufkraft_2023)
+    if_any(
+      all_of(struktur_spalten),
+      is.na
+    )
   )
 
 # Interne Plausibilitaetspruefungen, nicht als eigene Datensaetze gespeichert:

@@ -15,12 +15,28 @@ legacy_metadata_rds <- file.path(data_dir_cleaned, "vorlaeufig_inkar_workflow_me
 force_rebuild <- isTRUE(getOption("waehlendenwanderung.inkar_basis_rebuild", FALSE))
 struktur_jahr <- as.integer(getOption("waehlendenwanderung.inkar_struktur_jahr", 2023L))
 
-workflow_kuerzel <- c(
-  "xbev",
-  "q_arbeitslosigkeit",
-  "q_kaufkraft",
-  "a_ausl_bev"
+inkar_indikatoren <- data.table(
+  Kuerzel = c(
+    "xbev",
+    "q_arbeitslosigkeit",
+    "q_kaufkraft",
+    "a_ausl_bev"
+  ),
+  variable = c(
+    "bevoelkerung",
+    "arbeitslosigkeit",
+    "kaufkraft",
+    "auslaenderanteil"
+  ),
+  Raumbezug = c(
+    "Gemeinden",
+    "Gemeinden",
+    "Gemeinden",
+    "Kreise"
+  )
 )
+
+workflow_kuerzel <- unique(inkar_indikatoren$Kuerzel)
 
 spalten <- c(
   "Bereich",
@@ -67,14 +83,72 @@ read_selected_inkar <- function(path, kuerzel) {
 }
 
 make_metadata <- function() {
-  data.table(
+  list(
     struktur_jahr = struktur_jahr,
+    workflow_kuerzel = workflow_kuerzel,
+    inkar_indikatoren = as.data.frame(inkar_indikatoren),
     hinweis = paste(
       "Fuer den Regressionsworkflow werden INKAR-Strukturmerkmale als",
       "Niveauwerte des Jahres", struktur_jahr,
       "verwendet; es werden keine Veraenderungen zwischen Wahljahren gebildet."
     )
   )
+}
+
+normalise_indicator_config <- function(config) {
+  config <- as.data.table(config)
+  config <- config[
+    ,
+    .(
+      Kuerzel = as.character(Kuerzel),
+      variable = as.character(variable),
+      Raumbezug = as.character(Raumbezug)
+    )
+  ]
+  config[order(Raumbezug, Kuerzel, variable)]
+}
+
+indicator_config_matches <- function(metadata) {
+  if (!all(c("workflow_kuerzel", "inkar_indikatoren") %in% names(metadata))) {
+    return(FALSE)
+  }
+
+  identical(
+    sort(as.character(metadata$workflow_kuerzel)),
+    sort(as.character(workflow_kuerzel))
+  ) &&
+    identical(
+      normalise_indicator_config(metadata$inkar_indikatoren),
+      normalise_indicator_config(inkar_indikatoren)
+    )
+}
+
+filter_workflow_rows <- function(inkar_data) {
+  inkar_data <- as.data.table(inkar_data)
+
+  merge(
+    inkar_data,
+    unique(inkar_indikatoren[, .(Kuerzel, Raumbezug)]),
+    by = c("Kuerzel", "Raumbezug"),
+    all = FALSE,
+    sort = FALSE
+  )
+}
+
+required_indicators_present <- function(inkar_data) {
+  present <- unique(
+    as.data.table(inkar_data)[
+      Zeitbezug == struktur_jahr,
+      .(Kuerzel, Raumbezug)
+    ]
+  )
+
+  missing <- fsetdiff(
+    unique(inkar_indikatoren[, .(Kuerzel, Raumbezug)]),
+    present
+  )
+
+  nrow(missing) == 0
 }
 
 write_inkar_basis <- function(inkar_workflow, metadata) {
@@ -93,10 +167,15 @@ cache_is_current <- function() {
     return(FALSE)
   }
 
+  if (!indicator_config_matches(metadata)) {
+    return(FALSE)
+  }
+
   inkar_workflow <- readRDS(inkar_basis_rds)
 
   isTRUE(metadata$struktur_jahr[[1]] == struktur_jahr) &&
-    identical(sort(unique(inkar_workflow[["Zeitbezug"]])), struktur_jahr)
+    identical(sort(unique(inkar_workflow[["Zeitbezug"]])), struktur_jahr) &&
+    required_indicators_present(inkar_workflow)
 }
 
 load_existing_basis <- function() {
@@ -111,12 +190,22 @@ load_existing_basis <- function() {
   NULL
 }
 
+existing_basis <- if (!force_rebuild) {
+  load_existing_basis()
+} else {
+  NULL
+}
+
 if (!force_rebuild && cache_is_current()) {
   message("INKAR-Basisdaten sind bereits vorhanden: ", inkar_basis_rds)
-} else if (!force_rebuild && !is.null(load_existing_basis())) {
+} else if (
+  !is.null(existing_basis) &&
+    required_indicators_present(existing_basis)
+) {
   message("Aktualisiere vorhandene INKAR-Basisdaten auf Strukturjahr ", struktur_jahr, ".")
 
-  inkar_workflow <- load_existing_basis()
+  inkar_workflow <- existing_basis
+  inkar_workflow <- filter_workflow_rows(inkar_workflow)
   inkar_workflow <- inkar_workflow[Zeitbezug == struktur_jahr]
 
   if (nrow(inkar_workflow) == 0) {
@@ -141,16 +230,7 @@ if (!force_rebuild && cache_is_current()) {
   inkar_selected[, Zeitbezug := as.integer(Zeitbezug)]
   inkar_selected[, Kennziffer := sprintf("%08d", as.integer(Kennziffer))]
 
-  inkar_workflow <- inkar_selected[
-    (
-      Raumbezug == "Gemeinden" &
-        Kuerzel %in% c("xbev", "q_arbeitslosigkeit", "q_kaufkraft")
-    ) |
-      (
-        Raumbezug == "Kreise" &
-          Kuerzel == "a_ausl_bev"
-      )
-  ]
+  inkar_workflow <- filter_workflow_rows(inkar_selected)
 
   inkar_workflow <- inkar_workflow[
     Zeitbezug == struktur_jahr
