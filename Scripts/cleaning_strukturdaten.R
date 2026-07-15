@@ -8,9 +8,7 @@ setDTthreads(max(1, parallel::detectCores() - 2))
 
 inkar_pfad <- "Data/raw/inkar_2025/inkar_2025.csv"
 inkar_basis_rds <- file.path(data_dir_intermediate, "vorlaeufig_inkar_basis_gemeinden_kreise.rds")
-inkar_basis_csv <- file.path(data_dir_intermediate, "vorlaeufig_inkar_basis_gemeinden_kreise.csv")
 inkar_metadata_rds <- file.path(data_dir_intermediate, "vorlaeufig_inkar_basis_metadata.rds")
-inkar_metadata_csv <- file.path(data_dir_intermediate, "vorlaeufig_inkar_basis_metadata.csv")
 
 legacy_basis_rds <- file.path(data_dir_cleaned, "vorlaeufig_inkar_workflow_rohdaten.rds")
 legacy_metadata_rds <- file.path(data_dir_cleaned, "vorlaeufig_inkar_workflow_metadata.rds")
@@ -82,15 +80,6 @@ make_metadata <- function() {
 write_inkar_basis <- function(inkar_workflow, metadata) {
   saveRDS(inkar_workflow, inkar_basis_rds)
   saveRDS(metadata, inkar_metadata_rds)
-
-  fwrite(
-    inkar_workflow,
-    inkar_basis_csv
-  )
-  fwrite(
-    metadata,
-    inkar_metadata_csv
-  )
 }
 
 cache_is_current <- function() {

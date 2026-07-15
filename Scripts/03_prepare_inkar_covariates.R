@@ -177,12 +177,17 @@ struktur_missing <- agg_struktur_wide %>%
       is.na(kaufkraft_2023)
   )
 
+# Interne Plausibilitaetspruefungen, nicht als eigene Datensaetze gespeichert:
+# - struktur_checks: Zaehlt fehlende 2023-Kovariaten nach Variable.
+# - struktur_missing: Enthielte die betroffenen agg_schluessel; diese Tabelle
+#   muss leer sein, damit alle Analyseeinheiten Strukturkovariaten besitzen.
+if (nrow(struktur_missing) > 0) {
+  stop(
+    "INKAR-Aggregation unvollstaendig: struktur_missing enthaelt ",
+    nrow(struktur_missing),
+    " agg_schluessel ohne vollstaendige 2023-Kovariaten."
+  )
+}
+
 saveRDS(agg_struktur_long, file.path(data_dir_cleaned, "vorlaeufig_inkar_agg_long.rds"))
 saveRDS(agg_struktur_wide, file.path(data_dir_cleaned, "vorlaeufig_inkar_kovariaten_2023.rds"))
-saveRDS(struktur_checks, file.path(data_dir_validation, "vorlaeufig_inkar_agg_checks.rds"))
-saveRDS(struktur_missing, file.path(data_dir_validation, "vorlaeufig_inkar_agg_missing.rds"))
-
-write.csv(agg_struktur_long, file.path(data_dir_cleaned, "vorlaeufig_inkar_agg_long.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-write.csv(agg_struktur_wide, file.path(data_dir_cleaned, "vorlaeufig_inkar_kovariaten_2023.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-write.csv(struktur_checks, file.path(data_dir_validation, "vorlaeufig_inkar_agg_checks.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-write.csv(struktur_missing, file.path(data_dir_validation, "vorlaeufig_inkar_agg_missing.csv"), row.names = FALSE, fileEncoding = "UTF-8")
