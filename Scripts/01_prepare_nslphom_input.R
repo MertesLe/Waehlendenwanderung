@@ -1,6 +1,7 @@
 library(dplyr)
 library(tidyr)
 library(stringr)
+library(ggplot2)
 
 source("paths.R", encoding = "UTF-8")
 
@@ -250,6 +251,70 @@ stopifnot(all(abs(prepared2021$check$differenz_input_zu_referenz) < 1e-8))
 stopifnot(all(abs(prepared2025$check$differenz_input_zu_referenz) < 1e-8))
 stopifnot(all(abs(prepared2021$check$differenz_stimmen_zu_waehlenden) < 1e-8))
 stopifnot(all(abs(prepared2025$check$differenz_stimmen_zu_waehlenden) < 1e-8))
+
+# Untersuche: Anzahl Wahlberechtigter pro agg.schlüssel. Tabelle und Histogramme (voller und beschränkter Wertebereich)
+wahlberechtigte_agg <- bind_rows(
+  input2021 %>%
+    mutate(
+      Jahr = 2021,
+      wahlberechtigte_input = rowSums(across(-agg_schluessel))
+    ) %>%
+    select(Jahr, agg_schluessel, wahlberechtigte_input),
+  input2025 %>%
+    mutate(
+      Jahr = 2025,
+      wahlberechtigte_input = rowSums(across(-agg_schluessel))
+    ) %>%
+    select(Jahr, agg_schluessel, wahlberechtigte_input)
+)
+
+# Häufigkeitstabelle / Kennzahlen
+wahlberechtigte_summary <- wahlberechtigte_agg %>%
+  group_by(Jahr) %>%
+  summarise(
+    n_agg = n(),
+    min = min(wahlberechtigte_input, na.rm = TRUE),
+    q10 = quantile(wahlberechtigte_input, 0.10, na.rm = TRUE),
+    q25 = quantile(wahlberechtigte_input, 0.25, na.rm = TRUE),
+    median = median(wahlberechtigte_input, na.rm = TRUE),
+    mean = mean(wahlberechtigte_input, na.rm = TRUE),
+    q75 = quantile(wahlberechtigte_input, 0.75, na.rm = TRUE),
+    q90 = quantile(wahlberechtigte_input, 0.90, na.rm = TRUE),
+    q95 = quantile(wahlberechtigte_input, 0.95, na.rm = TRUE),
+    max = max(wahlberechtigte_input, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+View(wahlberechtigte_summary)
+View(wahlberechtigte_agg)
+
+# Histogramm mit allen Beobachtungen
+ggplot(wahlberechtigte_agg, aes(x = wahlberechtigte_input)) +
+  geom_histogram(bins = 80, fill = "grey50", color = "white") +
+  facet_wrap(~ Jahr, scales = "free_y") +
+  labs(
+    title = "Wahlberechtigte pro agg.schluessel",
+    x = "Wahlberechtigte / Input-Gesamtmasse",
+    y = "Anzahl agg.schluessel"
+  ) +
+  theme_minimal()
+
+# Histogramm abgeschnitten rechts, z.B. bei 95%-Quantil
+cutoff <- quantile(wahlberechtigte_agg$wahlberechtigte_input, 0.95, na.rm = TRUE)
+
+ggplot(
+  wahlberechtigte_agg %>% filter(wahlberechtigte_input <= cutoff),
+  aes(x = wahlberechtigte_input)
+) +
+  geom_histogram(bins = 80, fill = "grey50", color = "white") +
+  facet_wrap(~ Jahr, scales = "free_y") +
+  labs(
+    title = "Wahlberechtigte pro agg.schluessel, untere 95 %",
+    subtitle = paste("Rechter Rand abgeschnitten bei", round(cutoff), "Wahlberechtigten"),
+    x = "Wahlberechtigte / Input-Gesamtmasse",
+    y = "Anzahl agg.schluessel"
+  ) +
+  theme_minimal()
 
 saveRDS(prepared2021$wide, file.path(data_dir_cleaned, "vorlaeufig_nslphom_input_2021.rds"))
 saveRDS(prepared2025$wide, file.path(data_dir_cleaned, "vorlaeufig_nslphom_input_2025.rds"))
