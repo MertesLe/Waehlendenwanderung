@@ -22,8 +22,8 @@ first_existing <- function(data, patterns) {
 
 standardize_party <- function(x) {
   x <- x %>%
-    str_replace("^E_", "") %>%
-    str_replace("\\.\\.\\.Erststimmen$", "") %>%
+    str_replace("^Z_", "") %>%
+    str_replace("\\.\\.\\.Zweitstimmen$", "") %>%
     str_replace_all("\\.", "_")
 
   x <- iconv(x, from = "", to = "ASCII//TRANSLIT")
@@ -43,35 +43,35 @@ standardize_party <- function(x) {
   )
 }
 
-get_first_vote_columns <- function(data, jahr, invalid_col, valid_col) {
+get_second_vote_columns <- function(data, jahr, invalid_col, valid_col) {
   if (jahr == 2021) {
-    cols <- grep("^E_", names(data), value = TRUE)
+    cols <- grep("^Z_", names(data), value = TRUE)
   } else {
-    cols <- grep("\\.\\.\\.Erststimmen$", names(data), value = TRUE)
+    cols <- grep("\\.\\.\\.Zweitstimmen$", names(data), value = TRUE)
   }
 
   setdiff(cols, c(invalid_col, valid_col))
 }
 
-prepare_vote_year <- function(data, jahr, threshold = 0.10, keep_parties = NULL) {
+prepare_vote_year <- function(data, jahr, threshold = 0.12, keep_parties = NULL) {
   agg_col <- get_agg_col(data)
   a_col <- first_existing(data, c("^Wahlberechtigte"))
   b_col <- first_existing(data, c("^W.hlende"))
   invalid_col <- if (jahr == 2021) {
-    first_existing(data, c("^E_Ung.ltige$"))
+    first_existing(data, c("^Z_Ung.ltige$"))
   } else {
-    first_existing(data, c("^Ung.ltige\\.\\.\\.Erststimmen$"))
+    first_existing(data, c("^Ung.ltige\\.\\.\\.Zweitstimmen$"))
   }
   valid_col <- if (jahr == 2021) {
-    first_existing(data, c("^E_G.ltige$"))
+    first_existing(data, c("^Z_G.ltige$"))
   } else {
-    first_existing(data, c("^G.ltige\\.\\.\\.Erststimmen$"))
+    first_existing(data, c("^G.ltige\\.\\.\\.Zweitstimmen$"))
   }
 
   stopifnot(!is.na(agg_col), !is.na(a_col), !is.na(b_col))
   stopifnot(!is.na(invalid_col), !is.na(valid_col))
 
-  party_cols <- get_first_vote_columns(data, jahr, invalid_col, valid_col)
+  party_cols <- get_second_vote_columns(data, jahr, invalid_col, valid_col)
   stopifnot(length(party_cols) > 0)
 
   party_lookup <- tibble(
@@ -114,8 +114,8 @@ prepare_vote_year <- function(data, jahr, threshold = 0.10, keep_parties = NULL)
       agg_schluessel = .data[[agg_col]],
       wahlberechtigte = .data[[a_col]],
       waehlende = .data[[b_col]],
-      ungueltig_erst = .data[[invalid_col]],
-      gueltig_erst = .data[[valid_col]],
+      ungueltig_stimmen = .data[[invalid_col]],
+      gueltig_stimmen = .data[[valid_col]],
       across(all_of(party_cols))
     ) %>%
     pivot_longer(
@@ -188,15 +188,15 @@ prepare_vote_year <- function(data, jahr, threshold = 0.10, keep_parties = NULL)
       agg_schluessel = .data[[agg_col]],
       wahlberechtigte = .data[[a_col]],
       waehlende = .data[[b_col]],
-      gueltig_erst = .data[[valid_col]],
-      ungueltig_erst = .data[[invalid_col]]
+      gueltig_stimmen = .data[[valid_col]],
+      ungueltig_stimmen = .data[[invalid_col]]
     ) %>%
     group_by(agg_schluessel) %>%
     summarise(
       wahlberechtigte = sum(wahlberechtigte, na.rm = TRUE),
       waehlende = sum(waehlende, na.rm = TRUE),
-      gueltig_erst = sum(gueltig_erst, na.rm = TRUE),
-      ungueltig_erst = sum(ungueltig_erst, na.rm = TRUE),
+      gueltig_stimmen = sum(gueltig_stimmen, na.rm = TRUE),
+      ungueltig_stimmen = sum(ungueltig_stimmen, na.rm = TRUE),
       .groups = "drop"
     ) %>%
     left_join(
@@ -209,7 +209,7 @@ prepare_vote_year <- function(data, jahr, threshold = 0.10, keep_parties = NULL)
       input_reference = pmax(wahlberechtigte, waehlende),
       differenz_input_zu_wahlberechtigten = input_sum - wahlberechtigte,
       differenz_input_zu_referenz = input_sum - input_reference,
-      differenz_stimmen_zu_waehlenden = gueltig_erst + ungueltig_erst - waehlende,
+      differenz_stimmen_zu_waehlenden = gueltig_stimmen + ungueltig_stimmen - waehlende,
       flag_waehlende_groesser_wahlberechtigte = waehlende > wahlberechtigte
     )
 
@@ -225,7 +225,7 @@ wahldaten2021 <- readRDS(file.path(data_dir_cleaned, "wahldaten2021_gemappt.rds"
 wahldaten2025 <- readRDS(file.path(data_dir_cleaned, "wahldaten2025_gemappt.rds"))
 
 # Parteien bleiben separat, wenn sie bundesweit in mindestens einer der beiden
-# Wahlen mindestens 10 Prozent der gueltigen Erststimmen erreichen.
+# Wahlen mindestens 12 Prozent der gueltigen Zweitstimmen erreichen.
 initial2021 <- prepare_vote_year(wahldaten2021, 2021)
 initial2025 <- prepare_vote_year(wahldaten2025, 2025)
 

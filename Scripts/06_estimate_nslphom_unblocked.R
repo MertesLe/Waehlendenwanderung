@@ -5,7 +5,7 @@ source("paths.R", encoding = "UTF-8")
 
 ensure_data_dirs()
 
-threshold <- 0.10
+threshold <- 0.12
 output_dir <- file.path("Data", "modeloutput", "nslphom_unblocked")
 dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 
@@ -207,7 +207,7 @@ write_input_copies <- function(inputs, settings) {
 }
 
 main <- function() {
-  message("Lese zentral vorbereitete nslphom-Inputs mit 10%-Parteischwelle.")
+  message("Lese zentral vorbereitete nslphom-Inputs mit 12%-Parteischwelle.")
   inputs <- read_prepared_inputs()
 
   stopifnot(identical(inputs$input2021$agg_schluessel, inputs$input2025$agg_schluessel))
@@ -222,7 +222,7 @@ main <- function() {
 
   if (nrow(threshold_check) > 0) {
     stop(
-      "Die zentralen nslphom-Inputs passen nicht zur 10%-Schwelle. ",
+      "Die zentralen nslphom-Inputs passen nicht zur 12%-Schwelle. ",
       "Fuehre zuerst Scripts/01_prepare_nslphom_input.R neu aus."
     )
   }

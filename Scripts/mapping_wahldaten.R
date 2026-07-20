@@ -340,7 +340,7 @@ data2021 %>%
 data2021 %>%
   filter(Kennziffer.Urnenwahlbezirke.nach...68.BWO != "0000") %>%
   mutate(
-    leer = E_Gültige == 0
+    leer = Z_Gültige == 0
   ) %>%
   count(leer)
 
@@ -1185,24 +1185,24 @@ wahldaten2021 <- data21_agg %>%
 wahldaten2025 %>%
   summarise(
     n        = n(),
-    Mittel   = mean(Gültige...Erststimmen),
-    Median   = median(Gültige...Erststimmen),
-    SD       = sd(Gültige...Erststimmen),
-    Varianz  = var(Gültige...Erststimmen),
-    Minimum  = min(Gültige...Erststimmen),
-    Q1       = quantile(Gültige...Erststimmen, 0.25),
-    Q3       = quantile(Gültige...Erststimmen, 0.75),
-    Maximum  = max(Gültige...Erststimmen),
-    IQR      = IQR(Gültige...Erststimmen),
-    CV       = sd(Gültige...Erststimmen) / mean(Gültige...Erststimmen)
+    Mittel   = mean(Gültige...Zweitstimmen),
+    Median   = median(Gültige...Zweitstimmen),
+    SD       = sd(Gültige...Zweitstimmen),
+    Varianz  = var(Gültige...Zweitstimmen),
+    Minimum  = min(Gültige...Zweitstimmen),
+    Q1       = quantile(Gültige...Zweitstimmen, 0.25),
+    Q3       = quantile(Gültige...Zweitstimmen, 0.75),
+    Maximum  = max(Gültige...Zweitstimmen),
+    IQR      = IQR(Gültige...Zweitstimmen),
+    CV       = sd(Gültige...Zweitstimmen) / mean(Gültige...Zweitstimmen)
   )
 
 options(scipen = 999)
 hist(
-  wahldaten2025$Gültige...Erststimmen,
+  wahldaten2025$Gültige...Zweitstimmen,
   breaks = 100,
-  main = "Histogramm der gültigen Erststimmen",
-  xlab = "Gültige Erststimmen"
+  main = "Histogramm der gültigen Zweitstimmen",
+  xlab = "Gültige Zweitstimmen"
 )
 
 
