@@ -14,20 +14,6 @@ if (!file.exists(inkar_basis_rds) || !file.exists(inkar_metadata_rds)) {
   source("Scripts/cleaning_strukturdaten.R", encoding = "UTF-8")
 }
 
-get_agg_col <- function(data) {
-  grep("^agg\\.", names(data), value = TRUE)[1]
-}
-
-weighted_mean_safe <- function(x, w) {
-  ok <- !is.na(x) & !is.na(w) & w > 0
-
-  if (!any(ok)) {
-    return(NA_real_)
-  }
-
-  sum(x[ok] * w[ok]) / sum(w[ok])
-}
-
 inkar <- as_tibble(readRDS(inkar_basis_rds))
 metadata <- readRDS(inkar_metadata_rds)
 struktur_jahr <- if ("struktur_jahr" %in% names(metadata)) {

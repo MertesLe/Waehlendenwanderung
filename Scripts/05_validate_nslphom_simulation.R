@@ -398,7 +398,7 @@ run_one_simulation <- function(sim_id) {
     lphom::nslphom(
       votes_election1 = election_1,
       votes_election2 = election_2,
-      new_and_exit_voters = "regular",
+      new_and_exit_voters = "simultaneous",
       iter.max = settings$iter_max,
       verbose = FALSE,
       solver = "lp_solve",
@@ -675,7 +675,7 @@ fit_two_party_block <- function(unit_data, variant, sensitivity_type, block_id) 
     lphom::nslphom(
       votes_election1 = election_1,
       votes_election2 = election_2,
-      new_and_exit_voters = "regular",
+      new_and_exit_voters = "simultaneous",
       iter.max = sensitivity_settings$iter_max,
       verbose = FALSE,
       solver = "lp_solve",
@@ -957,7 +957,7 @@ simulate_three_party_sensitivity <- function(sim_id) {
     lphom::nslphom(
       votes_election1 = as.data.frame(origin_counts),
       votes_election2 = as.data.frame(destination_counts),
-      new_and_exit_voters = "regular",
+      new_and_exit_voters = "simultaneous",
       iter.max = sensitivity_settings$iter_max,
       verbose = FALSE,
       solver = "lp_solve",
@@ -981,7 +981,7 @@ simulate_three_party_sensitivity <- function(sim_id) {
     lphom::nslphom(
       votes_election1 = collapsed_origin,
       votes_election2 = collapsed_destination,
-      new_and_exit_voters = "regular",
+      new_and_exit_voters = "simultaneous",
       iter.max = sensitivity_settings$iter_max,
       verbose = FALSE,
       solver = "lp_solve",

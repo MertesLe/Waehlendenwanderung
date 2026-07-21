@@ -323,7 +323,7 @@ run_one_simulation <- function(sim_id) {
     lphom::nslphom(
       votes_election1 = election_1,
       votes_election2 = election_2,
-      new_and_exit_voters = "regular",
+      new_and_exit_voters = "simultaneous",
       iter.max = settings$iter_max,
       verbose = FALSE,
       solver = "lp_solve",

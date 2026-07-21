@@ -20,8 +20,7 @@ if (!file.exists(fit_path)) {
 }
 
 party_order <- c(
-  "CDU",
-  "CSU",
+  "Union",
   "AfD",
   "BSW",
   "GRUNE",
@@ -29,24 +28,19 @@ party_order <- c(
   "SPD",
   "FDP",
   "Andere",
-  "Nichtwaehler",
-  "NET_ENTRIES",
-  "NET_EXITS"
+  "Nichtwaehler"
 )
 
 party_colours <- c(
   AfD = "#58B9E8",
   BSW = "#F06D2F",
-  CDU = "#111111",
-  CSU = "#005CA9",
+  Union = "#111111",
   GRUNE = "#54B82A",
   Die_Linke = "#C85A9B",
   SPD = "#D7193F",
   FDP = "#FFD500",
   Andere = "#6E6E6E",
-  Nichtwaehler = "#BDBDBD",
-  NET_ENTRIES = "#A0A0A0",
-  NET_EXITS = "#4F4F4F"
+  Nichtwaehler = "#BDBDBD"
 )
 
 block_labels <- c(
@@ -88,8 +82,6 @@ label_group <- function(x) {
     GRUNE = "GRÜNE",
     Die_Linke = "DIE LINKE",
     Nichtwaehler = "Nichtwähler",
-    NET_ENTRIES = "neu/wieder\nwahlberechtigt",
-    NET_EXITS = "nicht mehr\nwahlberechtigt",
     .default = x
   )
 }
@@ -113,12 +105,12 @@ ordered_categories <- function(categories) {
 }
 
 get_matrix <- function(fit) {
-  if (!is.null(fit[["VTM.complete.votes"]])) {
-    return(fit[["VTM.complete.votes"]])
-  }
-
   if (!is.null(fit[["VTM.votes"]])) {
     return(fit[["VTM.votes"]])
+  }
+
+  if (!is.null(fit[["VTM.complete.votes"]])) {
+    return(fit[["VTM.complete.votes"]])
   }
 
   stop("Im Fit-Objekt wurde keine globale Stimmenmatrix gefunden.")
@@ -381,7 +373,7 @@ make_block_plot <- function(
     labs(
       title = title,
       subtitle = subtitle,
-      caption = "Breite der Bänder = geschätzte absolute Übergangsmasse. NET_ENTRIES/NET_EXITS entstehen durch new_and_exit_voters = 'raw'."
+      caption = "Breite der Baender = geschaetzte absolute Uebergangsmasse. Die 2025-Inputs wurden je Einheit auf die 2021-Gesamtmasse skaliert."
     ) +
     theme_void(base_size = 11) +
     theme(
