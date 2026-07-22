@@ -7,11 +7,11 @@ source("Functions/nslphom_functions.R", encoding = "UTF-8")
 
 ensure_data_dirs()
 
-n_test_units <- 2000L
+n_test_units <- 5300L
 threshold <- getOption("waehlendenwanderung.party_threshold", 0.12)
 iter_max <- getOption("waehlendenwanderung.test2000_nslphom_iter_max", 10L)
 tol <- getOption("waehlendenwanderung.test2000_nslphom_tol", 1e-5)
-output_dir <- file.path(data_dir_model_nslphom, "test2000")
+output_dir <- file.path(data_dir_model_nslphom, "test5300_random")
 dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 
 check_lphom_available()
@@ -20,12 +20,47 @@ inputs <- read_prepared_nslphom_inputs()
 validation <- validate_prepared_nslphom_inputs(inputs, threshold = threshold)
 stopifnot(nrow(inputs$input2021) >= n_test_units)
 
-# Fuer den reinen Belastungstest werden reproduzierbar die ersten 2000
+# Fuer den reinen Belastungstest werden reproduzierbar die ersten 5300
 # sortierten agg_schluessel genommen; fachliche Auswahl spielt hier keine Rolle.
+#input2021_test <- inputs$input2021 %>%
+#  slice_head(n = n_test_units)
+#input2025_test <- inputs$input2025 %>%
+#  slice_head(n = n_test_units)
+
+# Random 5300 ziehen
+set.seed(42)
+
+selected_ids <- sample(
+  inputs$input2021$agg_schluessel,
+  size = n_test_units,
+  replace = FALSE
+)
+
 input2021_test <- inputs$input2021 %>%
-  slice_head(n = n_test_units)
+  filter(agg_schluessel %in% selected_ids) %>%
+  arrange(match(agg_schluessel, selected_ids))
+
 input2025_test <- inputs$input2025 %>%
-  slice_head(n = n_test_units)
+  filter(agg_schluessel %in% selected_ids) %>%
+  arrange(match(agg_schluessel, selected_ids))
+
+stopifnot(identical(input2021_test$agg_schluessel, input2025_test$agg_schluessel))
+
+# die letzten 5300 ziehen
+# selected_ids <- inputs$input2021 %>%
+#   arrange(agg_schluessel) %>%
+#   slice_tail(n = n_test_units) %>%
+#   pull(agg_schluessel)
+# 
+# input2021_test <- inputs$input2021 %>%
+#   filter(agg_schluessel %in% selected_ids) %>%
+#   arrange(match(agg_schluessel, selected_ids))
+# 
+# input2025_test <- inputs$input2025 %>%
+#   filter(agg_schluessel %in% selected_ids) %>%
+#   arrange(match(agg_schluessel, selected_ids))
+# 
+# stopifnot(identical(input2021_test$agg_schluessel, input2025_test$agg_schluessel))
 
 ids <- input2021_test$agg_schluessel
 origin_counts <- make_count_matrix(input2021_test)
@@ -98,6 +133,8 @@ endoutput <- list(
   local_matrices_wide = local_matrices_wide,
   global_matrix = global_matrix,
   global_matrix_complete = global_matrix_complete,
+  EHet = fit$EHet,
+  EHet_ids = ids,
   settings = settings
 )
 

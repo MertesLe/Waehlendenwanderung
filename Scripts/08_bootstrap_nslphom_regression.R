@@ -66,9 +66,20 @@ if (!run_bootstrap) {
     )
 
     if (resume_existing && file.exists(iteration_file)) {
-      message("Lese vorhandene Bootstrap-Iteration ", iteration, ".")
-      iteration_results[[iteration]] <- readRDS(iteration_file)
-      next
+      cached_result <- readRDS(iteration_file)
+
+      if (is.null(cached_result$error)) {
+        message("Lese erfolgreiche vorhandene Bootstrap-Iteration ", iteration, ".")
+        iteration_results[[iteration]] <- cached_result
+        next
+      }
+
+      message(
+        "Vorhandene Bootstrap-Iteration ",
+        iteration,
+        " war fehlgeschlagen und wird neu gestartet. Alter Fehler: ",
+        cached_result$error
+      )
     }
 
     message("Starte unblocked Bootstrap-Iteration ", iteration, " von ", n_bootstrap, ".")
