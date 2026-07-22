@@ -53,6 +53,5 @@ write_blocked_nslphom_outputs(
   nslphom_fit = nslphom_fit,
   transition_long = transition_long,
   transition_wide = transition_wide,
-  checks = checks,
-  write_csv = TRUE
+  checks = checks
 )

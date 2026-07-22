@@ -27,7 +27,7 @@ if (interactive()) {
   plot_nslphom_input_diagnostics(prepared_inputs$diagnostics)
 }
 
-save_nslphom_inputs(prepared_inputs, write_csv = TRUE)
+save_nslphom_inputs(prepared_inputs)
 
 message(
   "nslphom-Input gespeichert mit Gruppen: ",

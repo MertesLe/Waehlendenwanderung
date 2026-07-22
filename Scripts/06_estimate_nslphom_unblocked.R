@@ -29,7 +29,7 @@ main <- function() {
     blocked = FALSE
   )
 
-  write_unblocked_input_copies(inputs, settings, output_dir, write_csv = TRUE)
+  write_unblocked_input_copies(inputs, settings, output_dir)
 
   if (!run_fit) {
     message(
@@ -68,8 +68,7 @@ main <- function() {
     output_dir = output_dir,
     settings = settings,
     method = "lphom::nslphom_unblocked",
-    threshold = threshold,
-    write_csv = TRUE
+    threshold = threshold
   )
 
   message("Fertig. Ergebnisse gespeichert unter: ", output_dir)

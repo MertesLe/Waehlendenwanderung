@@ -4,7 +4,7 @@ library(stringr)
 library(tidyr)
 library(purrr)
 
-source("functions.R", encoding = "UTF-8")
+source("Functions/general_functions.R", encoding = "UTF-8")
 source("paths.R", encoding = "UTF-8")
 
 ensure_data_dirs()

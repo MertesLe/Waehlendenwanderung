@@ -11,7 +11,6 @@ source("Functions/bootstrap_functions.R", encoding = "UTF-8")
 ensure_data_dirs()
 
 threshold <- getOption("waehlendenwanderung.party_threshold", 0.12)
-block_prefix_length <- getOption("waehlendenwanderung.nslphom_block_prefix_length", 3L)
 n_bootstrap <- getOption("waehlendenwanderung.bootstrap_n", 500L)
 sample_size <- getOption("waehlendenwanderung.bootstrap_sample_size", 2000L)
 seed <- getOption("waehlendenwanderung.bootstrap_seed", 20260721L)
@@ -31,18 +30,12 @@ inputs <- read_prepared_nslphom_inputs()
 validation <- validate_prepared_nslphom_inputs(inputs, threshold = threshold)
 struktur <- readRDS(file.path(data_dir_cleaned, "vorlaeufig_inkar_kovariaten_2023.rds"))
 
-block_index <- make_nslphom_block_index(
-  inputs$input2021,
-  prefix_length = block_prefix_length
-)
-
-# Bootstrap-Idee: Innerhalb jedes nslphom-Blocks wird proportional zur Blockgroesse
-# mit Zuruecklegen gezogen. Jede Ziehung bekommt fuer nslphom einen kuenstlichen
-# Schluessel, wird fuer die Regression aber wieder auf den originalen agg.schluessel
-# und damit auf die Strukturkovariaten gemappt.
+# Bootstrap-Idee: Pro Wiederholung werden bundesweit agg.schluessel mit
+# Zuruecklegen gezogen. nslphom wird ohne Blockaufteilung auf genau dieser
+# Bootstrap-Stichprobe geschaetzt. Danach werden die kuenstlichen Bootstrap-IDs
+# vor der Regression wieder auf die originalen agg.schluessel gemappt.
 settings <- tibble::tibble(
   threshold = threshold,
-  block_prefix_length = block_prefix_length,
   n_bootstrap = n_bootstrap,
   sample_size = sample_size,
   seed = seed,
@@ -52,7 +45,8 @@ settings <- tibble::tibble(
   keep_parties = paste(validation$kept_parties, collapse = ", "),
   new_and_exit_voters = "simultaneous",
   solver = "lp_solve",
-  resampling = "stratifiziert innerhalb nslphom_block, mit Zuruecklegen"
+  blocked = FALSE,
+  resampling = "bundesweit mit Zuruecklegen, ohne nslphom-Bloecke"
 )
 
 saveRDS(settings, file.path(output_dir, "vorlaeufig_bootstrap_settings.rds"))
@@ -77,14 +71,13 @@ if (!run_bootstrap) {
       next
     }
 
-    message("Starte Bootstrap-Iteration ", iteration, " von ", n_bootstrap, ".")
+    message("Starte unblocked Bootstrap-Iteration ", iteration, " von ", n_bootstrap, ".")
 
     current_result <- tryCatch(
       run_bootstrap_iteration(
         iteration = iteration,
         input2021 = inputs$input2021,
         input2025 = inputs$input2025,
-        block_index = block_index,
         struktur = struktur,
         sample_size = sample_size,
         seed = seed,
@@ -123,23 +116,20 @@ if (!run_bootstrap) {
   beta_draws <- dplyr::bind_rows(lapply(successful_results, `[[`, "beta_draws"))
   beta_intervals <- summarise_bootstrap_betas(beta_draws)
   bootstrap_checks <- dplyr::bind_rows(lapply(successful_results, `[[`, "checks"))
-  bootstrap_sample_sizes <- dplyr::bind_rows(lapply(successful_results, `[[`, "sample_sizes"))
+  bootstrap_mapping_checks <- dplyr::bind_rows(lapply(successful_results, `[[`, "mapping_checks"))
+  bootstrap_sample_summary <- dplyr::bind_rows(lapply(successful_results, `[[`, "sample_summary"))
 
   write_bootstrap_outputs(
     beta_draws = beta_draws,
     beta_intervals = beta_intervals,
     checks = bootstrap_checks,
-    sample_sizes = bootstrap_sample_sizes,
+    mapping_checks = bootstrap_mapping_checks,
+    sample_summary = bootstrap_sample_summary,
     settings = settings,
-    output_dir = output_dir,
-    write_csv = TRUE
+    output_dir = output_dir
   )
 
   saveRDS(failures, file.path(output_dir, "vorlaeufig_bootstrap_failures.rds"))
-
-  if (nrow(failures) > 0) {
-    utils::write.csv(failures, file.path(output_dir, "vorlaeufig_bootstrap_failures.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-  }
 
   if (nrow(beta_draws) > 0) {
     beta_plot <- plot_bootstrap_beta_distributions(beta_draws)
@@ -152,5 +142,5 @@ if (!run_bootstrap) {
     )
   }
 
-  message("Bootstrap abgeschlossen. Ergebnisse gespeichert unter: ", output_dir)
+  message("Unblocked Bootstrap abgeschlossen. Ergebnisse gespeichert unter: ", output_dir)
 }

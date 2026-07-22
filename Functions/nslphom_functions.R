@@ -448,18 +448,11 @@ write_blocked_nslphom_outputs <- function(
     nslphom_fit,
     transition_long,
     transition_wide,
-    checks,
-    write_csv = TRUE) {
+    checks) {
   saveRDS(nslphom_fit, file.path(data_dir_model_nslphom, "vorlaeufig_nslphom_fit.rds"))
   saveRDS(transition_long, file.path(data_dir_model_nslphom, "vorlaeufig_transition_matrices_long.rds"))
   saveRDS(transition_wide, file.path(data_dir_model_nslphom, "vorlaeufig_transition_matrices_wide.rds"))
   saveRDS(checks, file.path(data_dir_model_nslphom, "vorlaeufig_transition_checks.rds"))
-
-  if (isTRUE(write_csv)) {
-    utils::write.csv(transition_long, file.path(data_dir_model_nslphom, "vorlaeufig_transition_matrices_long.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-    utils::write.csv(transition_wide, file.path(data_dir_model_nslphom, "vorlaeufig_transition_matrices_wide.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-    utils::write.csv(checks, file.path(data_dir_model_nslphom, "vorlaeufig_transition_checks.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-  }
 
   invisible(nslphom_fit)
 }
@@ -485,7 +478,7 @@ make_unblocked_settings <- function(
   )
 }
 
-write_unblocked_input_copies <- function(inputs, settings, output_dir, write_csv = TRUE) {
+write_unblocked_input_copies <- function(inputs, settings, output_dir) {
   dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 
   saveRDS(inputs$input2021, file.path(output_dir, "vorlaeufig_nslphom_unblocked_input_2021.rds"))
@@ -494,15 +487,6 @@ write_unblocked_input_copies <- function(inputs, settings, output_dir, write_csv
   saveRDS(inputs$party_thresholds, file.path(output_dir, "vorlaeufig_nslphom_unblocked_party_thresholds.rds"))
   saveRDS(inputs$input_checks, file.path(output_dir, "vorlaeufig_nslphom_unblocked_input_checks.rds"))
   saveRDS(settings, file.path(output_dir, "vorlaeufig_nslphom_unblocked_settings.rds"))
-
-  if (isTRUE(write_csv)) {
-    utils::write.csv(inputs$input2021, file.path(output_dir, "vorlaeufig_nslphom_unblocked_input_2021.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-    utils::write.csv(inputs$input2025, file.path(output_dir, "vorlaeufig_nslphom_unblocked_input_2025.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-    utils::write.csv(inputs$input_long, file.path(output_dir, "vorlaeufig_nslphom_unblocked_input_long.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-    utils::write.csv(inputs$party_thresholds, file.path(output_dir, "vorlaeufig_nslphom_unblocked_party_thresholds.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-    utils::write.csv(inputs$input_checks, file.path(output_dir, "vorlaeufig_nslphom_unblocked_input_checks.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-    utils::write.csv(settings, file.path(output_dir, "vorlaeufig_nslphom_unblocked_settings.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-  }
 
   invisible(settings)
 }
@@ -513,8 +497,7 @@ write_unblocked_nslphom_outputs <- function(
     output_dir,
     settings,
     method = "lphom::nslphom_unblocked",
-    threshold = 0.12,
-    write_csv = TRUE) {
+    threshold = 0.12) {
   transition_long <- local_matrices_to_long(fit, ids, method = method) %>%
     dplyr::arrange(.data$agg_schluessel, .data$from, .data$to)
 
@@ -557,14 +540,6 @@ write_unblocked_nslphom_outputs <- function(
   saveRDS(global_transition, file.path(output_dir, "vorlaeufig_nslphom_unblocked_global_matrix.rds"))
   saveRDS(global_transition_complete, file.path(output_dir, "vorlaeufig_nslphom_unblocked_global_matrix_complete.rds"))
   saveRDS(checks, file.path(output_dir, "vorlaeufig_nslphom_unblocked_checks.rds"))
-
-  if (isTRUE(write_csv)) {
-    utils::write.csv(transition_long, file.path(output_dir, "vorlaeufig_nslphom_unblocked_local_matrices_long.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-    utils::write.csv(transition_wide, file.path(output_dir, "vorlaeufig_nslphom_unblocked_local_matrices_wide.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-    utils::write.csv(global_transition, file.path(output_dir, "vorlaeufig_nslphom_unblocked_global_matrix.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-    utils::write.csv(global_transition_complete, file.path(output_dir, "vorlaeufig_nslphom_unblocked_global_matrix_complete.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-    utils::write.csv(checks, file.path(output_dir, "vorlaeufig_nslphom_unblocked_checks.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-  }
 
   invisible(fit_bundle)
 }

@@ -420,7 +420,7 @@ plot_nslphom_input_diagnostics <- function(diagnostics) {
   invisible(diagnostics)
 }
 
-save_nslphom_inputs <- function(prepared_inputs, write_csv = TRUE) {
+save_nslphom_inputs <- function(prepared_inputs) {
   prepared2021 <- prepared_inputs$prepared2021
   prepared2025 <- prepared_inputs$prepared2025
 
@@ -430,14 +430,6 @@ save_nslphom_inputs <- function(prepared_inputs, write_csv = TRUE) {
   saveRDS(dplyr::bind_rows(prepared2021$national, prepared2025$national), file.path(data_dir_cleaned, "vorlaeufig_partei_schwellenwerte.rds"))
   saveRDS(dplyr::bind_rows(prepared2021$check, prepared2025$check), file.path(data_dir_validation, "vorlaeufig_nslphom_input_checks.rds"))
   saveRDS(prepared_inputs$scale_factors, file.path(data_dir_validation, "vorlaeufig_nslphom_input_scaling_2025_to_2021.rds"))
-
-  if (isTRUE(write_csv)) {
-    utils::write.csv(prepared2021$wide, file.path(data_dir_cleaned, "vorlaeufig_nslphom_input_2021.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-    utils::write.csv(prepared2025$wide, file.path(data_dir_cleaned, "vorlaeufig_nslphom_input_2025.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-    utils::write.csv(dplyr::bind_rows(prepared2021$long, prepared2025$long), file.path(data_dir_cleaned, "vorlaeufig_nslphom_input_long.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-    utils::write.csv(dplyr::bind_rows(prepared2021$national, prepared2025$national), file.path(data_dir_cleaned, "vorlaeufig_partei_schwellenwerte.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-    utils::write.csv(dplyr::bind_rows(prepared2021$check, prepared2025$check), file.path(data_dir_validation, "vorlaeufig_nslphom_input_checks.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-  }
 
   invisible(prepared_inputs)
 }

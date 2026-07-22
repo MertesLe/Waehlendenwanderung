@@ -17,4 +17,4 @@ model_outputs <- make_transition_model_outputs(
   covariates = default_struktur_covariates
 )
 
-write_transition_model_outputs(model_outputs, write_csv = TRUE)
+write_transition_model_outputs(model_outputs)

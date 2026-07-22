@@ -200,7 +200,7 @@ make_transition_model_outputs <- function(
   )
 }
 
-write_transition_model_outputs <- function(outputs, write_csv = TRUE) {
+write_transition_model_outputs <- function(outputs) {
   saveRDS(outputs$model_data, file.path(data_dir_model_regression, "vorlaeufig_modell_afd_zufluss_daten.rds"))
   saveRDS(outputs$model_coefficients, file.path(data_dir_model_regression, "vorlaeufig_modell_afd_zufluss_coefficients.rds"))
   saveRDS(outputs$afd_source_share_coefficients, file.path(data_dir_model_regression, "vorlaeufig_modell_afd_source_share_coefficients.rds"))
@@ -210,18 +210,6 @@ write_transition_model_outputs <- function(outputs, write_csv = TRUE) {
   saveRDS(outputs$legacy_model_data, file.path(data_dir_model_regression, "vorlaeufig_modell_daten.rds"))
   saveRDS(outputs$legacy_model_coefficients, file.path(data_dir_model_regression, "vorlaeufig_modell_coefficients.rds"))
   saveRDS(outputs$legacy_model_checks, file.path(data_dir_model_regression, "vorlaeufig_modell_checks.rds"))
-
-  if (isTRUE(write_csv)) {
-    utils::write.csv(outputs$model_data, file.path(data_dir_model_regression, "vorlaeufig_modell_afd_zufluss_daten.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-    utils::write.csv(outputs$model_coefficients, file.path(data_dir_model_regression, "vorlaeufig_modell_afd_zufluss_coefficients.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-    utils::write.csv(outputs$afd_source_share_coefficients, file.path(data_dir_model_regression, "vorlaeufig_modell_afd_source_share_coefficients.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-    utils::write.csv(outputs$all_model_coefficients, file.path(data_dir_model_regression, "vorlaeufig_modell_afd_all_coefficients.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-    utils::write.csv(outputs$model_checks, file.path(data_dir_model_regression, "vorlaeufig_modell_afd_zufluss_checks.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-    utils::write.csv(outputs$afd_source_summary, file.path(data_dir_model_regression, "vorlaeufig_modell_afd_source_summary.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-    utils::write.csv(outputs$legacy_model_data, file.path(data_dir_model_regression, "vorlaeufig_modell_daten.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-    utils::write.csv(outputs$legacy_model_coefficients, file.path(data_dir_model_regression, "vorlaeufig_modell_coefficients.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-    utils::write.csv(outputs$legacy_model_checks, file.path(data_dir_model_regression, "vorlaeufig_modell_checks.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-  }
 
   invisible(outputs)
 }
