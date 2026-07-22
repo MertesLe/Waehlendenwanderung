@@ -13,8 +13,8 @@ ehet_input_path <- getOption(
   "waehlendenwanderung.ehet_nslphom_output_path",
   file.path(
     data_dir_model_nslphom,
-    "test2000",
-    "vorlaeufig_test5300_nslphom_unblocked_endoutput.rds"
+    "test5000_first",
+    "vorlaeufig_test2000_nslphom_unblocked_endoutput.rds"
   )
 )
 
@@ -33,6 +33,20 @@ geometry_path <- getOption(
 geometry_layer <- getOption("waehlendenwanderung.ehet_geometry_layer", "vg250_gem")
 output_dir <- file.path(data_dir_validation, "homogenitaetsannahme")
 chart_dir <- file.path("Charts", "homogenitaetsannahme")
+run_label <- getOption("waehlendenwanderung.ehet_run_label", basename(dirname(ehet_input_path)))
+run_label <- str_replace_all(run_label, "[^A-Za-z0-9_]+", "_")
+run_prefix <- paste0("vorlaeufig_", run_label, "_ehet")
+save_data_outputs <- isTRUE(getOption("waehlendenwanderung.ehet_save_data_outputs", TRUE))
+save_diagnostic_plots <- isTRUE(getOption("waehlendenwanderung.ehet_save_diagnostic_plots", TRUE))
+save_map_plot <- isTRUE(getOption("waehlendenwanderung.ehet_save_map_plot", TRUE))
+
+data_file <- function(name) {
+  file.path(output_dir, paste0(run_prefix, "_", name))
+}
+
+chart_file <- function(name) {
+  file.path(chart_dir, paste0(run_prefix, "_", name))
+}
 
 dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 dir.create(chart_dir, recursive = TRUE, showWarnings = FALSE)
@@ -98,22 +112,6 @@ if (max(abs(global_row_check$row_sum - 1), na.rm = TRUE) > 0.02) {
   stop("Die globalen Uebergangswahrscheinlichkeiten summieren sich zeilenweise nicht plausibel zu 1.")
 }
 
-# EHet-Rekonstruktion:
-# Homogenitaet bedeutet hier: Jede Einheit haette innerhalb einer Herkunftsgruppe
-# dieselbe globale Uebergangswahrscheinlichkeit. Die Abweichungsmatrix ist daher
-# lokale geschaetzte Uebergangsmasse minus globale erwartete Uebergangsmasse.
-ehet_cells <- local_transitions %>%
-  left_join(global_probabilities, by = c("from", "to")) %>%
-  mutate(
-    expected_count_homogeneous = origin_count * global_probability,
-    ehet_deviation_count = estimated_transition_count - expected_count_homogeneous,
-    abs_ehet_deviation_count = abs(ehet_deviation_count)
-  )
-
-if (any(is.na(ehet_cells$global_probability))) {
-  stop("Mindestens eine lokale Uebergangszelle konnte keiner globalen Uebergangswahrscheinlichkeit zugeordnet werden.")
-}
-
 wahlberechtigte_by_unit <- local_transitions %>%
   distinct(agg_schluessel, from, origin_count) %>%
   group_by(agg_schluessel) %>%
@@ -122,43 +120,144 @@ wahlberechtigte_by_unit <- local_transitions %>%
     .groups = "drop"
   )
 
-ehet_unit_metrics <- ehet_cells %>%
-  group_by(agg_schluessel) %>%
-  summarise(
-    ehet_abs_sum = sum(abs_ehet_deviation_count, na.rm = TRUE),
-    ehet_abs_half = 0.5 * ehet_abs_sum,
-    max_abs_cell_deviation = max(abs_ehet_deviation_count, na.rm = TRUE),
-    .groups = "drop"
-  ) %>%
-  left_join(wahlberechtigte_by_unit, by = "agg_schluessel") %>%
-  mutate(
-    ehet_index = ehet_abs_half / wahlberechtigte,
-    ehet_index_percent = 100 * ehet_index,
-    n_gemeindeschluessel = lengths(lapply(agg_schluessel, split_keys))
-  ) %>%
-  arrange(desc(ehet_index))
+# Wenn das nslphom-Endobjekt fit$EHet enthaelt, wird diese Modellinformation
+# direkt genutzt. fit$EHet ist eine Matrix aus Einheiten x Zielgruppen; sie
+# misst je Einheit die Zielgruppen-Abweichung vom homogenen globalen Modell.
+if ("EHet" %in% names(nslphom_output) && !is.null(nslphom_output$EHet)) {
+  ehet_source <- "fit_EHet"
+  ehet_matrix <- as.matrix(nslphom_output$EHet)
+  ehet_ids <- if ("EHet_ids" %in% names(nslphom_output)) {
+    as.character(nslphom_output$EHet_ids)
+  } else {
+    rownames(ehet_matrix)
+  }
 
-ehet_by_from <- ehet_cells %>%
-  group_by(agg_schluessel, from) %>%
-  summarise(
-    ehet_abs_half_from = 0.5 * sum(abs_ehet_deviation_count, na.rm = TRUE),
-    .groups = "drop"
-  ) %>%
-  left_join(wahlberechtigte_by_unit, by = "agg_schluessel") %>%
-  mutate(
-    ehet_index_from = ehet_abs_half_from / wahlberechtigte
+  if (length(ehet_ids) != nrow(ehet_matrix) || any(is.na(ehet_ids))) {
+    stop("EHet ist vorhanden, aber seine Zeilen koennen keinen agg.schluesseln zugeordnet werden.")
+  }
+
+  rownames(ehet_matrix) <- ehet_ids
+  if (is.null(colnames(ehet_matrix))) {
+    colnames(ehet_matrix) <- sort(unique(local_transitions$to))
+  }
+
+  local_ids <- unique(local_transitions$agg_schluessel)
+  if (!setequal(ehet_ids, local_ids)) {
+    stop("Die EHet-Zeilen passen nicht zu den lokalen nslphom-Matrizen.")
+  }
+
+  ehet_cells <- as.data.frame(as.table(ehet_matrix), stringsAsFactors = FALSE) %>%
+    transmute(
+      agg_schluessel = as.character(Var1),
+      to = as.character(Var2),
+      ehet_deviation_count = as.numeric(Freq),
+      abs_ehet_deviation_count = abs(ehet_deviation_count),
+      ehet_source = ehet_source
+    )
+
+  ehet_unit_metrics <- ehet_cells %>%
+    group_by(agg_schluessel) %>%
+    summarise(
+      ehet_abs_sum = sum(abs_ehet_deviation_count, na.rm = TRUE),
+      ehet_abs_half = 0.5 * ehet_abs_sum,
+      max_abs_cell_deviation = max(abs_ehet_deviation_count, na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    left_join(wahlberechtigte_by_unit, by = "agg_schluessel") %>%
+    mutate(
+      ehet_index = ehet_abs_half / wahlberechtigte,
+      ehet_index_percent = 100 * ehet_index,
+      n_gemeindeschluessel = lengths(lapply(agg_schluessel, split_keys)),
+      ehet_source = ehet_source
+    ) %>%
+    arrange(desc(ehet_index))
+
+  # fit$EHet ist zielgruppenbezogen. Herkunftsgruppenbeitraege lassen sich
+  # daraus nicht eindeutig trennen; diese Tabelle bleibt deshalb leer.
+  ehet_by_from <- tibble::tibble(
+    agg_schluessel = character(),
+    from = character(),
+    ehet_abs_half_from = numeric(),
+    wahlberechtigte = numeric(),
+    ehet_index_from = numeric(),
+    ehet_source = character()
   )
 
-ehet_by_to <- ehet_cells %>%
-  group_by(agg_schluessel, to) %>%
-  summarise(
-    ehet_abs_half_to = 0.5 * sum(abs_ehet_deviation_count, na.rm = TRUE),
-    .groups = "drop"
-  ) %>%
-  left_join(wahlberechtigte_by_unit, by = "agg_schluessel") %>%
-  mutate(
-    ehet_index_to = ehet_abs_half_to / wahlberechtigte
-  )
+  ehet_by_to <- ehet_cells %>%
+    group_by(agg_schluessel, to) %>%
+    summarise(
+      ehet_abs_half_to = 0.5 * sum(abs_ehet_deviation_count, na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    left_join(wahlberechtigte_by_unit, by = "agg_schluessel") %>%
+    mutate(
+      ehet_index_to = ehet_abs_half_to / wahlberechtigte,
+      ehet_source = ehet_source
+    )
+} else {
+  ehet_source <- "reconstructed_transition_cells"
+
+  # Fallback fuer alte Endoutputs ohne fit$EHet: Homogenitaet bedeutet hier,
+  # dass jede Einheit innerhalb einer Herkunftsgruppe dieselbe globale
+  # Uebergangswahrscheinlichkeit haette.
+  ehet_cells <- local_transitions %>%
+    left_join(global_probabilities, by = c("from", "to")) %>%
+    mutate(
+      expected_count_homogeneous = origin_count * global_probability,
+      ehet_deviation_count = estimated_transition_count - expected_count_homogeneous,
+      abs_ehet_deviation_count = abs(ehet_deviation_count),
+      ehet_source = ehet_source
+    )
+
+  if (any(is.na(ehet_cells$global_probability))) {
+    stop("Mindestens eine lokale Uebergangszelle konnte keiner globalen Uebergangswahrscheinlichkeit zugeordnet werden.")
+  }
+
+  ehet_unit_metrics <- ehet_cells %>%
+    group_by(agg_schluessel) %>%
+    summarise(
+      ehet_abs_sum = sum(abs_ehet_deviation_count, na.rm = TRUE),
+      ehet_abs_half = 0.5 * ehet_abs_sum,
+      max_abs_cell_deviation = max(abs_ehet_deviation_count, na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    left_join(wahlberechtigte_by_unit, by = "agg_schluessel") %>%
+    mutate(
+      ehet_index = ehet_abs_half / wahlberechtigte,
+      ehet_index_percent = 100 * ehet_index,
+      n_gemeindeschluessel = lengths(lapply(agg_schluessel, split_keys)),
+      ehet_source = ehet_source
+    ) %>%
+    arrange(desc(ehet_index))
+
+  ehet_by_from <- ehet_cells %>%
+    group_by(agg_schluessel, from) %>%
+    summarise(
+      ehet_abs_half_from = 0.5 * sum(abs_ehet_deviation_count, na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    left_join(wahlberechtigte_by_unit, by = "agg_schluessel") %>%
+    mutate(
+      ehet_index_from = ehet_abs_half_from / wahlberechtigte,
+      ehet_source = ehet_source
+    )
+
+  ehet_by_to <- ehet_cells %>%
+    group_by(agg_schluessel, to) %>%
+    summarise(
+      ehet_abs_half_to = 0.5 * sum(abs_ehet_deviation_count, na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    left_join(wahlberechtigte_by_unit, by = "agg_schluessel") %>%
+    mutate(
+      ehet_index_to = ehet_abs_half_to / wahlberechtigte,
+      ehet_source = ehet_source
+    )
+}
+
+if (any(is.na(ehet_unit_metrics$wahlberechtigte))) {
+  stop("Mindestens eine EHet-Einheit konnte keiner Wahlberechtigtenzahl zugeordnet werden.")
+}
 
 ehet_summary <- ehet_unit_metrics %>%
   summarise(
@@ -173,13 +272,21 @@ ehet_summary <- ehet_unit_metrics %>%
     q95 = quantile(ehet_index, 0.95, na.rm = TRUE),
     q99 = quantile(ehet_index, 0.99, na.rm = TRUE),
     max = max(ehet_index, na.rm = TRUE)
+  ) %>%
+  mutate(
+    run_label = run_label,
+    ehet_source = ehet_source,
+    input_path = normalizePath(ehet_input_path, winslash = "/", mustWork = FALSE),
+    .before = 1
   )
 
-saveRDS(ehet_cells, file.path(output_dir, "vorlaeufig_ehet_zellabweichungen.rds"))
-saveRDS(ehet_unit_metrics, file.path(output_dir, "vorlaeufig_ehet_einheiten.rds"))
-saveRDS(ehet_by_from, file.path(output_dir, "vorlaeufig_ehet_nach_herkunft.rds"))
-saveRDS(ehet_by_to, file.path(output_dir, "vorlaeufig_ehet_nach_ziel.rds"))
-saveRDS(ehet_summary, file.path(output_dir, "vorlaeufig_ehet_summary.rds"))
+if (save_data_outputs) {
+  saveRDS(ehet_cells, data_file("abweichungen.rds"))
+  saveRDS(ehet_unit_metrics, data_file("einheiten.rds"))
+  saveRDS(ehet_by_from, data_file("nach_herkunft.rds"))
+  saveRDS(ehet_by_to, data_file("nach_ziel.rds"))
+  saveRDS(ehet_summary, data_file("summary.rds"))
+}
 
 hist_plot <- ggplot(ehet_unit_metrics, aes(x = ehet_index)) +
   geom_histogram(bins = 60, fill = "grey55", color = "white") +
@@ -216,14 +323,27 @@ top_plot <- ehet_unit_metrics %>%
   ) +
   theme_minimal()
 
-ggsave(file.path(chart_dir, "vorlaeufig_ehet_histogramm.png"), hist_plot, width = 9, height = 6, dpi = 300, bg = "white")
-ggsave(file.path(chart_dir, "vorlaeufig_ehet_groesse_scatter.png"), size_plot, width = 9, height = 6, dpi = 300, bg = "white")
-ggsave(file.path(chart_dir, "vorlaeufig_ehet_top25.png"), top_plot, width = 10, height = 8, dpi = 300, bg = "white")
+if (save_diagnostic_plots) {
+  ggsave(chart_file("histogramm.png"), hist_plot, width = 9, height = 6, dpi = 300, bg = "white")
+  ggsave(chart_file("groesse_scatter.png"), size_plot, width = 9, height = 6, dpi = 300, bg = "white")
+  ggsave(chart_file("top25.png"), top_plot, width = 10, height = 8, dpi = 300, bg = "white")
+}
 
-message("EHet-Kennzahlen gespeichert unter: ", output_dir)
-message("EHet-Diagnoseplots gespeichert unter: ", chart_dir)
+if (save_data_outputs) {
+  message("EHet-Kennzahlen gespeichert unter: ", output_dir)
+} else {
+  message("EHet-Kennzahlen berechnet, aber nicht gespeichert.")
+}
 
-if (!requireNamespace("sf", quietly = TRUE)) {
+if (save_diagnostic_plots) {
+  message("EHet-Diagnoseplots gespeichert unter: ", chart_dir)
+} else {
+  message("EHet-Diagnoseplots wurden wegen waehlendenwanderung.ehet_save_diagnostic_plots = FALSE uebersprungen.")
+}
+
+if (!save_map_plot) {
+  message("EHet-Karte wurde wegen waehlendenwanderung.ehet_save_map_plot = FALSE uebersprungen.")
+} else if (!requireNamespace("sf", quietly = TRUE)) {
   message(
     "Das Paket 'sf' ist nicht installiert. ",
     "Die nicht-raeumliche EHet-Analyse wurde erstellt; die Karte wird uebersprungen."
@@ -296,7 +416,9 @@ if (!requireNamespace("sf", quietly = TRUE)) {
       )
     )
 
-  saveRDS(geometry_status, file.path(output_dir, "vorlaeufig_ehet_geometrie_status.rds"))
+  if (save_data_outputs) {
+    saveRDS(geometry_status, data_file("geometrie_status.rds"))
+  }
 
   # Standardfall: alle direkt vorhandenen Gemeindegeometrien eines agg.schluessels
   # werden vereinigt. Wenn einzelne historische Bestandteile 2025 nicht mehr als
@@ -364,9 +486,18 @@ if (!requireNamespace("sf", quietly = TRUE)) {
     substitute_map
   )
 
-  saveRDS(ehet_map_data, file.path(output_dir, "vorlaeufig_ehet_karte_geometrien.rds"))
+  if (save_data_outputs) {
+    saveRDS(ehet_map_data, data_file("karte_geometrien.rds"))
+  }
 
   map_plot <- ggplot() +
+    # Die komplette 2025-Gemeindeflaeche wird grau unterlegt. Dadurch sind
+    # nicht im jeweiligen Testfit enthaltene Regionen sichtbar statt weiss.
+    geom_sf(
+      data = gemeinde_geometrien,
+      fill = "grey88",
+      color = NA
+    ) +
     geom_sf(
       data = ehet_map_data %>% filter(is.na(ehet_index)),
       fill = "grey82",
@@ -385,7 +516,7 @@ if (!requireNamespace("sf", quietly = TRUE)) {
     coord_sf(datum = NA) +
     labs(
       title = "Heterogenitaet der lokalen Uebergangsmatrizen",
-      subtitle = "Grau: keine passende kleinraeumige Gemeindegeometrie im VG250-Stand 01.01.2025",
+      subtitle = "Grau: nicht im Testfit enthalten oder keine passende kleinraeumige Gemeindegeometrie im VG250-Stand 01.01.2025",
       caption = "Index = 0.5 * Summe absoluter Zellabweichungen von der globalen Matrix / Wahlberechtigte"
     ) +
     theme_void() +
@@ -396,7 +527,7 @@ if (!requireNamespace("sf", quietly = TRUE)) {
     )
 
   ggsave(
-    file.path(chart_dir, "vorlaeufig_ehet_deutschlandkarte.png"),
+    chart_file("deutschlandkarte.png"),
     map_plot,
     width = 9,
     height = 11,
@@ -404,5 +535,5 @@ if (!requireNamespace("sf", quietly = TRUE)) {
     bg = "white"
   )
 
-  message("EHet-Karte gespeichert unter: ", file.path(chart_dir, "vorlaeufig_ehet_deutschlandkarte.png"))
+  message("EHet-Karte gespeichert unter: ", chart_file("deutschlandkarte.png"))
 }
