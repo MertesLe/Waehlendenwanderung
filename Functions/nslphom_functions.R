@@ -9,6 +9,25 @@ check_lphom_available <- function() {
   invisible(TRUE)
 }
 
+check_osqp_available <- function() {
+  if (!requireNamespace("osqp", quietly = TRUE)) {
+    stop(
+      "Das Paket 'osqp' ist nicht installiert. ",
+      "Installiere es mit install.packages('osqp'), damit der OSQP-Solver laufen kann."
+    )
+  }
+
+  if (!requireNamespace("Matrix", quietly = TRUE)) {
+    stop("Das Paket 'Matrix' wird fuer sparse OSQP-Matrizen benoetigt.")
+  }
+
+  invisible(TRUE)
+}
+
+get_lphom_internal <- function(name) {
+  get(name, envir = asNamespace("lphom"), inherits = FALSE)
+}
+
 read_prepared_nslphom_inputs <- function() {
   files <- c(
     input2021 = file.path(data_dir_cleaned, "vorlaeufig_nslphom_input_2021.rds"),
@@ -96,6 +115,672 @@ make_count_matrix <- function(data, id_col = "agg_schluessel") {
   rownames(mat) <- data[[id_col]]
 
   mat
+}
+
+solve_lp_osqp <- function(
+    objective,
+    constraint_matrix,
+    rhs,
+    rhs_tolerance = 0,
+    scale_constraints = FALSE,
+    context = "LP") {
+  check_osqp_available()
+
+  objective <- as.numeric(objective)
+  rhs <- as.numeric(rhs)
+  rhs_tolerance <- rep(as.numeric(rhs_tolerance), length.out = length(rhs))
+  n_vars <- length(objective)
+
+  if (ncol(constraint_matrix) != n_vars) {
+    stop("OSQP-", context, ": Die Zahl der Spalten passt nicht zur Zielfunktion.")
+  }
+
+  equality_matrix <- Matrix::Matrix(constraint_matrix, sparse = TRUE)
+
+  if (isTRUE(scale_constraints)) {
+    row_scale <- pmax(
+      as.numeric(Matrix::rowSums(abs(equality_matrix))),
+      abs(rhs),
+      1
+    )
+    equality_matrix <- Matrix::Diagonal(x = 1 / row_scale) %*% equality_matrix
+    rhs <- rhs / row_scale
+    rhs_tolerance <- rhs_tolerance / row_scale
+  }
+
+  # OSQP formuliert Nebenbedingungen als l <= A %*% x <= u.
+  # Gleichungen erhalten deshalb l = rhs und u = rhs; zusaetzlich werden
+  # die Nichtnegativitaetsbedingungen aus lpSolve/Rsymphony als x >= 0 ergaenzt.
+  osqp_matrix <- rbind(equality_matrix, Matrix::Diagonal(n_vars))
+  lower_bounds <- c(rhs - rhs_tolerance, rep(0, n_vars))
+  upper_bounds <- c(rhs + rhs_tolerance, rep(Inf, n_vars))
+  quadratic_regularization <- getOption("waehlendenwanderung.osqp_quadratic_regularization", 0)
+  quadratic_matrix <- if (quadratic_regularization > 0) {
+    Matrix::Diagonal(n_vars, x = quadratic_regularization)
+  } else {
+    Matrix::sparseMatrix(
+      i = integer(),
+      j = integer(),
+      x = numeric(),
+      dims = c(n_vars, n_vars)
+    )
+  }
+
+  settings <- osqp::osqpSettings(
+    verbose = isTRUE(getOption("waehlendenwanderung.osqp_verbose", FALSE)),
+    max_iter = as.integer(getOption("waehlendenwanderung.osqp_max_iter", 100000L)),
+    eps_abs = getOption("waehlendenwanderung.osqp_eps_abs", 1e-3),
+    eps_rel = getOption("waehlendenwanderung.osqp_eps_rel", 1e-3),
+    polishing = isTRUE(getOption("waehlendenwanderung.osqp_polishing", TRUE))
+  )
+
+  solution <- osqp::solve_osqp(
+    P = quadratic_matrix,
+    q = objective,
+    A = osqp_matrix,
+    l = lower_bounds,
+    u = upper_bounds,
+    pars = settings
+  )
+
+  status <- solution$info$status
+  if (!status %in% c("solved", "solved inaccurate")) {
+    stop(
+      "OSQP-",
+      context,
+      " wurde nicht geloest. Status: ",
+      status,
+      "; prim_res = ",
+      solution$info$prim_res,
+      "; dual_res = ",
+      solution$info$dual_res,
+      "; iter = ",
+      solution$info$iter
+    )
+  }
+
+  x <- as.numeric(solution$x)
+  if (anyNA(x)) {
+    stop("OSQP-", context, " enthaelt fehlende Loesungswerte.")
+  }
+
+  x[abs(x) < getOption("waehlendenwanderung.osqp_zero_tolerance", 1e-10)] <- 0
+
+  list(
+    solution = x,
+    objval = sum(objective * x),
+    status = status,
+    info = solution$info
+  )
+}
+
+solve_local_tiebreak_qp_osqp <- function(
+    base_matrix,
+    base_rhs,
+    first_objective,
+    first_objective_value,
+    global_probability,
+    context = "lokaler Tie-Break") {
+  check_osqp_available()
+
+  base_matrix <- Matrix::Matrix(base_matrix, sparse = TRUE)
+  base_rhs <- as.numeric(base_rhs)
+  first_objective <- as.numeric(first_objective)
+  global_probability <- as.numeric(global_probability)
+  n_vars <- length(first_objective)
+  n_probability_vars <- length(global_probability)
+
+  if (n_vars < n_probability_vars) {
+    stop("OSQP-", context, ": unplausible Variablenzahl.")
+  }
+
+  objective_tolerance <- max(
+    getOption("waehlendenwanderung.osqp_local_objective_tolerance", 1e-5),
+    abs(first_objective_value) * getOption("waehlendenwanderung.osqp_local_objective_relative_tolerance", 1e-6)
+  )
+
+  quadratic_matrix <- Matrix::sparseMatrix(
+    i = seq_len(n_probability_vars),
+    j = seq_len(n_probability_vars),
+    x = rep(1, n_probability_vars),
+    dims = c(n_vars, n_vars)
+  )
+  linear_objective <- c(-global_probability, rep(0, n_vars - n_probability_vars))
+  objective_row <- Matrix::Matrix(first_objective, nrow = 1L, sparse = TRUE)
+  osqp_matrix <- rbind(base_matrix, objective_row, Matrix::Diagonal(n_vars))
+
+  lower_bounds <- c(base_rhs, -Inf, rep(0, n_vars))
+  upper_bounds <- c(base_rhs, first_objective_value + objective_tolerance, rep(Inf, n_vars))
+
+  settings <- osqp::osqpSettings(
+    verbose = isTRUE(getOption("waehlendenwanderung.osqp_verbose", FALSE)),
+    max_iter = as.integer(getOption("waehlendenwanderung.osqp_max_iter", 100000L)),
+    eps_abs = getOption("waehlendenwanderung.osqp_eps_abs", 1e-3),
+    eps_rel = getOption("waehlendenwanderung.osqp_eps_rel", 1e-3),
+    polishing = isTRUE(getOption("waehlendenwanderung.osqp_polishing", TRUE))
+  )
+
+  solution <- osqp::solve_osqp(
+    P = quadratic_matrix,
+    q = linear_objective,
+    A = osqp_matrix,
+    l = lower_bounds,
+    u = upper_bounds,
+    pars = settings
+  )
+
+  status <- solution$info$status
+  if (!status %in% c("solved", "solved inaccurate")) {
+    stop(
+      "OSQP-",
+      context,
+      " wurde nicht geloest. Status: ",
+      status,
+      "; prim_res = ",
+      solution$info$prim_res,
+      "; dual_res = ",
+      solution$info$dual_res,
+      "; iter = ",
+      solution$info$iter
+    )
+  }
+
+  x <- as.numeric(solution$x)
+  x[abs(x) < getOption("waehlendenwanderung.osqp_zero_tolerance", 1e-10)] <- 0
+
+  list(
+    solution = x,
+    objval = solution$info$obj_val,
+    status = status,
+    info = solution$info
+  )
+}
+
+model_lphom_apriori_1_2_sparse <- function(X, Y, P0, lambda, uniform) {
+  X <- as.matrix(X)
+  Y <- as.matrix(Y)
+  J <- ncol(X)
+  K <- ncol(Y)
+  I <- nrow(X)
+  JK <- J * K
+  IK <- I * K
+  xt <- colSums(X)
+  yt <- colSums(Y)
+
+  if (lambda == 1) {
+    stop("Der OSQP-Solver ist im Workflow fuer lambda < 1 implementiert.")
+  }
+
+  p_index <- matrix(seq_len(JK), nrow = J, ncol = K, byrow = TRUE)
+  slack_global_minus <- JK + p_index
+  slack_global_plus <- 2L * JK + p_index
+  slack_local_plus <- 3L * JK + matrix(seq_len(IK), nrow = I, ncol = K, byrow = TRUE)
+  slack_local_minus <- 3L * JK + IK + matrix(seq_len(IK), nrow = I, ncol = K, byrow = TRUE)
+  n_vars <- 3L * JK + 2L * IK
+
+  n_uniform_rows <- if (uniform) J - 1L else 0L
+  row_a2 <- seq_len(J)
+  row_a3 <- J + seq_len(K)
+  row_a4 <- J + K + seq_len(JK)
+  row_a5_start <- J + K + JK
+  row_a9_start <- row_a5_start + n_uniform_rows
+  n_rows <- row_a9_start + IK
+
+  i_idx <- integer()
+  j_idx <- integer()
+  x_val <- numeric()
+
+  add_entries <- function(rows, cols, values) {
+    i_idx <<- c(i_idx, as.integer(rows))
+    j_idx <<- c(j_idx, as.integer(cols))
+    x_val <<- c(x_val, as.numeric(values))
+  }
+
+  for (j in seq_len(J)) {
+    add_entries(rep(row_a2[[j]], K), p_index[j, ], rep(1, K))
+  }
+
+  for (k in seq_len(K)) {
+    add_entries(rep(row_a3[[k]], J), p_index[, k], xt)
+  }
+
+  p0_vector <- as.vector(t(P0))
+  non_missing_p0 <- which(!is.na(p0_vector))
+  if (length(non_missing_p0) > 0) {
+    add_entries(row_a4[non_missing_p0], non_missing_p0, rep(1, length(non_missing_p0)))
+    add_entries(row_a4[non_missing_p0], JK + non_missing_p0, rep(-1, length(non_missing_p0)))
+    add_entries(row_a4[non_missing_p0], 2L * JK + non_missing_p0, rep(1, length(non_missing_p0)))
+  }
+
+  if (uniform) {
+    for (j in seq_len(J - 1L)) {
+      current_row <- row_a5_start + j
+      add_entries(
+        rep(current_row, 2),
+        c(p_index[1L, K], p_index[j + 1L, K]),
+        c(1, -1)
+      )
+    }
+  }
+
+  for (i in seq_len(I)) {
+    for (k in seq_len(K)) {
+      current_row <- row_a9_start + (i - 1L) * K + k
+      non_zero_origin <- which(X[i, ] != 0)
+
+      if (length(non_zero_origin) > 0) {
+        add_entries(
+          rep(current_row, length(non_zero_origin)),
+          p_index[non_zero_origin, k],
+          X[i, non_zero_origin]
+        )
+      }
+
+      add_entries(
+        rep(current_row, 2),
+        c(slack_local_plus[i, k], slack_local_minus[i, k]),
+        c(1, -1)
+      )
+    }
+  }
+
+  A <- Matrix::sparseMatrix(
+    i = i_idx,
+    j = j_idx,
+    x = x_val,
+    dims = c(n_rows, n_vars)
+  )
+
+  b <- c(
+    rep(1, J),
+    yt,
+    ifelse(is.na(p0_vector), 0, p0_vector),
+    if (uniform) rep(0, J - 1L) else numeric(),
+    as.vector(t(Y))
+  )
+
+  fp <- rep(0, JK)
+  fs <- lambda * rep(xt, each = K)
+  fs[is.na(p0_vector)] <- 0
+  fe <- rep(1 - lambda, 2L * IK)
+
+  list(
+    A = A,
+    b = b,
+    f = c(fp, fs, fs, fe)
+  )
+}
+
+nslphom_lphom_osqp <- function(
+    votes_election1,
+    votes_election2,
+    new_and_exit_voters = "simultaneous",
+    apriori = NULL,
+    lambda = 0.5,
+    uniform = TRUE,
+    structural_zeros = NULL,
+    integers = FALSE,
+    verbose = TRUE,
+    ...) {
+  check_lphom_available()
+  check_osqp_available()
+
+  if (!isFALSE(integers)) {
+    stop("Der OSQP-Solver ist hier nur fuer kontinuierliche Uebergangswerte implementiert.")
+  }
+
+  if (!is.null(structural_zeros)) {
+    stop("Structural zeros sind im OSQP-Solver noch nicht implementiert.")
+  }
+
+  matrix_votes <- get_lphom_internal("tests_inputs_lphom")(
+    c(
+      as.list(environment()),
+      list(solver = "lp_solve", integers.solver = "symphony"),
+      list(...)
+    )
+  )
+
+  inputs <- list(
+    votes_election1 = votes_election1,
+    votes_election2 = votes_election2,
+    new_and_exit_voters = new_and_exit_voters[1],
+    apriori = apriori,
+    lambda = lambda,
+    uniform = uniform,
+    structural_zeros = structural_zeros,
+    integers = FALSE,
+    verbose = verbose,
+    solver = "osqp",
+    integers.solver = NA_character_
+  )
+
+  x0 <- matrix_votes$x
+  y0 <- matrix_votes$y
+
+  if (any(abs(rowSums(x0) - rowSums(y0)) > 1e-8)) {
+    stop("Der OSQP-Hauptsolver erwartet bereits skalierte gleiche Zeilensummen.")
+  }
+
+  scenario <- new_and_exit_voters[1]
+  if (!scenario %in% c("simultaneous", "raw")) {
+    stop("Der OSQP-Hauptsolver ist fuer den aktuellen Workflow mit gleichen Zeilensummen implementiert.")
+  }
+
+  net <- get_lphom_internal("compute_net_voters")(x0 = x0, y0 = y0)
+  x <- net$x
+  y <- net$y
+  apriori <- get_lphom_internal("completar_apriori")(net = net, apriori = apriori)
+
+  J <- ncol(x)
+  K <- ncol(y)
+  JK <- J * K
+  names1 <- colnames(x)
+  names2 <- colnames(y)
+
+  if (verbose) {
+    message("Schaetze globale nslphom-Startmatrix mit OSQP.")
+  }
+
+  sistema <- model_lphom_apriori_1_2_sparse(
+    X = x,
+    Y = y,
+    P0 = apriori,
+    lambda = lambda,
+    uniform = FALSE
+  )
+
+  sol <- solve_lp_osqp(
+    objective = sistema$f,
+    constraint_matrix = sistema$A,
+    rhs = sistema$b,
+    context = "globale Startmatrix"
+  )
+
+  z <- sol$solution
+  pjk <- matrix(z[seq_len(JK)], J, K, TRUE, dimnames = list(names1, names2))
+  eik <- y - x %*% pjk
+  colnames(eik) <- names2
+  rownames(eik) <- rownames(x)
+  EHet <- eik
+
+  vjk <- pjk * colSums(x)
+  vjk.complete <- vjk
+  pkj <- t(vjk) / colSums(vjk)
+  filas0 <- which(rowSums(vjk) == 0L)
+  colum0 <- which(colSums(vjk) == 0L)
+  pjk[filas0, ] <- 0L
+  pkj[colum0, ] <- 0L
+  pjk.complete <- pjk
+  HIe <- 100 * sum(abs(eik)) / sum(vjk.complete)
+  pjk <- round(100 * pjk, 2)
+  pkj <- round(100 * pkj, 2)
+
+  det_bounds <- get_lphom_internal("bounds_compound")(
+    origin = x,
+    destination = y,
+    zeros = structural_zeros
+  )[c(1, 2)]
+
+  output <- list(
+    VTM = pjk,
+    VTM.votes = vjk,
+    OTM = pkj,
+    HETe = HIe,
+    VTM.complete = pjk.complete,
+    VTM.complete.votes = vjk.complete,
+    deterministic.bounds = det_bounds,
+    inputs = inputs,
+    origin = x,
+    destination = y,
+    EHet = EHet
+  )
+  class(output) <- c("lphom", "ei_lp")
+  output
+}
+
+lphom_local_abs_osqp <- function(lphom.object, iii) {
+  xt <- lphom.object$origin[iii, ]
+  yt <- lphom.object$destination[iii, ]
+  filas0 <- which(rowSums(lphom.object$VTM.complete) == 0)
+  pg <- lphom.object$VTM.complete / rowSums(lphom.object$VTM.complete)
+  pg[filas0, ] <- 0
+  ceros <- get_lphom_internal("determinar_zeros_estructurales")(lphom.object)
+  nj <- length(xt)
+  nk <- length(yt)
+  njk <- nj * nk
+
+  a1 <- kronecker(diag(nj), t(rep(1L, nk)))
+  b1 <- rep(1L, nj)
+  at <- t(kronecker(xt, diag(nk)))
+  bt <- yt
+  ajk <- cbind(
+    kronecker(diag(xt), diag(nk)),
+    t(kronecker(diag(njk), c(1L, -1L)))
+  )
+  bjk <- as.vector(t(xt * pg))
+  a <- rbind(cbind(rbind(a1, at), matrix(0L, nj + nk, 2L * njk)), ajk)
+  b <- c(b1, bt, bjk)
+
+  if (length(ceros) > 0) {
+    ast <- matrix(0L, length(ceros), ncol(a))
+    bst <- rep(0L, length(ceros))
+
+    for (i in seq_along(ceros)) {
+      ast[i, nk * (ceros[[i]][1L] - 1L) + ceros[[i]][2L]] <- 1L
+    }
+
+    a <- rbind(a, ast)
+    b <- c(b, bst)
+  }
+
+  fun.obj <- c(rep(0L, njk), rep(1L, 2L * njk))
+  sol <- solve_lp_osqp(
+    fun.obj,
+    a,
+    b,
+    context = paste0("lokale Einheit ", iii, " Schritt 1")
+  )
+  # OSQP ist fuer quadratische Programme gebaut. Der zweite lokale Schritt
+  # ersetzt deshalb den linearen Tie-Break aus lphom durch einen QP-Tie-Break:
+  # Unter dem minimalen L1-Abstand aus Schritt 1 wird die lokale Matrix moeglichst
+  # nah an der aktuellen globalen Matrix gehalten.
+  nsol <- solve_local_tiebreak_qp_osqp(
+    base_matrix = a,
+    base_rhs = b,
+    first_objective = fun.obj,
+    first_objective_value = sol$objval,
+    global_probability = as.vector(t(pg)),
+    context = paste0("lokale Einheit ", iii, " Schritt 2")
+  )
+
+  matrix(
+    nsol$solution[seq_len(njk)],
+    nj,
+    nk,
+    TRUE,
+    dimnames = dimnames(lphom.object$VTM.complete)
+  )
+}
+
+nslphom_osqp <- function(
+    votes_election1,
+    votes_election2,
+    new_and_exit_voters = "simultaneous",
+    apriori = NULL,
+    lambda = 0.5,
+    uniform = TRUE,
+    iter.max = 10,
+    min.first = FALSE,
+    structural_zeros = NULL,
+    integers = FALSE,
+    distance.local = "abs",
+    verbose = TRUE,
+    burnin = 0,
+    tol = 10^-5,
+    ...) {
+  if (iter.max < 0 | iter.max %% 1 > 0) {
+    stop("iter.max must be a positive integer")
+  }
+
+  if (distance.local[1] != "abs" || !isTRUE(uniform)) {
+    stop("Der OSQP-Solver ist fuer distance.local = 'abs' und uniform = TRUE implementiert.")
+  }
+
+  if (!isFALSE(integers)) {
+    stop("Der OSQP-Solver ist hier nur fuer kontinuierliche Uebergangswerte implementiert.")
+  }
+
+  if (iter.max <= burnin) {
+    stop("The number of iterations (iter.max) must be higher than burnin")
+  }
+
+  lphom_inic <- nslphom_lphom_osqp(
+    votes_election1 = votes_election1,
+    votes_election2 = votes_election2,
+    new_and_exit_voters = new_and_exit_voters,
+    apriori = apriori,
+    lambda = lambda,
+    uniform = uniform,
+    structural_zeros = structural_zeros,
+    integers = integers,
+    verbose = verbose,
+    ...
+  )
+  lphom0 <- lphom_inic
+  zeros <- get_lphom_internal("determinar_zeros_estructurales")(lphom_inic)
+  local_solver <- getOption("waehlendenwanderung.osqp_local_solver", "lp_solve")
+  local_solver <- match.arg(local_solver, c("lp_solve", "symphony", "osqp"))
+
+  VTM.sequence <- array(NA, c(dim(lphom_inic$VTM.complete), iter.max + 1L))
+  VTM_votos.sequence <- array(NA, c(dim(lphom_inic$VTM.complete), iter.max + 1L))
+  VTM_units.sequence <- array(NA, c(dim(lphom_inic$VTM.complete), nrow(lphom_inic$origin), iter.max + 1L))
+  votos_units.sequence <- array(NA, c(dim(lphom_inic$VTM.complete), nrow(lphom_inic$origin), iter.max + 1L))
+  EHet.sequence <- array(NA, c(dim(lphom_inic$EHet), iter.max + 1L))
+
+  iter <- 0L
+  dif.max <- Inf
+  VTM.iter <- lphom0$VTM.complete <- lphom_inic$VTM.complete
+  VTM.sequence[, , iter + 1L] <- VTM.iter
+  HETe.sequence <- lphom_inic$HETe
+  EHet.sequence[, , iter + 1L] <- lphom_inic$EHet
+
+  while (iter < iter.max & dif.max > tol) {
+    if (verbose) {
+      message("OSQP-nslphom Iteration ", iter + 1L, " von ", iter.max, ".")
+    }
+
+    VTM_units <- votos_units <- array(NA, c(dim(lphom_inic$VTM.complete), nrow(lphom_inic$origin)))
+
+    for (i in seq_len(nrow(lphom_inic$origin))) {
+      VTM_units[, , i] <- if (local_solver == "osqp") {
+        lphom_local_abs_osqp(lphom.object = lphom0, iii = i)
+      } else {
+        get_lphom_internal("lphom_local_abs")(
+          lphom.object = lphom0,
+          iii = i,
+          solver = local_solver
+        )
+      }
+      votos_units[, , i] <- VTM_units[, , i] / rowSums(VTM_units[, , i]) * lphom_inic$origin[i, ]
+      VTM_units[lphom_inic$origin[i, ] == 0L, , i] <- 0L
+    }
+
+    votos_units[is.na(votos_units)] <- 0L
+    VTM_votos_homogeneos <- get_lphom_internal("HET_MT.votos_MT.prop_Y")(votos_units)
+    VTM_votos <- VTM_votos_homogeneos$MT.votos
+    VTM.complete <- VTM_votos_homogeneos$MT.pro
+    iter <- iter + 1L
+    dif.max <- max(abs(VTM.complete - VTM.iter))
+    VTM.iter <- lphom0$VTM.complete <- VTM.complete
+    VTM.sequence[, , iter + 1L] <- VTM.iter
+    HETe.sequence <- c(HETe.sequence, VTM_votos_homogeneos$HET)
+    VTM_votos.sequence[, , iter + 1L] <- VTM_votos
+    VTM_units.sequence[, , , iter + 1L] <- VTM_units
+    votos_units.sequence[, , , iter + 1L] <- votos_units
+    EHet.sequence[, , iter + 1L] <- VTM_votos_homogeneos$EHet
+
+    if (min.first & (HETe.sequence[iter + 1L] > HETe.sequence[iter])) {
+      dif.max <- -Inf
+    }
+  }
+
+  dimnames(VTM.sequence) <- c(dimnames(lphom_inic$VTM.complete), list(paste0("iter = ", 0L:iter.max)))
+  VTM.sequence <- VTM.sequence[, , 1L:(iter + 1L)]
+  VTM_votos.sequence <- VTM_votos.sequence[, , 1L:(iter + 1L)]
+  VTM_units.sequence <- VTM_units.sequence[, , , 1L:(iter + 1L)]
+  votos_units.sequence <- votos_units.sequence[, , , 1L:(iter + 1L)]
+
+  if (iter < burnin) {
+    burnin <- iter - 1L
+  }
+
+  iter.select <- which.min(HETe.sequence[(burnin + 2L):(iter + 1L)])
+  VTM.complete <- VTM.sequence[, , burnin + 1L + iter.select]
+  VTM_votos <- VTM_votos.sequence[, , burnin + 1L + iter.select]
+  VTM_units <- VTM_units.sequence[, , , burnin + 1L + iter.select]
+  votos_units <- votos_units.sequence[, , , burnin + 1L + iter.select]
+  OTM <- round(t(VTM_votos) / colSums(VTM_votos) * 100, 2)
+  OTM <- OTM[seq_len(nrow(lphom_inic$OTM)), seq_len(ncol(lphom_inic$OTM))]
+  EHet <- EHet.sequence[, , burnin + 1L + iter.select]
+  dimnames(OTM) <- dimnames(lphom_inic$OTM)
+  HETe <- HETe.sequence[burnin + 1L + iter.select]
+  dimnames(VTM_units) <- dimnames(votos_units) <- c(
+    dimnames(VTM.complete),
+    list(rownames(lphom_inic$origin))
+  )
+  dimnames(EHet) <- dimnames(lphom_inic$EHet)
+  dimnames(VTM_votos) <- dimnames(lphom_inic$VTM.complete)
+  VTM <- round(VTM.complete[seq_len(nrow(lphom_inic$VTM)), seq_len(ncol(lphom_inic$VTM))] * 100, 2)
+  VTM.votes <- VTM_votos[seq_len(nrow(lphom_inic$VTM)), seq_len(ncol(lphom_inic$VTM))]
+  lphom_inic$inputs$verbose <- verbose
+  inputs <- c(
+    lphom_inic$inputs,
+    iter.max = iter.max,
+    min.first = min.first,
+    uniform = uniform,
+    distance.local = distance.local,
+    burnin = burnin,
+    tol = tol
+  )
+  inputs$osqp_local_solver <- local_solver
+  inic <- lphom_inic[c(1L:6L, 10L)]
+  names(inic) <- paste0(names(inic), "_init")
+  filas0 <- which(rowSums(VTM_votos) == 0)
+  colum0 <- which(colSums(VTM_votos) == 0)
+  VTM[filas0, ] <- 0
+  VTM.complete[filas0, ] <- 0
+  OTM[colum0, ] <- 0
+  det.bounds <- get_lphom_internal("bounds_compound")(
+    origin = lphom_inic$origin,
+    destination = lphom_inic$destination,
+    zeros = zeros
+  )
+
+  output <- list(
+    VTM = VTM,
+    VTM.votes = VTM.votes,
+    OTM = OTM,
+    HETe = HETe,
+    VTM.complete = VTM.complete,
+    VTM.complete.votes = VTM_votos,
+    VTM.sequence = VTM.sequence,
+    HETe.sequence = HETe.sequence,
+    VTM.prop.units = VTM_units,
+    VTM.votes.units = votos_units,
+    zeros = zeros,
+    iter = iter,
+    iter.min = burnin + iter.select,
+    EHet = EHet,
+    deterministic.bounds = det.bounds,
+    inputs = inputs,
+    origin = lphom_inic$origin,
+    destination = lphom_inic$destination,
+    solution_init = inic,
+    argg = c(as.list(environment()), list(...))
+  )
+  class(output) <- c("nslphom", "ei_lp", "lphom")
+  output
 }
 
 derive_nslphom_block_id <- function(agg_schluessel, prefix_length = 3L) {
@@ -192,28 +877,49 @@ fit_nslphom_model <- function(
     destination_counts,
     iter_max = getOption("waehlendenwanderung.nslphom_iter_max", 10L),
     tol = getOption("waehlendenwanderung.nslphom_tol", 1e-5),
+    solver = getOption("waehlendenwanderung.nslphom_solver", "osqp"),
     verbose = FALSE,
     method = "lphom::nslphom") {
   check_lphom_available()
+  solver <- match.arg(solver, c("lp_solve", "symphony", "osqp"))
 
-  fit <- lphom::nslphom(
-    votes_election1 = as.data.frame(origin_counts),
-    votes_election2 = as.data.frame(destination_counts),
-    new_and_exit_voters = "simultaneous",
-    apriori = NULL,
-    uniform = TRUE,
-    iter.max = iter_max,
-    min.first = FALSE,
-    structural_zeros = NULL,
-    integers = FALSE,
-    distance.local = "abs",
-    verbose = verbose,
-    solver = "lp_solve",
-    burnin = 0,
-    tol = tol
-  )
+  if (solver == "osqp") {
+    fit <- nslphom_osqp(
+      votes_election1 = as.data.frame(origin_counts),
+      votes_election2 = as.data.frame(destination_counts),
+      new_and_exit_voters = "simultaneous",
+      apriori = NULL,
+      uniform = TRUE,
+      iter.max = iter_max,
+      min.first = FALSE,
+      structural_zeros = NULL,
+      integers = FALSE,
+      distance.local = "abs",
+      verbose = verbose,
+      burnin = 0,
+      tol = tol
+    )
+  } else {
+    fit <- lphom::nslphom(
+      votes_election1 = as.data.frame(origin_counts),
+      votes_election2 = as.data.frame(destination_counts),
+      new_and_exit_voters = "simultaneous",
+      apriori = NULL,
+      uniform = TRUE,
+      iter.max = iter_max,
+      min.first = FALSE,
+      structural_zeros = NULL,
+      integers = FALSE,
+      distance.local = "abs",
+      verbose = verbose,
+      solver = solver,
+      burnin = 0,
+      tol = tol
+    )
+  }
 
   attr(fit, "method_label") <- method
+  attr(fit, "solver") <- solver
   fit
 }
 
@@ -288,6 +994,18 @@ make_nslphom_checks <- function(
   votes_units <- fit[["VTM.votes.units"]]
   origin_used <- as.matrix(fit[["origin"]])
   destination_used <- as.matrix(fit[["destination"]])
+  solver_used <- if (!is.null(fit[["inputs"]][["solver"]])) {
+    fit[["inputs"]][["solver"]]
+  } else if (!is.null(attr(fit, "solver"))) {
+    attr(fit, "solver")
+  } else {
+    NA_character_
+  }
+  osqp_local_solver <- if (!is.null(fit[["inputs"]][["osqp_local_solver"]])) {
+    fit[["inputs"]][["osqp_local_solver"]]
+  } else {
+    NA_character_
+  }
 
   origin_from_units <- t(vapply(
     seq_len(dim(votes_units)[[3]]),
@@ -331,6 +1049,8 @@ make_nslphom_checks <- function(
     package = "lphom",
     package_version = as.character(utils::packageVersion("lphom")),
     new_and_exit_voters = "simultaneous",
+    solver = solver_used,
+    osqp_local_solver = osqp_local_solver,
     threshold = threshold,
     blocked = blocked
   )
@@ -363,6 +1083,7 @@ fit_nslphom_block <- function(
     destination_counts,
     iter_max = iter_max,
     tol = tol,
+    solver = getOption("waehlendenwanderung.nslphom_solver", "osqp"),
     verbose = verbose,
     method = "lphom::nslphom"
   )
@@ -437,7 +1158,7 @@ make_nslphom_fit_bundle <- function(
       iter_max = iter_max,
       tol = tol,
       new_and_exit_voters = "simultaneous",
-      solver = "lp_solve"
+      solver = getOption("waehlendenwanderung.nslphom_solver", "osqp")
     ),
     package = "lphom",
     package_version = as.character(utils::packageVersion("lphom"))
@@ -463,6 +1184,7 @@ make_unblocked_settings <- function(
     threshold = 0.12,
     iter_max = 10L,
     tol = 1e-5,
+    solver = getOption("waehlendenwanderung.nslphom_solver", "osqp"),
     blocked = FALSE) {
   tibble::tibble(
     threshold = threshold,
@@ -474,7 +1196,12 @@ make_unblocked_settings <- function(
     iter_max = iter_max,
     tol = tol,
     new_and_exit_voters = "simultaneous",
-    solver = "lp_solve"
+    solver = solver,
+    osqp_local_solver = if (identical(solver, "osqp")) {
+      getOption("waehlendenwanderung.osqp_local_solver", "lp_solve")
+    } else {
+      NA_character_
+    }
   )
 }
 
@@ -542,4 +1269,63 @@ write_unblocked_nslphom_outputs <- function(
   saveRDS(checks, file.path(output_dir, "vorlaeufig_nslphom_unblocked_checks.rds"))
 
   invisible(fit_bundle)
+}
+
+write_main_unblocked_nslphom_outputs <- function(
+    fit,
+    ids,
+    settings,
+    method = "nslphom_unblocked",
+    threshold = 0.12) {
+  transition_long <- local_matrices_to_long(fit, ids, method = method) %>%
+    dplyr::arrange(.data$agg_schluessel, .data$from, .data$to)
+
+  transition_wide <- make_transition_wide(transition_long)
+
+  global_transition <- matrix_to_long(
+    prop_matrix = fit[["VTM"]],
+    votes_matrix = fit[["VTM.votes"]],
+    matrix_scope = "global",
+    method = method
+  )
+
+  global_transition_complete <- matrix_to_long(
+    prop_matrix = fit[["VTM.complete"]],
+    votes_matrix = fit[["VTM.complete.votes"]],
+    matrix_scope = "global_complete",
+    method = method
+  )
+
+  checks <- make_nslphom_checks(
+    fit,
+    transition_long,
+    block_id = NA_character_,
+    method = method,
+    threshold = threshold,
+    blocked = FALSE
+  )
+
+  nslphom_fit <- list(
+    fit = fit,
+    settings = settings,
+    checks = checks,
+    global_matrix = global_transition,
+    global_matrix_complete = global_transition_complete,
+    package = "lphom",
+    package_version = as.character(utils::packageVersion("lphom")),
+    osqp_package_version = if (requireNamespace("osqp", quietly = TRUE)) {
+      as.character(utils::packageVersion("osqp"))
+    } else {
+      NA_character_
+    }
+  )
+
+  saveRDS(nslphom_fit, file.path(data_dir_model_nslphom, "vorlaeufig_nslphom_fit.rds"))
+  saveRDS(transition_long, file.path(data_dir_model_nslphom, "vorlaeufig_transition_matrices_long.rds"))
+  saveRDS(transition_wide, file.path(data_dir_model_nslphom, "vorlaeufig_transition_matrices_wide.rds"))
+  saveRDS(global_transition, file.path(data_dir_model_nslphom, "vorlaeufig_nslphom_global_matrix.rds"))
+  saveRDS(global_transition_complete, file.path(data_dir_model_nslphom, "vorlaeufig_nslphom_global_matrix_complete.rds"))
+  saveRDS(checks, file.path(data_dir_model_nslphom, "vorlaeufig_transition_checks.rds"))
+
+  invisible(nslphom_fit)
 }

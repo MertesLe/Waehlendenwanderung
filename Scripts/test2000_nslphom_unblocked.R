@@ -11,6 +11,8 @@ n_test_units <- 5300L
 threshold <- getOption("waehlendenwanderung.party_threshold", 0.12)
 iter_max <- getOption("waehlendenwanderung.test2000_nslphom_iter_max", 10L)
 tol <- getOption("waehlendenwanderung.test2000_nslphom_tol", 1e-5)
+solver <- getOption("waehlendenwanderung.test2000_nslphom_solver", getOption("waehlendenwanderung.nslphom_solver", "osqp"))
+solver <- match.arg(solver, c("osqp", "symphony", "lp_solve"))
 output_dir <- file.path(data_dir_model_nslphom, "test5300_random")
 dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 
@@ -75,7 +77,9 @@ message(
   nrow(origin_counts),
   " Aggregationseinheiten und ",
   ncol(origin_counts),
-  " Gruppen."
+  " Gruppen mit Solver ",
+  solver,
+  "."
 )
 
 fit <- fit_nslphom_model(
@@ -83,8 +87,9 @@ fit <- fit_nslphom_model(
   destination_counts,
   iter_max = iter_max,
   tol = tol,
+  solver = solver,
   verbose = TRUE,
-  method = "lphom::nslphom_unblocked_test2000"
+  method = paste0("nslphom_unblocked_test2000_", solver)
 )
 
 message("Bereite Endoutput mit lokalen und globalen Uebergangswahrscheinlichkeiten auf.")
@@ -92,7 +97,7 @@ message("Bereite Endoutput mit lokalen und globalen Uebergangswahrscheinlichkeit
 local_matrices_long <- local_matrices_to_long(
   fit,
   ids,
-  method = "lphom::nslphom_unblocked_test2000"
+  method = paste0("nslphom_unblocked_test2000_", solver)
 ) %>%
   arrange(
     agg_schluessel,
@@ -106,14 +111,14 @@ global_matrix <- matrix_to_long(
   prop_matrix = fit[["VTM"]],
   votes_matrix = fit[["VTM.votes"]],
   matrix_scope = "global",
-  method = "lphom::nslphom_unblocked_test2000"
+  method = paste0("nslphom_unblocked_test2000_", solver)
 )
 
 global_matrix_complete <- matrix_to_long(
   prop_matrix = fit[["VTM.complete"]],
   votes_matrix = fit[["VTM.complete.votes"]],
   matrix_scope = "global_complete",
-  method = "lphom::nslphom_unblocked_test2000"
+  method = paste0("nslphom_unblocked_test2000_", solver)
 )
 
 settings <- tibble::tibble(
@@ -124,8 +129,8 @@ settings <- tibble::tibble(
   iter_max = iter_max,
   tol = tol,
   new_and_exit_voters = "simultaneous",
-  solver = "lp_solve",
-  selection = "erste 2000 sortierte agg_schluessel"
+  solver = solver,
+  selection = "zufaellige 5300 agg_schluessel mit seed 42"
 )
 
 endoutput <- list(

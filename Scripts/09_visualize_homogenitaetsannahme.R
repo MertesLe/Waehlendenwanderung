@@ -457,15 +457,15 @@ if (!save_map_plot) {
       agg_schluessel = paste(sort(unique(agg_schluessel)), collapse = ", "),
       ehet_abs_half = sum(ehet_abs_half, na.rm = TRUE),
       wahlberechtigte = sum(wahlberechtigte, na.rm = TRUE),
-      ehet_index = NA_real_,
-      ehet_index_percent = NA_real_,
-      geometrie_status = "fehlende_untergliederung_grau",
+      ehet_index = ehet_abs_half / wahlberechtigte,
+      ehet_index_percent = 100 * ehet_index,
+      geometrie_status = "ersatz_geometrie_aggregiert",
       .groups = "drop"
     )
 
-  # Berlin/Hamburg-Untergliederungen fehlen in VG250 als eigenstaendige
-  # Gemeindegeometrien. Vorerst werden die Gesamtstadt-Flaechen grau gezeigt,
-  # damit sichtbar bleibt, dass hier keine kleinraeumige Flaeche verfuegbar ist.
+  # Berlin/Hamburg-Aggregation: Die Wahldaten liegen kleinteiliger vor als VG250.
+  # Deshalb werden alle lokalen Einheiten je Gesamtstadt ueber
+  # sum(EHet_abs_half) / sum(Wahlberechtigte) zu einem Gesamtstadtwert aggregiert.
   substitute_map <- gemeinde_geometrien %>%
     inner_join(missing_substitute_lookup, by = c("gemeindeschluessel" = "ersatz_geometrie")) %>%
     group_by(gemeindeschluessel) %>%
@@ -516,7 +516,7 @@ if (!save_map_plot) {
     coord_sf(datum = NA) +
     labs(
       title = "Heterogenitaet der lokalen Uebergangsmatrizen",
-      subtitle = "Grau: nicht im Testfit enthalten oder keine passende kleinraeumige Gemeindegeometrie im VG250-Stand 01.01.2025",
+      subtitle = "Berlin/Hamburg sind als Gesamtstadt aggregiert. Grau: keine passende kleinraeumige Gemeindegeometrie im VG250-Stand 01.01.2025",
       caption = "Index = 0.5 * Summe absoluter Zellabweichungen von der globalen Matrix / Wahlberechtigte"
     ) +
     theme_void() +
@@ -527,7 +527,7 @@ if (!save_map_plot) {
     )
 
   ggsave(
-    chart_file("deutschlandkarte.png"),
+    chart_file("deutschlandkarte_agg.png"),
     map_plot,
     width = 9,
     height = 11,
@@ -535,5 +535,5 @@ if (!save_map_plot) {
     bg = "white"
   )
 
-  message("EHet-Karte gespeichert unter: ", chart_file("deutschlandkarte.png"))
+  message("EHet-Karte gespeichert unter: ", chart_file("deutschlandkarte_agg.png"))
 }

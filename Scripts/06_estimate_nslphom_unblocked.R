@@ -14,6 +14,8 @@ dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 run_fit <- isTRUE(getOption("waehlendenwanderung.unblocked_run_fit", TRUE))
 iter_max <- getOption("waehlendenwanderung.unblocked_nslphom_iter_max", 10L)
 tol <- getOption("waehlendenwanderung.unblocked_nslphom_tol", 1e-5)
+solver <- getOption("waehlendenwanderung.unblocked_nslphom_solver", getOption("waehlendenwanderung.nslphom_solver", "osqp"))
+solver <- match.arg(solver, c("osqp", "symphony", "lp_solve"))
 
 main <- function() {
   message("Lese zentral vorbereitete nslphom-Inputs mit ", threshold * 100, "%-Parteischwelle.")
@@ -26,6 +28,7 @@ main <- function() {
     threshold = threshold,
     iter_max = iter_max,
     tol = tol,
+    solver = solver,
     blocked = FALSE
   )
 
@@ -48,7 +51,9 @@ main <- function() {
     nrow(origin_counts),
     " Aggregationseinheiten und ",
     ncol(origin_counts),
-    " Gruppen."
+    " Gruppen mit Solver ",
+    solver,
+    "."
   )
   message("Dieser Schritt ist speicherintensiv und fuer den leistungsstaerkeren PC gedacht.")
 
@@ -57,8 +62,9 @@ main <- function() {
     destination_counts,
     iter_max = iter_max,
     tol = tol,
+    solver = solver,
     verbose = TRUE,
-    method = "lphom::nslphom_unblocked"
+    method = paste0("nslphom_unblocked_", solver)
   )
 
   message("Bereite lokale und globale Uebergangsmatrizen auf.")
@@ -67,7 +73,7 @@ main <- function() {
     ids = ids,
     output_dir = output_dir,
     settings = settings,
-    method = "lphom::nslphom_unblocked",
+    method = paste0("nslphom_unblocked_", solver),
     threshold = threshold
   )
 

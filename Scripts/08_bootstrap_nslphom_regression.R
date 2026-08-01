@@ -16,6 +16,8 @@ sample_size <- getOption("waehlendenwanderung.bootstrap_sample_size", 2000L)
 seed <- getOption("waehlendenwanderung.bootstrap_seed", 20260721L)
 iter_max <- getOption("waehlendenwanderung.bootstrap_nslphom_iter_max", 10L)
 tol <- getOption("waehlendenwanderung.bootstrap_nslphom_tol", 1e-5)
+solver <- getOption("waehlendenwanderung.bootstrap_nslphom_solver", getOption("waehlendenwanderung.nslphom_solver", "osqp"))
+solver <- match.arg(solver, c("osqp", "symphony", "lp_solve"))
 run_bootstrap <- isTRUE(getOption("waehlendenwanderung.bootstrap_run", TRUE))
 resume_existing <- isTRUE(getOption("waehlendenwanderung.bootstrap_resume", TRUE))
 
@@ -44,7 +46,7 @@ settings <- tibble::tibble(
   groups = paste(validation$group_names, collapse = ", "),
   keep_parties = paste(validation$kept_parties, collapse = ", "),
   new_and_exit_voters = "simultaneous",
-  solver = "lp_solve",
+  solver = solver,
   blocked = FALSE,
   resampling = "bundesweit mit Zuruecklegen, ohne nslphom-Bloecke"
 )
@@ -94,6 +96,7 @@ if (!run_bootstrap) {
         seed = seed,
         iter_max = iter_max,
         tol = tol,
+        solver = solver,
         threshold = threshold,
         covariates = default_struktur_covariates
       ),

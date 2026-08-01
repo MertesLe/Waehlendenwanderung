@@ -12,13 +12,15 @@ if (!exists("nslphom_dual", where = asNamespace("lphom"), inherits = FALSE)) {
   stop("lphom::nslphom_dual() ist in der installierten lphom-Version nicht verfuegbar.")
 }
 
-n_test_units <- getOption("waehlendenwanderung.test_dual_nslphom_units", 2000L)
+n_test_units <- getOption("waehlendenwanderung.test_dual_nslphom_units", 20L)
 selection_mode <- getOption("waehlendenwanderung.test_dual_nslphom_selection", "first")
 selection_mode <- match.arg(selection_mode, c("first", "last", "random"))
 seed <- getOption("waehlendenwanderung.test_dual_nslphom_seed", 42L)
 threshold <- getOption("waehlendenwanderung.party_threshold", 0.12)
 iter_max <- getOption("waehlendenwanderung.test_dual_nslphom_iter_max", 10L)
 tol <- getOption("waehlendenwanderung.test_dual_nslphom_tol", 1e-5)
+solver <- getOption("waehlendenwanderung.test_dual_nslphom_solver", "lp_solve")
+solver <- match.arg(solver, c("lp_solve", "symphony"))
 method_label <- "lphom::nslphom_dual"
 
 output_dir <- getOption(
@@ -168,7 +170,9 @@ message(
   nrow(origin_counts),
   " Aggregationseinheiten und ",
   ncol(origin_counts),
-  " Gruppen."
+  " Gruppen mit Solver ",
+  solver,
+  "."
 )
 
 fit <- lphom::nslphom_dual(
@@ -177,7 +181,7 @@ fit <- lphom::nslphom_dual(
   iter.max = iter_max,
   min.first = FALSE,
   integers = FALSE,
-  solver = "lp_solve",
+  solver = solver,
   tol = tol
 )
 
@@ -246,7 +250,7 @@ settings <- tibble(
   iter_max = iter_max,
   tol = tol,
   new_and_exit_voters = "simultaneous",
-  solver = "lp_solve",
+  solver = solver,
   selection_mode = selection_mode,
   seed = if (selection_mode == "random") seed else NA_integer_,
   main_matrix_type = "weighted",

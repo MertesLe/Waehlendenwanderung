@@ -147,8 +147,11 @@ run_bootstrap_iteration <- function(
     seed = 20260721L,
     iter_max = getOption("waehlendenwanderung.bootstrap_nslphom_iter_max", 10L),
     tol = getOption("waehlendenwanderung.bootstrap_nslphom_tol", 1e-5),
+    solver = getOption("waehlendenwanderung.bootstrap_nslphom_solver", getOption("waehlendenwanderung.nslphom_solver", "osqp")),
     threshold = 0.12,
     covariates = default_struktur_covariates) {
+  solver <- match.arg(solver, c("osqp", "symphony", "lp_solve"))
+
   sample_data <- draw_bootstrap_sample(
     input2021 = input2021,
     input2025 = input2025,
@@ -165,14 +168,15 @@ run_bootstrap_iteration <- function(
     destination_counts,
     iter_max = iter_max,
     tol = tol,
+    solver = solver,
     verbose = FALSE,
-    method = "lphom::nslphom_bootstrap_unblocked"
+    method = paste0("nslphom_bootstrap_unblocked_", solver)
   )
 
   transitions_boot <- local_matrices_to_long(
     fit,
     sample_data$input2021$agg_schluessel,
-    method = "lphom::nslphom_bootstrap_unblocked"
+    method = paste0("nslphom_bootstrap_unblocked_", solver)
   )
 
   mapped <- map_bootstrap_transitions_to_original_ids(
@@ -205,7 +209,7 @@ run_bootstrap_iteration <- function(
     fit,
     transitions_boot,
     block_id = NA_character_,
-    method = "lphom::nslphom_bootstrap_unblocked",
+    method = paste0("nslphom_bootstrap_unblocked_", solver),
     threshold = threshold,
     blocked = FALSE
   ) %>%
