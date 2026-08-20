@@ -1,3 +1,5 @@
+# Ergebnisse identischer Dual-Schaetzungen mit lp_solve und Symphony vergleichen.
+
 library(dplyr)
 library(tidyr)
 
@@ -34,10 +36,12 @@ comparison_name <- getOption(
 comparison_name <- gsub("[^A-Za-z0-9_]+", "_", comparison_name)
 diff_tolerance <- getOption("waehlendenwanderung.solververgleich_tolerance", 1e-8)
 
+# Dateinamen fuer die gespeicherten Vergleichstabellen im Zielordner erzeugen.
 output_file <- function(name) {
   file.path(output_dir, paste0("vorlaeufig_", comparison_name, "_", name))
 }
 
+# Solveroutput laden und seine benoetigten Bestandteile validieren.
 read_solver_output <- function(path, label) {
   if (!file.exists(path)) {
     stop("Der ", label, "-Output wurde nicht gefunden: ", path)
@@ -55,6 +59,7 @@ read_solver_output <- function(path, label) {
   obj
 }
 
+# Einen Einstellungswert sicher aus einem Outputobjekt auslesen.
 get_setting <- function(obj, name) {
   settings <- as.data.frame(obj$settings)
 
@@ -65,6 +70,7 @@ get_setting <- function(obj, name) {
   }
 }
 
+# EHet-Matrix eines Solveroutputs in ein vergleichbares Longformat umformen.
 make_ehet_long <- function(obj, label) {
   ehet_matrix <- as.matrix(obj$EHet)
   ids <- as.character(obj$EHet_ids)
@@ -83,6 +89,7 @@ make_ehet_long <- function(obj, label) {
     )
 }
 
+# Anzahl und Groesse der Abweichungen einer Solver-Vergleichsspalte zusammenfassen.
 summarise_diff <- function(data, diff_col) {
   diff_values <- data[[diff_col]]
 
@@ -97,6 +104,7 @@ summarise_diff <- function(data, diff_col) {
   )
 }
 
+# Beide Outputs laden und zuerst identische Aggregationseinheiten sicherstellen.
 lp_output <- read_solver_output(lp_output_path, "lp_solve")
 symphony_output <- read_solver_output(symphony_output_path, "symphony")
 
@@ -114,6 +122,7 @@ if (!same_ids_ordered) {
   )
 }
 
+# Lokale Matrizen zellgenau ueber Einheit, Herkunft und Ziel vergleichen.
 lp_local <- lp_output$local_matrices_long %>%
   select(
     agg_schluessel,
@@ -153,6 +162,7 @@ if (nrow(local_differences) != nrow(lp_local) || nrow(local_differences) != nrow
   stop("Die lokalen Matrizen konnten nicht vollstaendig ueber agg_schluessel, from, to verbunden werden.")
 }
 
+# Globale Matrizen zellgenau vergleichen.
 lp_global <- lp_output$global_matrix %>%
   select(
     from,
@@ -186,6 +196,7 @@ global_differences <- lp_global %>%
     estimated_transition_count_diff = estimated_transition_count_symphony - estimated_transition_count_lp
   )
 
+# Auch die lokalen EHet-Abweichungen beider Solver gegenueberstellen.
 lp_ehet <- make_ehet_long(lp_output, "lp_solve")
 symphony_ehet <- make_ehet_long(symphony_output, "symphony")
 
@@ -230,6 +241,7 @@ settings_comparison <- tibble(
   equal = lp_solve == symphony
 )
 
+# Maximale und mittlere Differenzen aller verglichenen Ergebnistypen zusammenfassen.
 comparison_summary <- bind_rows(
   summarise_diff(local_differences, "transition_probability_diff") %>%
     mutate(scope = "local_transition_probability"),

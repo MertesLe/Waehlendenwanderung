@@ -1,3 +1,5 @@
+# EHet je Aggregationseinheit auswerten und als Diagramme sowie Deutschlandkarte darstellen.
+
 library(dplyr)
 library(tidyr)
 library(stringr)
@@ -12,9 +14,8 @@ ensure_data_dirs()
 ehet_input_path <- getOption(
   "waehlendenwanderung.ehet_nslphom_output_path",
   file.path(
-    data_dir_model_nslphom,
-    "test5000_first",
-    "vorlaeufig_test2000_nslphom_unblocked_endoutput.rds"
+    data_dir_model_nslphom_deutschland,
+    "vorlaeufig_nslphom_deutschland_endoutput.rds"
   )
 )
 
@@ -40,10 +41,12 @@ save_data_outputs <- isTRUE(getOption("waehlendenwanderung.ehet_save_data_output
 save_diagnostic_plots <- isTRUE(getOption("waehlendenwanderung.ehet_save_diagnostic_plots", TRUE))
 save_map_plot <- isTRUE(getOption("waehlendenwanderung.ehet_save_map_plot", TRUE))
 
+# Pfad zu einer gespeicherten Validierungstabelle im Ausgabeordner erzeugen.
 data_file <- function(name) {
   file.path(output_dir, paste0(run_prefix, "_", name))
 }
 
+# Pfad zu einer Grafik im Ordner fuer den Homogenitaetstest erzeugen.
 chart_file <- function(name) {
   file.path(chart_dir, paste0(run_prefix, "_", name))
 }
@@ -259,6 +262,29 @@ if (any(is.na(ehet_unit_metrics$wahlberechtigte))) {
   stop("Mindestens eine EHet-Einheit konnte keiner Wahlberechtigtenzahl zugeordnet werden.")
 }
 
+# Ost-West-Vergleich aus dem Deutschlandfit bilden. Berlin wird separat
+# ausgewiesen, weil es nicht Teil der Ost-Hauptanalyse ist.
+ehet_unit_metrics <- ehet_unit_metrics %>%
+  mutate(
+    region = case_when(
+      is_ostdeutschland_ohne_berlin(.data$agg_schluessel) ~ "Ostdeutschland ohne Berlin",
+      substr(.data$agg_schluessel, 1, 2) == "11" ~ "Berlin",
+      TRUE ~ "Westdeutschland"
+    )
+  )
+
+ehet_region_summary <- ehet_unit_metrics %>%
+  group_by(.data$region) %>%
+  summarise(
+    n_units = n(),
+    mean_ehet = mean(.data$ehet_index, na.rm = TRUE),
+    median_ehet = median(.data$ehet_index, na.rm = TRUE),
+    weighted_ehet = sum(.data$ehet_abs_half, na.rm = TRUE) /
+      sum(.data$wahlberechtigte, na.rm = TRUE),
+    p90_ehet = quantile(.data$ehet_index, 0.90, na.rm = TRUE),
+    .groups = "drop"
+  )
+
 ehet_summary <- ehet_unit_metrics %>%
   summarise(
     n_units = n(),
@@ -286,6 +312,7 @@ if (save_data_outputs) {
   saveRDS(ehet_by_from, data_file("nach_herkunft.rds"))
   saveRDS(ehet_by_to, data_file("nach_ziel.rds"))
   saveRDS(ehet_summary, data_file("summary.rds"))
+  saveRDS(ehet_region_summary, data_file("region_summary.rds"))
 }
 
 hist_plot <- ggplot(ehet_unit_metrics, aes(x = ehet_index)) +
@@ -323,10 +350,24 @@ top_plot <- ehet_unit_metrics %>%
   ) +
   theme_minimal()
 
+region_plot <- ehet_unit_metrics %>%
+  filter(.data$region != "Berlin") %>%
+  ggplot(aes(x = .data$region, y = .data$ehet_index, fill = .data$region)) +
+  geom_boxplot(outlier.alpha = 0.25, show.legend = FALSE) +
+  scale_y_continuous(labels = percent_format(accuracy = 1)) +
+  labs(
+    title = "Heterogenitaetsindex im Ost-West-Vergleich",
+    subtitle = "Deutschlandfit; Berlin separat ausgeschlossen",
+    x = NULL,
+    y = "Heterogenitaetsindex"
+  ) +
+  theme_minimal()
+
 if (save_diagnostic_plots) {
   ggsave(chart_file("histogramm.png"), hist_plot, width = 9, height = 6, dpi = 300, bg = "white")
   ggsave(chart_file("groesse_scatter.png"), size_plot, width = 9, height = 6, dpi = 300, bg = "white")
   ggsave(chart_file("top25.png"), top_plot, width = 10, height = 8, dpi = 300, bg = "white")
+  ggsave(chart_file("ost_west_boxplot.png"), region_plot, width = 8, height = 6, dpi = 300, bg = "white")
 }
 
 if (save_data_outputs) {

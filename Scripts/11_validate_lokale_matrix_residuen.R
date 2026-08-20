@@ -1,3 +1,5 @@
+# Pruefen, wie genau die lokalen Uebergangsmatrizen die beobachteten Zielstimmen rekonstruieren.
+
 library(dplyr)
 library(tidyr)
 library(stringr)

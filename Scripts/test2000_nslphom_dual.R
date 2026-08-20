@@ -1,3 +1,5 @@
+# nslphom_dual auf einer waehlbaren Teilmenge testen und nur den kompakten Endoutput speichern.
+
 library(dplyr)
 library(tidyr)
 
@@ -29,6 +31,7 @@ output_dir <- getOption(
 )
 dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 
+# Lokale absolute Dual-Matrizen in das einheitliche Longformat ueberfuehren.
 make_local_dual_matrices_long <- function(votes_units, ids, from_names, to_names, matrix_type) {
   stopifnot(length(dim(votes_units)) == 3)
   stopifnot(dim(votes_units)[[3]] == length(ids))
@@ -68,6 +71,7 @@ make_local_dual_matrices_long <- function(votes_units, ids, from_names, to_names
   }))
 }
 
+# Eine globale Dual-Matrix mit Wahrscheinlichkeiten und absoluten Zahlen lang formatieren.
 make_global_dual_matrix_long <- function(prop_matrix, votes_matrix, matrix_scope, matrix_type) {
   prop_matrix <- as.matrix(prop_matrix)
   votes_matrix <- as.matrix(votes_matrix)
@@ -81,6 +85,7 @@ make_global_dual_matrix_long <- function(prop_matrix, votes_matrix, matrix_scope
     mutate(matrix_type = matrix_type, .before = method)
 }
 
+# EHet der globalen Dual-Matrix je Einheit berechnen und relativ zusammenfassen.
 make_dual_ehet <- function(origin_counts, destination_counts, prop_matrix, ids, ehet_type) {
   prop_matrix <- as.matrix(prop_matrix)
   expected_destination <- origin_counts %*% prop_matrix

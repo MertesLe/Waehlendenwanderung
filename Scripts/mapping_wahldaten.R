@@ -1,3 +1,5 @@
+# Wahldaten 2021 und 2025 ueber Briefwahl, Paragraph 68 und Gebietsstaende harmonisieren.
+
 library(dplyr)
 library(stringr)
 library(tidyr)
@@ -84,6 +86,7 @@ joinedG <- bind_rows(
   group_modify(~ connected_components(.x$agg.schlüssel)) %>%
   ungroup()
 
+# Alle einzelnen Gemeindeschluessel aus einem Mapping als Lookup-Tabelle ausgeben.
 aggregation_members <- function(mapping) {
   mapping %>%
     transmute(
@@ -343,12 +346,14 @@ if (!file.exists(mapping_gebietsaenderungen_pfad)) {
 
 mapping_gebietsaenderungen <- readRDS(mapping_gebietsaenderungen_pfad)
 
+# Klammerzusatz am Ende eines Gemeindenamens fuer die Namensdiagnose entfernen.
 clean_gemeindename <- function(x) {
   x %>%
     str_replace("\\s*\\([^\\)]*\\)\\s*$", "") %>%
     str_squish()
 }
 
+# Nach "einschl." aufgefuehrte Gemeindenamen aus einem amtlichen Namen extrahieren.
 extract_einschlussnamen <- function(x) {
   einschluss <- str_match(
     x,
@@ -553,6 +558,7 @@ textausweisungen_inkonsistenzen <- textausweisungen_namensdiagnose %>%
       !bereits_vorlaeufig_abgedeckt
   )
 
+# Finale Komponenten in eine eindeutige Zuordnung Gemeinde zu agg.final zerlegen.
 build_final_lookup <- function(components) {
   components %>%
     mutate(
@@ -565,6 +571,7 @@ build_final_lookup <- function(components) {
     distinct(Gemeindeschlüssel, agg.final)
 }
 
+# Vorlaeufige Aggregationen ueber ihre Mitglieder auf finale Komponenten abbilden.
 build_prelim_to_final <- function(final_lookup) {
   bind_rows(
     mapping21_clean %>%
@@ -594,6 +601,7 @@ build_prelim_to_final <- function(final_lookup) {
     )
 }
 
+# Vorlaeufige agg.schluessel eines Jahres durch die final harmonisierten ersetzen.
 apply_final_mapping <- function(mapping_clean, prelim_to_final) {
   mapping_clean %>%
     left_join(

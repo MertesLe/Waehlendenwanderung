@@ -1,3 +1,6 @@
+# Funktionen fuer das Ziehen, Schaetzen und Zusammenfassen der Bootstrap-Iterationen.
+
+# Aggregationseinheiten mit Zuruecklegen ziehen und eindeutige Bootstrap-IDs vergeben.
 draw_bootstrap_sample <- function(
     input2021,
     input2025,
@@ -16,8 +19,10 @@ draw_bootstrap_sample <- function(
     set.seed(seed + as.integer(iteration))
   }
 
+  # Aus der vorab gefilterten Analysepopulation mit Zuruecklegen ziehen.
   drawn_ids <- sample(input2021$agg_schluessel, size = sample_size, replace = TRUE)
 
+  # Jede Ziehung erhaelt eine eindeutige ID, damit Duplikate im Modell getrennte Zeilen bleiben.
   sample_map <- tibble::tibble(
     bootstrap_id = iteration,
     bootstrap_row = seq_len(sample_size),
@@ -27,6 +32,7 @@ draw_bootstrap_sample <- function(
 
   input_groups <- setdiff(names(input2021), "agg_schluessel")
 
+  # Beide Wahlinputs in exakt derselben gezogenen Reihenfolge vervielfachen.
   bootstrap_input2021 <- sample_map %>%
     dplyr::left_join(input2021, by = c("agg_schluessel_original" = "agg_schluessel")) %>%
     dplyr::transmute(
@@ -52,7 +58,7 @@ draw_bootstrap_sample <- function(
     n_population = nrow(input2021),
     n_draw = sample_size,
     n_unique_original = dplyr::n_distinct(sample_map$agg_schluessel_original),
-    resampling = "bundesweit mit Zuruecklegen, ohne nslphom-Bloecke"
+    resampling = "gefilterte Analysepopulation mit Zuruecklegen, ohne nslphom-Bloecke"
   )
 
   list(
@@ -63,7 +69,9 @@ draw_bootstrap_sample <- function(
   )
 }
 
+# Ergebnisse der gezogenen Bootstrap-IDs wieder ihren urspruenglichen Einheiten zuordnen.
 map_bootstrap_transitions_to_original_ids <- function(transitions, sample_map) {
+  # Eindeutige Bootstrap-ID behalten und den fachlichen Originalschluessel danebenstellen.
   mapped_transitions <- transitions %>%
     dplyr::rename(bootstrap_agg_schluessel = agg_schluessel) %>%
     dplyr::left_join(
@@ -103,15 +111,21 @@ map_bootstrap_transitions_to_original_ids <- function(transitions, sample_map) {
   )
 }
 
+# Pruefen, dass Uebergangsmatrizen und Kovariaten im Bootstrap korrekt gemappt sind.
 check_bootstrap_regression_mapping <- function(
     transitions,
     struktur,
-    covariates = default_struktur_covariates) {
+    covariates) {
+  # Jede gezogene Zeile ueber ihren Originalschluessel mit denselben Strukturwerten verbinden.
   check_data <- transitions %>%
     dplyr::distinct(.data$bootstrap_agg_schluessel, .data$agg_schluessel) %>%
     dplyr::left_join(
       struktur %>%
-        dplyr::select(agg_schluessel, dplyr::all_of(covariates)),
+        dplyr::transmute(
+          agg_schluessel,
+          struktur_zeile_vorhanden = TRUE,
+          dplyr::across(dplyr::all_of(covariates))
+        ),
       by = "agg_schluessel"
     )
 
@@ -119,6 +133,7 @@ check_bootstrap_regression_mapping <- function(
     dplyr::summarise(
       n_bootstrap_ids = dplyr::n_distinct(.data$bootstrap_agg_schluessel),
       n_original_ids = dplyr::n_distinct(.data$agg_schluessel),
+      n_missing_struktur_zeile = sum(is.na(.data$struktur_zeile_vorhanden)),
       dplyr::across(
         dplyr::all_of(covariates),
         ~ sum(is.na(.x)),
@@ -127,29 +142,26 @@ check_bootstrap_regression_mapping <- function(
       .groups = "drop"
     )
 
-  missing_covariates <- mapping_check %>%
-    dplyr::select(dplyr::starts_with("n_missing_")) %>%
-    unlist(use.names = FALSE)
-
-  if (any(missing_covariates > 0)) {
-    stop("Mindestens eine Bootstrap-Zeile hat keine vollstaendigen Strukturkovariaten fuer die Regression.")
+  if (mapping_check$n_missing_struktur_zeile > 0) {
+    stop("Mindestens eine Bootstrap-Zeile konnte keinem Strukturdatensatz zugeordnet werden.")
   }
 
   mapping_check
 }
 
+# Eine Bootstrap-Stichprobe ziehen, nslphom schaetzen und darauf die Regressionen fitten.
 run_bootstrap_iteration <- function(
     iteration,
     input2021,
     input2025,
     struktur,
+    covariates,
     sample_size = 2000L,
     seed = 20260721L,
     iter_max = getOption("waehlendenwanderung.bootstrap_nslphom_iter_max", 10L),
     tol = getOption("waehlendenwanderung.bootstrap_nslphom_tol", 1e-5),
     solver = getOption("waehlendenwanderung.bootstrap_nslphom_solver", getOption("waehlendenwanderung.nslphom_solver", "osqp")),
-    threshold = 0.12,
-    covariates = default_struktur_covariates) {
+    threshold = 0.12) {
   solver <- match.arg(solver, c("osqp", "symphony", "lp_solve"))
 
   sample_data <- draw_bootstrap_sample(
@@ -163,22 +175,25 @@ run_bootstrap_iteration <- function(
   origin_counts <- make_count_matrix(sample_data$input2021)
   destination_counts <- make_count_matrix(sample_data$input2025)
 
-  fit <- fit_nslphom_model(
+  # Dasselbe nslphom_dual-Modell wie im Hauptlauf fuer jede Ziehung neu fitten.
+  fit <- fit_nslphom_dual_model(
     origin_counts,
     destination_counts,
     iter_max = iter_max,
     tol = tol,
     solver = solver,
     verbose = FALSE,
-    method = paste0("nslphom_bootstrap_unblocked_", solver)
+    method = paste0("nslphom_dual_bootstrap_ost_unblocked_", solver)
   )
 
+  # Lokale Matrizen zunaechst ueber die eindeutigen Bootstrap-IDs aufbereiten.
   transitions_boot <- local_matrices_to_long(
     fit,
     sample_data$input2021$agg_schluessel,
-    method = paste0("nslphom_bootstrap_unblocked_", solver)
+    method = paste0("nslphom_dual_bootstrap_ost_unblocked_", solver)
   )
 
+  # Danach fuer den Strukturjoin wieder auf die urspruenglichen Gebiete verweisen.
   mapped <- map_bootstrap_transitions_to_original_ids(
     transitions = transitions_boot,
     sample_map = sample_data$sample_map
@@ -190,12 +205,14 @@ run_bootstrap_iteration <- function(
     covariates = covariates
   )
 
+  # Auf den neu geschaetzten lokalen Matrizen die vollstaendige Regression erneut fitten.
   model_outputs <- make_transition_model_outputs(
     transitions = mapped$transitions,
     struktur = struktur,
     covariates = covariates
   )
 
+  # Alle Beta-Schaetzungen mit Iterations- und Stichprobeninformation sammeln.
   beta_draws <- model_outputs$all_model_coefficients %>%
     dplyr::mutate(
       bootstrap_id = iteration,
@@ -209,7 +226,7 @@ run_bootstrap_iteration <- function(
     fit,
     transitions_boot,
     block_id = NA_character_,
-    method = paste0("nslphom_bootstrap_unblocked_", solver),
+    method = paste0("nslphom_dual_bootstrap_ost_unblocked_", solver),
     threshold = threshold,
     blocked = FALSE
   ) %>%
@@ -234,6 +251,7 @@ run_bootstrap_iteration <- function(
   )
 }
 
+# Beta-Verteilungen ueber alle erfolgreichen Bootstrap-Iterationen zusammenfassen.
 summarise_bootstrap_betas <- function(beta_draws) {
   beta_draws %>%
     dplyr::filter(.data$term != "(Intercept)") %>%
@@ -251,6 +269,7 @@ summarise_bootstrap_betas <- function(beta_draws) {
     dplyr::arrange(.data$model_target, .data$from, .data$to, .data$term)
 }
 
+# Verteilungen der Bootstrap-Koeffizienten mit Nullreferenz und Intervallen plotten.
 plot_bootstrap_beta_distributions <- function(beta_draws) {
   beta_draws %>%
     dplyr::filter(.data$term != "(Intercept)") %>%
@@ -270,6 +289,7 @@ plot_bootstrap_beta_distributions <- function(beta_draws) {
     ggplot2::theme_minimal()
 }
 
+# Bootstrap-Ziehungen, Intervalle, Diagnosen und Grafiken als Analyseoutput speichern.
 write_bootstrap_outputs <- function(
     beta_draws,
     beta_intervals,

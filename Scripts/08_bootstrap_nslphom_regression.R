@@ -1,3 +1,5 @@
+# nslphom und AfD-Regression wiederholt auf Bootstrap-Stichproben schaetzen.
+
 library(dplyr)
 library(tidyr)
 library(ggplot2)
@@ -10,9 +12,10 @@ source("Functions/bootstrap_functions.R", encoding = "UTF-8")
 
 ensure_data_dirs()
 
+# Anzahl, Ziehungsumfang und nslphom-Einstellungen zentral ueber R-Optionen steuern.
 threshold <- getOption("waehlendenwanderung.party_threshold", 0.12)
 n_bootstrap <- getOption("waehlendenwanderung.bootstrap_n", 500L)
-sample_size <- getOption("waehlendenwanderung.bootstrap_sample_size", 2000L)
+sample_size_option <- getOption("waehlendenwanderung.bootstrap_sample_size", NULL)
 seed <- getOption("waehlendenwanderung.bootstrap_seed", 20260721L)
 iter_max <- getOption("waehlendenwanderung.bootstrap_nslphom_iter_max", 10L)
 tol <- getOption("waehlendenwanderung.bootstrap_nslphom_tol", 1e-5)
@@ -21,21 +24,58 @@ solver <- match.arg(solver, c("osqp", "symphony", "lp_solve"))
 run_bootstrap <- isTRUE(getOption("waehlendenwanderung.bootstrap_run", TRUE))
 resume_existing <- isTRUE(getOption("waehlendenwanderung.bootstrap_resume", TRUE))
 
-output_dir <- data_dir_model_bootstrap
+output_dir <- data_dir_model_bootstrap_ost
 iteration_dir <- file.path(output_dir, "iterations")
-chart_dir <- "Charts"
+chart_dir <- file.path("Charts", "bootstrap", "ostdeutschland")
 dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 dir.create(iteration_dir, recursive = TRUE, showWarnings = FALSE)
 dir.create(chart_dir, recursive = TRUE, showWarnings = FALSE)
 
+# Wahlinputs und Strukturwerte einmal laden und vor allen Wiederholungen validieren.
 inputs <- read_prepared_nslphom_inputs()
+
+# Bootstrap und Regression auf die ostdeutschen Flaechenlaender begrenzen.
+# Berlin bleibt wegen der nur gesamtstaedtisch vorliegenden INKAR-Werte ausgeschlossen.
+ost_ids <- inputs$input2021$agg_schluessel[
+  is_ostdeutschland_ohne_berlin(inputs$input2021$agg_schluessel)
+]
+inputs$input2021 <- inputs$input2021 %>% filter(.data$agg_schluessel %in% ost_ids)
+inputs$input2025 <- inputs$input2025 %>% filter(.data$agg_schluessel %in% ost_ids)
+inputs$input_long <- inputs$input_long %>% filter(.data$agg_schluessel %in% ost_ids)
+inputs$input_checks <- inputs$input_checks %>% filter(.data$agg_schluessel %in% ost_ids)
+
+sample_size <- if (is.null(sample_size_option)) {
+  nrow(inputs$input2021)
+} else {
+  as.integer(sample_size_option)
+}
+
 validation <- validate_prepared_nslphom_inputs(inputs, threshold = threshold)
 struktur <- readRDS(file.path(data_dir_cleaned, "vorlaeufig_inkar_kovariaten_2023.rds"))
+struktur_covariates <- get_structure_covariates(struktur)
 
-# Bootstrap-Idee: Pro Wiederholung werden bundesweit agg.schluessel mit
-# Zuruecklegen gezogen. nslphom wird ohne Blockaufteilung auf genau dieser
+# Iterationscache nur wiederverwenden, wenn Inputs und Modelleinstellungen gleich sind.
+analysis_signature <- paste(
+  unname(tools::md5sum(c(
+    file.path(data_dir_cleaned, "vorlaeufig_nslphom_input_2021.rds"),
+    file.path(data_dir_cleaned, "vorlaeufig_nslphom_input_2025.rds"),
+    file.path(data_dir_cleaned, "vorlaeufig_inkar_kovariaten_2023.rds")
+  ))),
+  threshold,
+  sample_size,
+  seed,
+  iter_max,
+  tol,
+  solver,
+  paste(struktur_covariates, collapse = ","),
+  sep = "|"
+)
+
+# Bootstrap-Idee: Pro Wiederholung werden ostdeutsche agg.schluessel ohne Berlin
+# mit Zuruecklegen gezogen. nslphom_dual wird ohne Blockaufteilung auf dieser
 # Bootstrap-Stichprobe geschaetzt. Danach werden die kuenstlichen Bootstrap-IDs
 # vor der Regression wieder auf die originalen agg.schluessel gemappt.
+# Vollstaendige Einstellungen speichern, damit ein unterbrochener Lauf reproduzierbar fortsetzbar ist.
 settings <- tibble::tibble(
   threshold = threshold,
   n_bootstrap = n_bootstrap,
@@ -43,12 +83,18 @@ settings <- tibble::tibble(
   seed = seed,
   iter_max = iter_max,
   tol = tol,
+  covariates = paste(struktur_covariates, collapse = ", "),
   groups = paste(validation$group_names, collapse = ", "),
   keep_parties = paste(validation$kept_parties, collapse = ", "),
   new_and_exit_voters = "simultaneous",
   solver = solver,
+  model = "nslphom_dual",
   blocked = FALSE,
-  resampling = "bundesweit mit Zuruecklegen, ohne nslphom-Bloecke"
+  analysis_region = "ostdeutschland_ohne_berlin",
+  berlin_included = FALSE,
+  n_population = nrow(inputs$input2021),
+  analysis_signature = analysis_signature,
+  resampling = "Ostdeutschland ohne Berlin mit Zuruecklegen, ohne nslphom-Bloecke"
 )
 
 saveRDS(settings, file.path(output_dir, "vorlaeufig_bootstrap_settings.rds"))
@@ -70,21 +116,48 @@ if (!run_bootstrap) {
     if (resume_existing && file.exists(iteration_file)) {
       cached_result <- readRDS(iteration_file)
 
-      if (is.null(cached_result$error)) {
+      cached_terms <- if (!is.null(cached_result$beta_draws)) {
+        unique(cached_result$beta_draws$term)
+      } else {
+        character()
+      }
+      expected_terms <- paste0(struktur_covariates, "_z")
+      cache_uses_current_covariates <- setequal(
+        setdiff(cached_terms, "(Intercept)"),
+        expected_terms
+      )
+      cache_uses_current_settings <- identical(
+        cached_result$analysis_signature,
+        analysis_signature
+      )
+
+      if (
+        is.null(cached_result$error) &&
+          cache_uses_current_covariates &&
+          cache_uses_current_settings
+      ) {
         message("Lese erfolgreiche vorhandene Bootstrap-Iteration ", iteration, ".")
         iteration_results[[iteration]] <- cached_result
         next
       }
 
-      message(
-        "Vorhandene Bootstrap-Iteration ",
-        iteration,
-        " war fehlgeschlagen und wird neu gestartet. Alter Fehler: ",
-        cached_result$error
-      )
+      if (is.null(cached_result$error)) {
+        message(
+          "Vorhandene Bootstrap-Iteration ",
+          iteration,
+          " verwendet andere Inputs oder Modelleinstellungen und wird neu gestartet."
+        )
+      } else {
+        message(
+          "Vorhandene Bootstrap-Iteration ",
+          iteration,
+          " war fehlgeschlagen und wird neu gestartet. Alter Fehler: ",
+          cached_result$error
+        )
+      }
     }
 
-    message("Starte unblocked Bootstrap-Iteration ", iteration, " von ", n_bootstrap, ".")
+    message("Starte Ost-Bootstrap-Iteration ", iteration, " von ", n_bootstrap, ".")
 
     current_result <- tryCatch(
       run_bootstrap_iteration(
@@ -92,13 +165,13 @@ if (!run_bootstrap) {
         input2021 = inputs$input2021,
         input2025 = inputs$input2025,
         struktur = struktur,
+        covariates = struktur_covariates,
         sample_size = sample_size,
         seed = seed,
         iter_max = iter_max,
         tol = tol,
         solver = solver,
-        threshold = threshold,
-        covariates = default_struktur_covariates
+        threshold = threshold
       ),
       error = function(error) {
         list(
@@ -107,6 +180,8 @@ if (!run_bootstrap) {
         )
       }
     )
+
+    current_result$analysis_signature <- analysis_signature
 
     saveRDS(current_result, iteration_file)
     iteration_results[[iteration]] <- current_result
@@ -148,7 +223,7 @@ if (!run_bootstrap) {
   if (nrow(beta_draws) > 0) {
     beta_plot <- plot_bootstrap_beta_distributions(beta_draws)
     ggplot2::ggsave(
-      filename = file.path(chart_dir, "vorlaeufig_bootstrap_beta_verteilungen.pdf"),
+      filename = file.path(chart_dir, "vorlaeufig_bootstrap_beta_verteilungen_ostdeutschland.pdf"),
       plot = beta_plot,
       width = 14,
       height = 9,
@@ -156,5 +231,5 @@ if (!run_bootstrap) {
     )
   }
 
-  message("Unblocked Bootstrap abgeschlossen. Ergebnisse gespeichert unter: ", output_dir)
+  message("Ost-Bootstrap abgeschlossen. Ergebnisse gespeichert unter: ", output_dir)
 }

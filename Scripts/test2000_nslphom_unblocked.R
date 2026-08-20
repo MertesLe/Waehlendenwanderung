@@ -1,3 +1,5 @@
+# Ungeblocktes nslphom auf einer waehlbaren Zahl von Aggregationseinheiten testen.
+
 library(dplyr)
 library(tidyr)
 

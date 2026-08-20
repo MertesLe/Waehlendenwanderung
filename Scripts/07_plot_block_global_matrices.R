@@ -1,3 +1,5 @@
+# Globale Uebergangsmatrizen aggregieren und als Sankey-aehnliche Flussgrafik darstellen.
+
 library(dplyr)
 library(ggplot2)
 
@@ -76,6 +78,7 @@ block_labels <- c(
   "160" = "Thüringen"
 )
 
+# Interne Gruppennamen in gut lesbare Beschriftungen fuer die Grafik umwandeln.
 label_group <- function(x) {
   dplyr::recode(
     x,
@@ -86,6 +89,7 @@ label_group <- function(x) {
   )
 }
 
+# Absolute Stimmenzahlen mit deutschen Tausendertrennzeichen formatieren.
 format_count <- function(x) {
   format(
     round(x),
@@ -96,6 +100,7 @@ format_count <- function(x) {
   )
 }
 
+# Vorhandene Kategorien entsprechend der festgelegten Parteienreihenfolge sortieren.
 ordered_categories <- function(categories) {
   categories <- unique(categories)
   known <- party_order[party_order %in% categories]
@@ -104,6 +109,7 @@ ordered_categories <- function(categories) {
   c(known, unknown)
 }
 
+# Absolute globale Uebergangsmatrix aus einem gespeicherten Fit extrahieren.
 get_matrix <- function(fit) {
   if (!is.null(fit[["VTM.votes"]])) {
     return(fit[["VTM.votes"]])
@@ -116,6 +122,7 @@ get_matrix <- function(fit) {
   stop("Im Fit-Objekt wurde keine globale Stimmenmatrix gefunden.")
 }
 
+# Absolute Matrizen mehrerer Fits zellweise zu einer Gesamtmatrix addieren.
 aggregate_matrices <- function(fits) {
   matrices <- lapply(fits, get_matrix)
   row_order <- ordered_categories(unique(unlist(lapply(matrices, rownames), use.names = FALSE)))
@@ -136,6 +143,7 @@ aggregate_matrices <- function(fits) {
   total_matrix
 }
 
+# Matrixzellen in eine Tabelle von Flussbreiten zwischen Herkunft und Ziel umformen.
 matrix_to_flows <- function(matrix, block_id) {
   as.data.frame(as.table(matrix), stringsAsFactors = FALSE) %>%
     transmute(
@@ -150,6 +158,7 @@ matrix_to_flows <- function(matrix, block_id) {
     )
 }
 
+# Vertikale Anfangs- und Endpositionen der Parteienbalken mit Abstaenden berechnen.
 calculate_bar_positions <- function(totals, category_order, stack_height, gap_size = 0) {
   bars <- tibble(category = category_order) %>%
     left_join(totals, by = "category") %>%
@@ -171,6 +180,7 @@ calculate_bar_positions <- function(totals, category_order, stack_height, gap_si
     )
 }
 
+# Jeden Fluss innerhalb der Balken in konsistenter Parteienreihenfolge stapeln.
 add_flow_positions <- function(flows, left_bars, right_bars, left_order, right_order) {
   left_lookup <- left_bars %>%
     select(from = category, left_top = y_max)
@@ -203,6 +213,7 @@ add_flow_positions <- function(flows, left_bars, right_bars, left_order, right_o
     )
 }
 
+# Gekruemmte Polygonpunkte fuer jeden Uebergangsfluss zwischen beiden Wahlen erzeugen.
 make_ribbon_data <- function(positioned_flows, n_points = 80L) {
   bind_rows(lapply(seq_len(nrow(positioned_flows)), function(i) {
     flow <- positioned_flows[i, ]
@@ -230,6 +241,7 @@ make_ribbon_data <- function(positioned_flows, n_points = 80L) {
   }))
 }
 
+# Vollstaendige Flussgrafik fuer eine globale oder blockbezogene Matrix erstellen.
 make_block_plot <- function(
   block_id,
   fit = NULL,

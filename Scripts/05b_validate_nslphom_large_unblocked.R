@@ -1,3 +1,5 @@
+# Grosse ungeblockte nslphom-Simulation mit etwa 3.000 Einheiten wiederholt validieren.
+
 library(dplyr)
 
 source("paths.R", encoding = "UTF-8")
@@ -40,10 +42,12 @@ transition_betas <- tibble(
   )
 )
 
+# Wahrscheinlichkeiten fuer numerisch stabile Logitmodelle begrenzen.
 clamp_probability <- function(x, eps = 1e-6) {
   pmin(pmax(x, eps), 1 - eps)
 }
 
+# Korrelation nur bei ausreichender Streuung beider Vektoren berechnen.
 safe_cor <- function(x, y) {
   ok <- stats::complete.cases(x, y)
 
@@ -58,10 +62,12 @@ safe_cor <- function(x, y) {
   stats::cor(x[ok], y[ok])
 }
 
+# Einen Herkunft-Ziel-Uebergang aus allen lokalen Matrizen auslesen.
 extract_unit_values <- function(array, from, to) {
   as.numeric(array[from, to, ])
 }
 
+# Wahre, realisierte und geschaetzte Uebergaenge einer grossen Simulation lang verbinden.
 make_transition_long <- function(sim_id, unit_data, transition_counts, p_a_to_a, p_b_to_a, fit) {
   prop_units <- fit[["VTM.prop.units"]]
   votes_units <- fit[["VTM.votes.units"]]
@@ -147,6 +153,7 @@ make_transition_long <- function(sim_id, unit_data, transition_counts, p_a_to_a,
     )
 }
 
+# Kovariateneffekte fuer eine ausgewaehlte Uebergangswahrscheinlichkeit schaetzen.
 estimate_beta_model <- function(data, probability_col, model_label) {
   bind_rows(lapply(c("A_to_A", "B_to_A"), function(current_transition) {
     model_data <- data %>%
@@ -188,6 +195,7 @@ estimate_beta_model <- function(data, probability_col, model_label) {
   }))
 }
 
+# Lokale Zellfehler ueber die grosse Simulation zusammenfassen.
 summarise_local_errors <- function(local_errors) {
   local_errors %>%
     filter(!failed, origin_count > 0) %>%
@@ -209,6 +217,7 @@ summarise_local_errors <- function(local_errors) {
     )
 }
 
+# EI der geschaetzten gemeinsamen Verteilung je Einheit berechnen.
 calculate_estimation_error <- function(data) {
   data %>%
     filter(
@@ -231,6 +240,7 @@ calculate_estimation_error <- function(data) {
     )
 }
 
+# EI-Verteilung ueber alle Einheiten und Wiederholungen zusammenfassen.
 summarise_estimation_error <- function(estimation_error) {
   estimation_error %>%
     summarise(
@@ -246,6 +256,7 @@ summarise_estimation_error <- function(estimation_error) {
     )
 }
 
+# Recovery der bekannten Betas durch die nachgelagerte Regression auswerten.
 summarise_beta_recovery <- function(beta_estimates) {
   beta_estimates %>%
     left_join(
@@ -268,6 +279,7 @@ summarise_beta_recovery <- function(beta_estimates) {
     )
 }
 
+# Eine grosse ungeblockte Wahl simulieren, schaetzen und ihre Fehlerkennzahlen zurueckgeben.
 run_one_simulation <- function(sim_id) {
   unit_id <- sprintf("large_%04d_unit_%04d", sim_id, seq_len(settings$n_units))
   x_binary <- stats::rbinom(settings$n_units, size = 1, prob = 0.45)

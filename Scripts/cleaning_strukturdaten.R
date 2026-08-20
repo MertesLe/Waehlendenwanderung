@@ -1,3 +1,5 @@
+# Benötigte INKAR-Indikatoren fuer 2023 einlesen und als kleine wiederverwendbare Basis cachen.
+
 library(data.table)
 
 source("paths.R", encoding = "UTF-8")
@@ -16,23 +18,57 @@ force_rebuild <- isTRUE(getOption("waehlendenwanderung.inkar_basis_rebuild", FAL
 struktur_jahr <- as.integer(getOption("waehlendenwanderung.inkar_struktur_jahr", 2023L))
 
 inkar_indikatoren <- data.table(
-  Kuerzel = c(
-    "xbev",
-    "q_arbeitslosigkeit",
-    "q_kaufkraft",
-    "a_ausl_bev"
+  Kuerzel = c( # noch möglich: Supermarktentfernung, Grundschulentfernung, Hausarzt- Apothekenentfernung, Verkehrsunfälle, Pendler (Ein, Aus, > 50 km, ...)
+    "xbev", # Bevölkerungsgröße
+    "a_alo_ausländer", # Anteil Ausländer an Arbeitslosen
+    "q_arbeitslosigkeit", # Anteil Arbeitslose
+    "q_kaufkraft", # Kaufkraft / Einwohner
+    "q_svw", # Anteil beschäftigte (Anzahl beschäftigte pro 100 Personen)
+    "a_bev_0006", # Bevölkerungsanteil unter 6 Jähriger
+    "a_bev0618",   # Bevölkerungsanteil 6 bis 18 Jähriger
+    "a_bev65um",    # Einwohneranteil über 65 Jahren
+    "m_bev_alter",   # Durchschnittsalter Bevölkerung
+    "q_HH",          # Durchschnittliche Haushaltsgröße
+    "i_wans", # Zu und Abwanderung aus Gemeinde pro 1000 Einwohner (zuzüge - fortzüge) /  Einwohner x 1000
+    # Steuer nur 2021 bzw 2023 auf Kreisebene (heißt aber pro kreis immer derselbe Wert):
+    "d_steuereinnahme", # Steuereinnahmen der Gemeinden (höher heißt mehr finanzieller spielraum für gemeinde)
+    "a_bevd150_", # Ländlichkeit (Anteil Einwohner in Gemeinden mit Bevölkerungsdichte unter 150 Einwohner pro km^2)
+    "q_bev_fl", # Einwohnerdichte (E/km^2)
+    "q_bevsva_qkm" # Einwohner und Beschäftigte 7 km^2 (Einwohner-Arbeitsplatz-Dichte)
   ),
   variable = c(
     "bevoelkerung",
+    "auslaenderArbeitslose",
     "arbeitslosigkeit",
     "kaufkraft",
-    "auslaenderanteil"
+    "beschaeftigte100",
+    "bevoelkerung6",
+    "bevoelkerung618",
+    "bevoelkerung65",
+    "alterMean",
+    "haushaltsgroesseMean",
+    "bevWanderung",
+    "steuereinnahmen",
+    "laendlichkeit",
+    "einwohnerdichte",
+    "einwohnerArbeitsplatzDichte"
   ),
   Raumbezug = c(
     "Gemeinden",
     "Gemeinden",
     "Gemeinden",
-    "Kreise"
+    "Gemeinden",
+    "Gemeinden",
+    "Gemeinden",
+    "Gemeinden",
+    "Gemeinden",
+    "Gemeinden",
+    "Gemeinden",
+    "Gemeinden",
+    "Kreise",
+    "Gemeinden",
+    "Gemeinden",
+    "Gemeinden"
   )
 )
 
@@ -50,26 +86,34 @@ spalten <- c(
   "Wert"
 )
 
+# Nur benoetigte Spalten und Indikatoren aus einer grossen INKAR-Datei einlesen.
 read_selected_inkar <- function(path, kuerzel) {
   if (.Platform$OS.type == "windows") {
-    patterns <- paste(sprintf('/C:";%s;"', kuerzel), collapse = " ")
+    # findstr verarbeitet nicht-ASCII-Zeichen in Suchmustern unzuverlaessig.
+    # Solche Kuerzel werden ueber ihren ASCII-Praefix gesucht und danach in R exakt gefiltert.
+    findstr_kuerzel <- sub("[^\\x01-\\x7F].*$", "", kuerzel, perl = TRUE)
+    patterns <- ifelse(
+      findstr_kuerzel == kuerzel,
+      sprintf('/C:";%s;"', findstr_kuerzel),
+      sprintf('/C:";%s"', findstr_kuerzel)
+    )
     cmd <- paste(
       "findstr",
-      patterns,
+      paste(patterns, collapse = " "),
       shQuote(normalizePath(path, winslash = "\\"))
     )
 
-    return(
-      fread(
-        cmd = cmd,
-        sep = ";",
-        header = FALSE,
-        col.names = spalten,
-        dec = ",",
-        encoding = "UTF-8",
-        showProgress = FALSE
-      )
+    selected <- fread(
+      cmd = cmd,
+      sep = ";",
+      header = FALSE,
+      col.names = spalten,
+      dec = ",",
+      encoding = "UTF-8",
+      showProgress = FALSE
     )
+
+    return(selected[Kuerzel %chin% kuerzel])
   }
 
   fread(
@@ -82,6 +126,7 @@ read_selected_inkar <- function(path, kuerzel) {
   )[Kuerzel %in% kuerzel]
 }
 
+# Metadaten des aktuellen INKAR-Caches aus Dateien und Indikatorauswahl erzeugen.
 make_metadata <- function() {
   list(
     struktur_jahr = struktur_jahr,
@@ -95,6 +140,7 @@ make_metadata <- function() {
   )
 }
 
+# Indikatorkonfiguration sortieren und fuer einen stabilen Cachevergleich vereinheitlichen.
 normalise_indicator_config <- function(config) {
   config <- as.data.table(config)
   config <- config[
@@ -108,6 +154,7 @@ normalise_indicator_config <- function(config) {
   config[order(Raumbezug, Kuerzel, variable)]
 }
 
+# Pruefen, ob die im Cache gespeicherten Indikatoren der aktuellen Auswahl entsprechen.
 indicator_config_matches <- function(metadata) {
   if (!all(c("workflow_kuerzel", "inkar_indikatoren") %in% names(metadata))) {
     return(FALSE)
@@ -123,6 +170,7 @@ indicator_config_matches <- function(metadata) {
     )
 }
 
+# INKAR-Daten auf das Strukturjahr und die benoetigten Raumebenen begrenzen.
 filter_workflow_rows <- function(inkar_data) {
   inkar_data <- as.data.table(inkar_data)
 
@@ -135,6 +183,7 @@ filter_workflow_rows <- function(inkar_data) {
   )
 }
 
+# Kontrollieren, dass alle angeforderten Indikatoren in den eingelesenen Daten vorhanden sind.
 required_indicators_present <- function(inkar_data) {
   present <- unique(
     as.data.table(inkar_data)[
@@ -151,11 +200,13 @@ required_indicators_present <- function(inkar_data) {
   nrow(missing) == 0
 }
 
+# Gefilterte INKAR-Basis und ihre Metadaten als RDS-Cache speichern.
 write_inkar_basis <- function(inkar_workflow, metadata) {
   saveRDS(inkar_workflow, inkar_basis_rds)
   saveRDS(metadata, inkar_metadata_rds)
 }
 
+# Entscheiden, ob vorhandene Cachedateien noch zu Rohdaten und Konfiguration passen.
 cache_is_current <- function() {
   if (!file.exists(inkar_basis_rds) || !file.exists(inkar_metadata_rds)) {
     return(FALSE)
@@ -178,6 +229,7 @@ cache_is_current <- function() {
     required_indicators_present(inkar_workflow)
 }
 
+# Vorhandene INKAR-Basis laden oder bei unpassendem Cache neu erzeugen.
 load_existing_basis <- function() {
   if (file.exists(inkar_basis_rds)) {
     return(readRDS(inkar_basis_rds))
@@ -228,9 +280,9 @@ if (!force_rebuild && cache_is_current()) {
   )
 
   inkar_selected[, Zeitbezug := as.integer(Zeitbezug)]
-  inkar_selected[, Kennziffer := sprintf("%08d", as.integer(Kennziffer))]
 
   inkar_workflow <- filter_workflow_rows(inkar_selected)
+  inkar_workflow[, Kennziffer := sprintf("%08d", as.integer(Kennziffer))]
 
   inkar_workflow <- inkar_workflow[
     Zeitbezug == struktur_jahr

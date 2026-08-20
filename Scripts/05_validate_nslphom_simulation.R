@@ -1,3 +1,5 @@
+# nslphom mit simulierten bekannten Uebergaengen und Kovariateneffekten validieren.
+
 library(dplyr)
 library(tidyr)
 
@@ -14,14 +16,17 @@ if (!requireNamespace("lphom", quietly = TRUE)) {
   )
 }
 
+# Linearen Praediktor mit der inversen Logitfunktion in eine Wahrscheinlichkeit umwandeln.
 inv_logit <- function(x) {
   stats::plogis(x)
 }
 
+# Wahrscheinlichkeiten von exakt 0 und 1 fernhalten, damit Logitmodelle stabil bleiben.
 clamp_probability <- function(x, eps = 1e-6) {
   pmin(pmax(x, eps), 1 - eps)
 }
 
+# Korrelation nur berechnen, wenn beide Vektoren genuegend Variation besitzen.
 safe_cor <- function(x, y) {
   ok <- stats::complete.cases(x, y)
 
@@ -36,6 +41,7 @@ safe_cor <- function(x, y) {
   stats::cor(x[ok], y[ok])
 }
 
+# Einen bestimmten Herkunft-Ziel-Uebergang aus allen lokalen Matrizen extrahieren.
 extract_unit_values <- function(array, from, to) {
   as.numeric(array[from, to, ])
 }
@@ -75,6 +81,7 @@ transition_betas <- tibble(
   )
 )
 
+# Herkunftsgruppen A und B je Einheit aus einer Binomialverteilung simulieren.
 simulate_origin_counts <- function(electorate, p_a) {
   counts <- t(vapply(
     seq_along(electorate),
@@ -88,6 +95,7 @@ simulate_origin_counts <- function(electorate, p_a) {
   counts
 }
 
+# Realisierte Uebergangszahlen aus Herkunftsmasse und bekannten Wahrscheinlichkeiten ziehen.
 simulate_transition_counts <- function(origin_a, origin_b, p_a_to_a, p_b_to_a) {
   counts <- t(vapply(
     seq_along(origin_a),
@@ -117,6 +125,7 @@ simulate_transition_counts <- function(origin_a, origin_b, p_a_to_a, p_b_to_a) {
   counts
 }
 
+# Wahre, realisierte und nslphom-geschaetzte lokale Uebergaenge lang zusammenfuehren.
 make_transition_long <- function(
   sim_id,
   unit_data,
@@ -212,6 +221,7 @@ make_transition_long <- function(
     )
 }
 
+# Kovariateneffekte auf eine ausgewaehlte wahre, realisierte oder geschaetzte Wahrscheinlichkeit fitten.
 estimate_beta_model <- function(data, probability_col, model_label) {
   bind_rows(lapply(c("A_to_A", "B_to_A"), function(current_transition) {
     model_data <- data %>%
@@ -253,6 +263,7 @@ estimate_beta_model <- function(data, probability_col, model_label) {
   }))
 }
 
+# Bias, absolute Fehler und MSE ueber alle lokalen Matrixzellen zusammenfassen.
 summarise_local_errors <- function(local_errors) {
   local_errors %>%
     filter(!failed, origin_count > 0) %>%
@@ -274,6 +285,7 @@ summarise_local_errors <- function(local_errors) {
     )
 }
 
+# EI als halbierte absolute Abweichung der wahren und geschaetzten gemeinsamen Verteilung berechnen.
 calculate_estimation_error <- function(data) {
   data %>%
     filter(
@@ -297,6 +309,7 @@ calculate_estimation_error <- function(data) {
     )
 }
 
+# Verteilung der EI-Werte ueber Einheiten und Simulationen zusammenfassen.
 summarise_estimation_error <- function(estimation_error) {
   estimation_error %>%
     summarise(
@@ -312,6 +325,7 @@ summarise_estimation_error <- function(estimation_error) {
     )
 }
 
+# Abweichung der geschaetzten Regressionskoeffizienten von den festgelegten Betas zusammenfassen.
 summarise_beta_recovery <- function(beta_estimates) {
   beta_estimates %>%
     left_join(
@@ -334,6 +348,7 @@ summarise_beta_recovery <- function(beta_estimates) {
     )
 }
 
+# Eine vollstaendige Wahl simulieren, nslphom fitten und alle Validierungskennzahlen erzeugen.
 run_one_simulation <- function(sim_id) {
   unit_id <- sprintf("sim_%04d_unit_%03d", sim_id, seq_len(settings$n_units))
   x_binary <- stats::rbinom(settings$n_units, size = 1, prob = 0.45)
@@ -524,6 +539,7 @@ sensitivity_settings <- list(
   covariate_year = settings$covariate_year
 )
 
+# Einheitsdaten mit Kovariaten und wahren Wahrscheinlichkeiten aus lokalen Fehlerdaten rekonstruieren.
 make_unit_data_from_local_errors <- function(data) {
   data %>%
     filter(!failed) %>%
@@ -547,6 +563,7 @@ make_unit_data_from_local_errors <- function(data) {
     arrange(sim_id, unit_id)
 }
 
+# Wahre gemeinsame Zwei-Parteien-Verteilung fuer eine Sensitivitaetsvariante erzeugen.
 make_two_party_truth_long <- function(unit_data, variant, sensitivity_type, block_id = "global") {
   bind_rows(
     tibble(
@@ -621,6 +638,7 @@ make_two_party_truth_long <- function(unit_data, variant, sensitivity_type, bloc
     )
 }
 
+# Lokale Zwei-Parteien-Matrizen und absolute Zahlen aus einem nslphom-Fit extrahieren.
 extract_two_party_fit <- function(fit, unit_ids) {
   prop_units <- fit[["VTM.prop.units"]]
   votes_units <- fit[["VTM.votes.units"]]
@@ -653,6 +671,7 @@ extract_two_party_fit <- function(fit, unit_ids) {
   )
 }
 
+# Eine Zwei-Parteien-Variante innerhalb eines vorgegebenen Blocks schaetzen.
 fit_two_party_block <- function(unit_data, variant, sensitivity_type, block_id) {
   truth <- make_two_party_truth_long(unit_data, variant, sensitivity_type, block_id)
 
@@ -705,6 +724,7 @@ fit_two_party_block <- function(unit_data, variant, sensitivity_type, block_id) 
     )
 }
 
+# Eine Sensitivitaetsvariante global oder getrennt nach der angegebenen Blockspalte fitten.
 fit_two_party_variant <- function(unit_data, variant, sensitivity_type, block_col) {
   bind_rows(lapply(split(unit_data, unit_data[[block_col]]), function(block_data) {
     fit_two_party_block(
@@ -716,6 +736,7 @@ fit_two_party_variant <- function(unit_data, variant, sensitivity_type, block_co
   }))
 }
 
+# Benachbarte Simulationseinheiten zu groesseren Einheiten mit summierten Stimmen aggregieren.
 make_aggregated_unit_data <- function(unit_data, group_size) {
   unit_data %>%
     arrange(unit_id) %>%
@@ -743,6 +764,7 @@ make_aggregated_unit_data <- function(unit_data, group_size) {
     )
 }
 
+# Bereits geschaetzte globale Referenzwerte fuer den Sensitivitaetsvergleich bereitstellen.
 make_existing_global_reference <- function(data) {
   data %>%
     filter(!failed) %>%
@@ -770,6 +792,7 @@ make_existing_global_reference <- function(data) {
     )
 }
 
+# Lokale Fehler je Sensitivitaetsvariante, Block und Uebergang zusammenfassen.
 summarise_sensitivity_errors <- function(data) {
   data %>%
     filter(!failed, origin_count > 0) %>%
@@ -798,6 +821,7 @@ summarise_sensitivity_errors <- function(data) {
     )
 }
 
+# EI fuer jede Sensitivitaetsvariante aus wahren und geschaetzten Zellzahlen berechnen.
 calculate_sensitivity_estimation_error <- function(data) {
   data %>%
     filter(
@@ -823,6 +847,7 @@ calculate_sensitivity_estimation_error <- function(data) {
     )
 }
 
+# EI-Verteilungen der Sensitivitaetsvarianten zusammenfassen.
 summarise_sensitivity_estimation_error <- function(estimation_error) {
   estimation_error %>%
     group_by(
@@ -842,6 +867,7 @@ summarise_sensitivity_estimation_error <- function(estimation_error) {
     )
 }
 
+# Kovariateneffekte aus den geschätzten Sensitivitaets-Uebergaengen erneut schaetzen.
 estimate_sensitivity_betas <- function(data) {
   split_keys <- paste(data$variant, data$sim_id, sep = "___")
 
@@ -857,6 +883,7 @@ estimate_sensitivity_betas <- function(data) {
   }))
 }
 
+# Beta-Recovery je Sensitivitaetsvariante gegen die bekannten Parameter auswerten.
 summarise_sensitivity_betas <- function(data) {
   data %>%
     filter(!failed) %>%
@@ -880,12 +907,14 @@ summarise_sensitivity_betas <- function(data) {
     )
 }
 
+# Beliebige lineare Praediktoren zeilenweise in drei sich zu 1 summierende Anteile umwandeln.
 softmax_rows <- function(eta) {
   shifted <- eta - apply(eta, 1, max)
   exp_eta <- exp(shifted)
   exp_eta / rowSums(exp_eta)
 }
 
+# Drei-Parteien-Wahlen mit bekannten lokalen Matrizen simulieren und nslphom validieren.
 simulate_three_party_sensitivity <- function(sim_id) {
   unit_id <- sprintf("party_%04d_unit_%03d", sim_id, seq_len(sensitivity_settings$party_grouping_n_units))
   x_binary <- stats::rbinom(sensitivity_settings$party_grouping_n_units, size = 1, prob = 0.45)

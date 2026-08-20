@@ -1,3 +1,5 @@
+# INKAR-Werte von 2023 auf die finalen Wahl-Aggregationseinheiten zusammenfassen.
+
 library(data.table)
 library(dplyr)
 library(tidyr)
@@ -7,6 +9,7 @@ source("paths.R", encoding = "UTF-8")
 
 ensure_data_dirs()
 
+# Kleine, bereits auf 2023 und relevante Indikatoren gefilterte INKAR-Basis laden.
 inkar_basis_rds <- file.path(data_dir_intermediate, "vorlaeufig_inkar_basis_gemeinden_kreise.rds")
 inkar_metadata_rds <- file.path(data_dir_intermediate, "vorlaeufig_inkar_basis_metadata.rds")
 
@@ -21,36 +24,30 @@ struktur_jahr <- if ("struktur_jahr" %in% names(metadata)) {
 } else {
   2023L
 }
-indikator_config <- if ("inkar_indikatoren" %in% names(metadata)) {
-  as_tibble(metadata$inkar_indikatoren)
-} else {
-  tibble(
-    Kuerzel = c(
-      "xbev",
-      "q_arbeitslosigkeit",
-      "q_kaufkraft",
-      "a_ausl_bev"
-    ),
-    variable = c(
-      "bevoelkerung",
-      "arbeitslosigkeit",
-      "kaufkraft",
-      "auslaenderanteil"
-    ),
-    Raumbezug = c(
-      "Gemeinden",
-      "Gemeinden",
-      "Gemeinden",
-      "Kreise"
-    )
+# Indikatorkonfiguration ausschliesslich aus dem zuvor erzeugten Cache uebernehmen.
+if (!"inkar_indikatoren" %in% names(metadata)) {
+  stop(
+    "Die INKAR-Metadaten enthalten keine Indikatorkonfiguration. ",
+    "Fuehre zuerst Scripts/cleaning_strukturdaten.R aus."
   )
 }
+
+indikator_config <- as_tibble(metadata$inkar_indikatoren)
 gemeinde_config <- indikator_config %>%
   filter(Raumbezug == "Gemeinden")
 kreis_config <- indikator_config %>%
   filter(Raumbezug == "Kreise")
 struktur_variablen <- setdiff(unique(indikator_config$variable), "bevoelkerung")
 struktur_spalten <- paste0(struktur_variablen, "_", struktur_jahr)
+speziell_aggregierte_variablen <- c(
+  "haushaltsgroesseMean",
+  "einwohnerdichte",
+  "einwohnerArbeitsplatzDichte"
+)
+bevoelkerungsgewichtete_variablen <- setdiff(
+  struktur_variablen,
+  speziell_aggregierte_variablen
+)
 
 if (!"bevoelkerung" %in% indikator_config$variable) {
   stop(
@@ -59,6 +56,7 @@ if (!"bevoelkerung" %in% indikator_config$variable) {
   )
 }
 
+# Finales Gemeindemapping und die vollstaendige Menge der Analyse-Aggregationen laden.
 mapping_gemeinden <- readRDS(file.path(data_dir_cleaned, "mapping_gemeinden_final_manuell_validiert.rds"))
 all_aggs <- readRDS(file.path(data_dir_cleaned, "vorlaeufig_nslphom_input_2021.rds")) %>%
   select(agg_schluessel) %>%
@@ -75,6 +73,7 @@ mapping_gemeinden <- mapping_gemeinden %>%
   ) %>%
   distinct()
 
+# Gemeindeindikatoren direkt ueber den Gemeindeschluessel aufbereiten.
 gemeinde_indikatoren <- inkar %>%
   inner_join(
     gemeinde_config,
@@ -105,6 +104,7 @@ gemeinde_struktur <- gemeinde_indikatoren %>%
     kreis_schluessel = paste0(substr(gemeindeschluessel, 1, 5), "000")
   )
 
+# Nur falls noetig Kreisindikatoren als Ersatz fuer nicht gemeindescharfe Variablen anspielen.
 if (nrow(kreis_config) > 0) {
   kreis_indikatoren <- inkar %>%
     inner_join(
@@ -140,6 +140,7 @@ if (nrow(kreis_config) > 0) {
 
 inkar_gemeinden <- unique(gemeinde_struktur$gemeindeschluessel)
 
+# Gemeinden ohne eigenen INKAR-Eintrag innerhalb ihrer finalen Aggregation kennzeichnen.
 mapping_gemeinden <- mapping_gemeinden %>%
   mutate(
     gemeindeschluessel_inkar = case_when(
@@ -150,6 +151,7 @@ mapping_gemeinden <- mapping_gemeinden %>%
     )
   )
 
+# Werte innerhalb jedes agg_schluessels passend zur inhaltlichen Bezugsgroesse zusammenfassen.
 agg_struktur_long <- mapping_gemeinden %>%
   left_join(
     gemeinde_struktur,
@@ -165,9 +167,50 @@ agg_struktur_long <- mapping_gemeinden %>%
     n_gemeinden_mit_inkar = n_distinct(gemeindeschluessel[!is.na(bevoelkerung)]),
     gewicht_summe = sum(bevoelkerung, na.rm = TRUE),
     across(
-      all_of(struktur_variablen),
+      all_of(bevoelkerungsgewichtete_variablen),
       ~ weighted_mean_safe(.x, bevoelkerung)
     ),
+    # Durchschnittliche Haushaltsgroesse ueber die aus Bevoelkerung und
+    # Haushaltsgroesse angenaeherte Zahl der Haushalte aggregieren.
+    haushaltsgroesseMean = {
+      gueltig <- !is.na(bevoelkerung) & bevoelkerung > 0 &
+        !is.na(haushaltsgroesseMean) & haushaltsgroesseMean > 0
+
+      if (any(gueltig)) {
+        sum(bevoelkerung[gueltig]) /
+          sum(bevoelkerung[gueltig] / haushaltsgroesseMean[gueltig])
+      } else {
+        NA_real_
+      }
+    },
+    # Einwohner-Arbeitsplatz-Dichte mit der aus Bevoelkerung und Einwohnerdichte
+    # angenaeherten Gemeindeflaeche gewichten. Dies steht vor der Aggregation der
+    # Einwohnerdichte, damit hier noch deren gemeindescharfe Werte verwendet werden.
+    einwohnerArbeitsplatzDichte = {
+      gueltig <- !is.na(bevoelkerung) & bevoelkerung > 0 &
+        !is.na(einwohnerdichte) & einwohnerdichte > 0 &
+        !is.na(einwohnerArbeitsplatzDichte)
+
+      if (any(gueltig)) {
+        flaeche <- bevoelkerung[gueltig] / einwohnerdichte[gueltig]
+        sum(einwohnerArbeitsplatzDichte[gueltig] * flaeche) / sum(flaeche)
+      } else {
+        NA_real_
+      }
+    },
+    # Einwohnerdichte als Gesamtbevoelkerung geteilt durch die aus den
+    # Gemeindedichten angenaeherte Gesamtflaeche berechnen.
+    einwohnerdichte = {
+      gueltig <- !is.na(bevoelkerung) & bevoelkerung > 0 &
+        !is.na(einwohnerdichte) & einwohnerdichte > 0
+
+      if (any(gueltig)) {
+        sum(bevoelkerung[gueltig]) /
+          sum(bevoelkerung[gueltig] / einwohnerdichte[gueltig])
+      } else {
+        NA_real_
+      }
+    },
     .groups = "drop"
   )
 
@@ -193,6 +236,7 @@ agg_struktur_wide_inner <- agg_struktur_long %>%
   ) %>%
   arrange(agg_schluessel)
 
+# Eine Zeile je Wahlanalyseeinheit und eine Spalte je 2023-Kovariate erzeugen.
 agg_struktur_wide <- all_aggs %>%
   left_join(
     agg_struktur_wide_inner,
@@ -220,13 +264,14 @@ struktur_missing <- agg_struktur_wide %>%
 
 # Interne Plausibilitaetspruefungen, nicht als eigene Datensaetze gespeichert:
 # - struktur_checks: Zaehlt fehlende 2023-Kovariaten nach Variable.
-# - struktur_missing: Enthielte die betroffenen agg_schluessel; diese Tabelle
-#   muss leer sein, damit alle Analyseeinheiten Strukturkovariaten besitzen.
+# - struktur_missing: Enthaelt Einheiten mit mindestens einem fehlenden INKAR-Wert.
+#   Diese Einheiten bleiben im Datensatz und werden in Regressionen fallweise ausgeschlossen.
 if (nrow(struktur_missing) > 0) {
-  stop(
-    "INKAR-Aggregation unvollstaendig: struktur_missing enthaelt ",
+  warning(
+    "INKAR-Aggregation enthaelt ",
     nrow(struktur_missing),
-    " agg_schluessel ohne vollstaendige 2023-Kovariaten."
+    " agg_schluessel ohne vollstaendige 2023-Kovariaten. ",
+    "Die Regressionsskripte verwenden fuer die betroffenen Modelle vollstaendige Faelle."
   )
 }
 

@@ -1,3 +1,5 @@
+# Verlauf von HETe ueber nslphom_dual-Iterationen untersuchen und ein iter_max bestimmen.
+
 library(dplyr)
 library(tidyr)
 library(ggplot2)
@@ -42,6 +44,7 @@ if (max_iter < 1L) {
 # entsprechen den ersten max_iter Iterationen eines kuerzeren Laufes.
 sequence_tol <- getOption("waehlendenwanderung.itermax_dual_tol", -Inf)
 
+# Aggregationseinheiten fuer die Iterationsdiagnose vollstaendig oder als Teilmenge auswaehlen.
 select_itermax_ids <- function(ids, selection_mode, n_units, seed) {
   if (selection_mode == "all") {
     return(ids)
@@ -66,6 +69,7 @@ select_itermax_ids <- function(ids, selection_mode, n_units, seed) {
   )
 }
 
+# Einen nslphom-Lauf ausfuehren und lokale Matrizen jeder Iteration erhalten.
 nslphom_with_unit_sequences <- function(
     votes_election1,
     votes_election2,
@@ -166,6 +170,7 @@ nslphom_with_unit_sequences <- function(
   )
 }
 
+# Beide Richtungen iterieren und fuer jedes moegliche iter_max den Dual-HETe rekonstruieren.
 nslphom_dual_with_itermax_sequence <- function(
     votes_election1,
     votes_election2,
@@ -273,6 +278,7 @@ nslphom_dual_with_itermax_sequence <- function(
   )
 }
 
+# Identische Einheiten fuer beide Richtungen auswaehlen und in Zaehldatenmatrizen umwandeln.
 inputs <- read_prepared_nslphom_inputs()
 validation <- validate_prepared_nslphom_inputs(inputs, threshold = threshold)
 all_ids <- inputs$input2021$agg_schluessel
@@ -320,6 +326,7 @@ message(
   "."
 )
 
+# Einmal bis max_iter rechnen und daraus alle kuerzeren iter_max-Ergebnisse rekonstruieren.
 dual_sequence <- nslphom_dual_with_itermax_sequence(
   votes_election1 = as.data.frame(origin_counts),
   votes_election2 = as.data.frame(destination_counts),
@@ -340,6 +347,7 @@ target_col <- if (plot_matrix_type == "weighted") {
   "HETe_dual_average"
 }
 
+# Das iter_max mit dem kleinsten gewichteten oder gemittelten Dual-HETe bestimmen.
 best_iter <- sequence_table %>%
   slice_min(.data[[target_col]], n = 1, with_ties = FALSE) %>%
   transmute(
@@ -353,6 +361,7 @@ best_iter <- sequence_table %>%
     HETe_21_selected
   )
 
+# Gewaehltes HETe je iter_max und HETe der exakten Iteration gemeinsam lang formatieren.
 plot_data <- sequence_table %>%
   select(
     iter_max,

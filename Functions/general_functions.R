@@ -1,7 +1,11 @@
+# Allgemeine Hilfsfunktionen fuer Gemeindeschluessel, Aggregationen und gewichtete Mittelwerte.
+
+# Namen der Aggregationsschluessel-Spalte eines Datensatzes ermitteln.
 get_agg_col <- function(data) {
   grep("^agg\\.", names(data), value = TRUE)[1]
 }
 
+# Erste vorhandene Spalte zurueckgeben, deren Name auf eines der Suchmuster passt.
 first_existing <- function(data, patterns) {
   for (pattern in patterns) {
     hit <- grep(pattern, names(data), value = TRUE)
@@ -14,6 +18,7 @@ first_existing <- function(data, patterns) {
   NA_character_
 }
 
+# Gewichteten Mittelwert berechnen und fehlende oder ungueltige Gewichte sicher behandeln.
 weighted_mean_safe <- function(x, w) {
   ok <- !is.na(x) & !is.na(w) & w > 0
 
@@ -24,6 +29,7 @@ weighted_mean_safe <- function(x, w) {
   sum(x[ok] * w[ok]) / sum(w[ok])
 }
 
+# Achtstelligen amtlichen Gemeindeschluessel aus den amtlichen Gebietsteilen zusammensetzen.
 make_ags <- function(data) {
   data %>%
     dplyr::mutate(
@@ -40,6 +46,7 @@ make_ags <- function(data) {
     )
 }
 
+# Vollstaendig leere Zeilen aus einem Datensatz entfernen.
 drop_empty_rows <- function(data) {
   is_empty_value <- function(x) {
     is.na(x) | stringr::str_trim(as.character(x)) == ""
@@ -54,6 +61,7 @@ drop_empty_rows <- function(data) {
     )
 }
 
+# Gemeindeschluessel als achtstellige Zeichenketten vereinheitlichen.
 normalize_ags <- function(x) {
   x <- as.character(x)
   x <- stringr::str_trim(x)
@@ -62,6 +70,7 @@ normalize_ags <- function(x) {
   stringr::str_pad(x, width = 8, pad = "0")
 }
 
+# Kommagetrennte Aggregationsschluessel in einzelne Gemeindeschluessel zerlegen.
 split_keys <- function(x) {
   x <- x[!is.na(x) & x != ""]
 
@@ -74,11 +83,24 @@ split_keys <- function(x) {
   sort(unique(keys[!is.na(keys) & keys != ""]))
 }
 
+# Aggregationseinheiten der ostdeutschen Flaechenlaender ohne Berlin erkennen.
+is_ostdeutschland_ohne_berlin <- function(agg_schluessel) {
+  ost_laender <- c("12", "13", "14", "15", "16")
+
+  vapply(
+    lapply(agg_schluessel, split_keys),
+    function(keys) length(keys) > 0 && all(substr(keys, 1, 2) %in% ost_laender),
+    logical(1)
+  )
+}
+
+# Gemeindeschluessel sortieren, doppelte entfernen und wieder komma-getrennt zusammenfassen.
 collapse_keys <- function(x) {
   x <- x[!is.na(x) & x != ""]
   paste(sort(unique(x)), collapse = ", ")
 }
 
+# Alle direkt oder indirekt verbundenen Gemeindeschluessel zu Komponenten zusammenfassen.
 connected_components <- function(agg_strings) {
   groups <- lapply(agg_strings, split_keys)
   groups <- groups[lengths(groups) > 0]

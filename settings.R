@@ -1,4 +1,4 @@
+# Standard-CRAN-Quelle fuer reproduzierbare Paketinstallationen festlegen.
 
-# Set CRAN mirror
 options(repos = c(CRAN = "https://cloud.r-project.org"))
 

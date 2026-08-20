@@ -1,3 +1,5 @@
+# Amtliche Gemeindegebietsveraenderungen einlesen und zu Aggregationsgruppen verbinden.
+
 library(readxl)
 library(dplyr)
 library(stringr)
@@ -22,6 +24,7 @@ dateien <- dateien[!startsWith(basename(dateien), "~$")]
 start <- as.Date("2021-06-30") # Bundestagswahl 2021
 ende  <- as.Date("2024-12-31") # Bundestagswahl 2025
 
+# Eine Jahresdatei der Gebietsveraenderungen einlesen und standardisieren.
 read_changes <- function(datei){
   
   dat <-

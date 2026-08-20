@@ -1,3 +1,5 @@
+# Abweichungen der AfD-Zielspalte aus EHet auf einer Deutschlandkarte visualisieren.
+
 library(dplyr)
 library(tidyr)
 library(stringr)

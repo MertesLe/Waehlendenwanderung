@@ -1,9 +1,35 @@
-default_struktur_covariates <- c(
-  "arbeitslosigkeit_2023",
-  "auslaenderanteil_2023",
-  "kaufkraft_2023"
-)
+# Funktionen zur Modellierung der geschaetzten Uebergangswahrscheinlichkeiten.
 
+# Kovariatenspalten anhand des Strukturjahres aus einem aufbereiteten Datensatz bestimmen.
+get_structure_covariates <- function(data) {
+  if (!"struktur_jahr" %in% names(data)) {
+    stop("Der Strukturdatensatz enthaelt keine Spalte struktur_jahr.")
+  }
+
+  years <- unique(stats::na.omit(data$struktur_jahr))
+
+  if (length(years) != 1) {
+    stop("Der Strukturdatensatz muss genau ein eindeutiges struktur_jahr enthalten.")
+  }
+
+  suffix <- paste0("_", years[[1]])
+  covariates <- names(data)[endsWith(names(data), suffix)]
+  covariates <- setdiff(covariates, paste0("gewicht_summe", suffix))
+
+  if (length(covariates) == 0) {
+    stop("Im Strukturdatensatz wurden keine Kovariatenspalten fuer ", years[[1]], " gefunden.")
+  }
+
+  non_numeric <- covariates[!vapply(data[covariates], is.numeric, logical(1))]
+
+  if (length(non_numeric) > 0) {
+    stop("Folgende Strukturkovariaten sind nicht numerisch: ", paste(non_numeric, collapse = ", "))
+  }
+
+  covariates
+}
+
+# Koeffizienten und Konfidenzinformationen eines linearen Modells als Tabelle ausgeben.
 tidy_lm <- function(fit) {
   coefficient_table <- summary(fit)$coefficients
 
@@ -16,7 +42,8 @@ tidy_lm <- function(fit) {
   )
 }
 
-standardize_covariates <- function(data, covariates = default_struktur_covariates) {
+# Kovariaten z-standardisieren und dabei die urspruenglichen Zeilen beibehalten.
+standardize_covariates <- function(data, covariates) {
   missing_covariates <- setdiff(covariates, names(data))
 
   if (length(missing_covariates) > 0) {
@@ -30,11 +57,12 @@ standardize_covariates <- function(data, covariates = default_struktur_covariate
   data
 }
 
+# Ein gewichtetes lineares Modell fuer genau einen Uebergang schaetzen.
 fit_one_transition_lm <- function(
     data,
     response_col,
     weight_col,
-    covariates_z = paste0(default_struktur_covariates, "_z")) {
+    covariates_z) {
   if (
     nrow(data) < 30 ||
       stats::sd(data[[response_col]], na.rm = TRUE) < 1e-8 ||
@@ -49,6 +77,7 @@ fit_one_transition_lm <- function(
     ))
   }
 
+  # Herkunfts- oder Zielmasse als Fallgewicht verwenden, damit groessere Einheiten staerker eingehen.
   fit <- stats::lm(
     stats::reformulate(
       covariates_z,
@@ -61,6 +90,7 @@ fit_one_transition_lm <- function(
   tidy_lm(fit)
 }
 
+# AfD-Zufluesse nach Herkunftsgruppe deskriptiv zusammenfassen.
 make_afd_source_summary <- function(transitions) {
   transitions %>%
     dplyr::filter(.data$to == "AfD") %>%
@@ -86,10 +116,11 @@ make_afd_source_summary <- function(transitions) {
     dplyr::arrange(dplyr::desc(.data$estimated_transition_count))
 }
 
+# Lokale AfD-Uebergaenge mit den 2023-Strukturmerkmalen derselben Einheit verbinden.
 prepare_afd_model_data <- function(
     transitions,
     struktur,
-    covariates = default_struktur_covariates) {
+    covariates) {
   transitions %>%
     dplyr::filter(.data$to == "AfD", .data$from != "AfD") %>%
     dplyr::left_join(struktur, by = "agg_schluessel") %>%
@@ -105,6 +136,7 @@ prepare_afd_model_data <- function(
     standardize_covariates(covariates)
 }
 
+# Fuer jede vorhandene Herkunftsgruppe ein eigenes Uebergangsmodell schaetzen.
 fit_grouped_transition_models <- function(
     model_data,
     response_col,
@@ -119,15 +151,17 @@ fit_grouped_transition_models <- function(
     dplyr::arrange(.data$from, .data$to, .data$term)
 }
 
+# Modelldaten, Fits, Koeffizienten und Plausibilitaetschecks gemeinsam erzeugen.
 make_transition_model_outputs <- function(
     transitions,
     struktur,
-    covariates = default_struktur_covariates) {
+    covariates) {
   covariates_z <- paste0(covariates, "_z")
 
   afd_source_summary <- make_afd_source_summary(transitions)
   model_data <- prepare_afd_model_data(transitions, struktur, covariates)
 
+  # Modell 1 erklaert, welcher Anteil einer Herkunftsgruppe 2025 zur AfD wechselt.
   model_coefficients <- fit_grouped_transition_models(
     model_data,
     response_col = "transition_probability",
@@ -136,6 +170,7 @@ make_transition_model_outputs <- function(
     covariates_z = covariates_z
   )
 
+  # Modell 2 erklaert, welchen Anteil eine Herkunftsgruppe an allen AfD-Stimmen 2025 stellt.
   afd_source_share_coefficients <- fit_grouped_transition_models(
     model_data,
     response_col = "afd_2025_source_share",
@@ -144,6 +179,7 @@ make_transition_model_outputs <- function(
     covariates_z = covariates_z
   )
 
+  # Beobachtungszahl und Streuung je Herkunft fuer die Modellierbarkeit dokumentieren.
   model_checks <- model_data %>%
     dplyr::group_by(.data$from, .data$to) %>%
     dplyr::summarise(
@@ -164,6 +200,7 @@ make_transition_model_outputs <- function(
   ) %>%
     dplyr::arrange(.data$model_target, .data$from, .data$to, .data$term)
 
+  # Zusatzoutput: bisherige Modelle fuer alle Herkunft-Ziel-Kombinationen weiter bereitstellen.
   legacy_model_data <- transitions %>%
     dplyr::left_join(struktur, by = "agg_schluessel") %>%
     dplyr::filter(
@@ -200,16 +237,19 @@ make_transition_model_outputs <- function(
   )
 }
 
-write_transition_model_outputs <- function(outputs) {
-  saveRDS(outputs$model_data, file.path(data_dir_model_regression, "vorlaeufig_modell_afd_zufluss_daten.rds"))
-  saveRDS(outputs$model_coefficients, file.path(data_dir_model_regression, "vorlaeufig_modell_afd_zufluss_coefficients.rds"))
-  saveRDS(outputs$afd_source_share_coefficients, file.path(data_dir_model_regression, "vorlaeufig_modell_afd_source_share_coefficients.rds"))
-  saveRDS(outputs$all_model_coefficients, file.path(data_dir_model_regression, "vorlaeufig_modell_afd_all_coefficients.rds"))
-  saveRDS(outputs$model_checks, file.path(data_dir_model_regression, "vorlaeufig_modell_afd_zufluss_checks.rds"))
-  saveRDS(outputs$afd_source_summary, file.path(data_dir_model_regression, "vorlaeufig_modell_afd_source_summary.rds"))
-  saveRDS(outputs$legacy_model_data, file.path(data_dir_model_regression, "vorlaeufig_modell_daten.rds"))
-  saveRDS(outputs$legacy_model_coefficients, file.path(data_dir_model_regression, "vorlaeufig_modell_coefficients.rds"))
-  saveRDS(outputs$legacy_model_checks, file.path(data_dir_model_regression, "vorlaeufig_modell_checks.rds"))
+# Relevante Regressionsoutputs als RDS-Dateien in den gewaehlten Modellordner schreiben.
+write_transition_model_outputs <- function(outputs, output_dir = data_dir_model_regression) {
+  dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+
+  saveRDS(outputs$model_data, file.path(output_dir, "vorlaeufig_modell_afd_zufluss_daten.rds"))
+  saveRDS(outputs$model_coefficients, file.path(output_dir, "vorlaeufig_modell_afd_zufluss_coefficients.rds"))
+  saveRDS(outputs$afd_source_share_coefficients, file.path(output_dir, "vorlaeufig_modell_afd_source_share_coefficients.rds"))
+  saveRDS(outputs$all_model_coefficients, file.path(output_dir, "vorlaeufig_modell_afd_all_coefficients.rds"))
+  saveRDS(outputs$model_checks, file.path(output_dir, "vorlaeufig_modell_afd_zufluss_checks.rds"))
+  saveRDS(outputs$afd_source_summary, file.path(output_dir, "vorlaeufig_modell_afd_source_summary.rds"))
+  saveRDS(outputs$legacy_model_data, file.path(output_dir, "vorlaeufig_modell_daten.rds"))
+  saveRDS(outputs$legacy_model_coefficients, file.path(output_dir, "vorlaeufig_modell_coefficients.rds"))
+  saveRDS(outputs$legacy_model_checks, file.path(output_dir, "vorlaeufig_modell_checks.rds"))
 
   invisible(outputs)
 }

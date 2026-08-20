@@ -1,3 +1,6 @@
+# Funktionen zur Aufbereitung der Zweitstimmen fuer den nslphom-Input.
+
+# Unterschiedliche amtliche Parteinamen auf einheitliche Gruppennamen abbilden.
 standardize_party <- function(x) {
   x <- x %>%
     stringr::str_replace("^Z_", "") %>%
@@ -23,86 +26,32 @@ standardize_party <- function(x) {
   )
 }
 
-get_second_vote_columns <- function(data, jahr, invalid_col, valid_col) {
-  if (jahr == 2021) {
-    cols <- grep("^Z_", names(data), value = TRUE)
-  } else {
-    cols <- grep("\\.\\.\\.Zweitstimmen$", names(data), value = TRUE)
-  }
-
-  setdiff(cols, c(invalid_col, valid_col))
-}
-
-prepare_vote_year <- function(data, jahr, threshold = 0.12, keep_parties = NULL) {
+# Wahldaten eines Jahres auf Aggregationseinheiten und standardisierte Parteien vorbereiten.
+prepare_vote_year <- function(
+    data,
+    jahr,
+    party_cols,
+    invalid_col,
+    valid_col,
+    threshold = 0.12) {
   agg_col <- get_agg_col(data)
   a_col <- first_existing(data, c("^Wahlberechtigte"))
   b_col <- first_existing(data, c("^W.hlende"))
-  invalid_col <- if (jahr == 2021) {
-    first_existing(data, c("^Z_Ung.ltige$"))
-  } else {
-    first_existing(data, c("^Ung.ltige\\.\\.\\.Zweitstimmen$"))
-  }
-  valid_col <- if (jahr == 2021) {
-    first_existing(data, c("^Z_G.ltige$"))
-  } else {
-    first_existing(data, c("^G.ltige\\.\\.\\.Zweitstimmen$"))
-  }
 
   stopifnot(!is.na(agg_col), !is.na(a_col), !is.na(b_col))
   stopifnot(!is.na(invalid_col), !is.na(valid_col))
-
-  party_cols <- get_second_vote_columns(data, jahr, invalid_col, valid_col)
   stopifnot(length(party_cols) > 0)
 
+  # Urspruengliche Zweitstimmenspalten ihren vereinheitlichten Parteien zuordnen.
   party_lookup <- tibble::tibble(
     source_col = party_cols,
     party = standardize_party(party_cols)
   )
 
-  national <- data %>%
-    dplyr::summarise(
-      dplyr::across(dplyr::all_of(party_cols), ~ sum(.x, na.rm = TRUE)),
-      valid_total = sum(.data[[valid_col]], na.rm = TRUE)
-    ) %>%
-    tidyr::pivot_longer(
-      cols = dplyr::all_of(party_cols),
-      names_to = "source_col",
-      values_to = "votes"
-    ) %>%
-    dplyr::left_join(party_lookup, by = "source_col") %>%
-    dplyr::group_by(.data$party) %>%
-    dplyr::summarise(
-      source_col = paste(.data$source_col, collapse = ", "),
-      votes = sum(.data$votes, na.rm = TRUE),
-      valid_total = max(.data$valid_total, na.rm = TRUE),
-      .groups = "drop"
-    ) %>%
-    dplyr::mutate(
-      threshold = threshold,
-      national_share_valid = .data$votes / .data$valid_total,
-      keep_party_year = .data$national_share_valid >= .data$threshold
-    )
-
-  if (is.null(keep_parties)) {
-    keep_parties <- national %>%
-      dplyr::filter(.data$keep_party_year) %>%
-      dplyr::pull(party)
-  }
-
-  keep_parties <- sort(unique(keep_parties))
-  output_groups <- c(keep_parties, "Andere", "Nichtwaehler")
-  national <- national %>%
-    dplyr::mutate(
-      keep_party = .data$party %in% keep_parties
-    )
-
-  long <- data %>%
+  # Stimmen gleicher Partei, insbesondere CDU und CSU als Union, je Einheit addieren.
+  party_counts <- data %>%
     dplyr::transmute(
       agg_schluessel = .data[[agg_col]],
-      wahlberechtigte = .data[[a_col]],
-      waehlende = .data[[b_col]],
-      ungueltig_stimmen = .data[[invalid_col]],
-      gueltig_stimmen = .data[[valid_col]],
       dplyr::across(dplyr::all_of(party_cols))
     ) %>%
     tidyr::pivot_longer(
@@ -111,15 +60,42 @@ prepare_vote_year <- function(data, jahr, threshold = 0.12, keep_parties = NULL)
       values_to = "votes"
     ) %>%
     dplyr::left_join(party_lookup, by = "source_col") %>%
-    dplyr::mutate(
-      gruppe = dplyr::if_else(.data$party %in% keep_parties, .data$party, "Andere")
-    ) %>%
-    dplyr::group_by(.data$agg_schluessel, .data$gruppe) %>%
+    dplyr::group_by(.data$agg_schluessel, .data$party) %>%
     dplyr::summarise(
       votes = sum(.data$votes, na.rm = TRUE),
       .groups = "drop"
     )
 
+  # Nationale Zweitstimmenanteile bestimmen, auf denen die Parteischwelle beruht.
+  national <- party_counts %>%
+    dplyr::group_by(.data$party) %>%
+    dplyr::summarise(votes = sum(.data$votes, na.rm = TRUE), .groups = "drop") %>%
+    dplyr::left_join(
+      party_lookup %>%
+        dplyr::group_by(.data$party) %>%
+        dplyr::summarise(
+          source_col = paste(.data$source_col, collapse = ", "),
+          .groups = "drop"
+        ),
+      by = "party"
+    ) %>%
+    dplyr::mutate(
+      valid_total = sum(data[[valid_col]], na.rm = TRUE),
+      threshold = threshold,
+      national_share_valid = .data$votes / .data$valid_total,
+      keep_party_year = .data$national_share_valid >= .data$threshold
+    ) %>%
+    dplyr::select(
+      party,
+      source_col,
+      votes,
+      valid_total,
+      threshold,
+      national_share_valid,
+      keep_party_year
+    )
+
+  # Ungueltige Stimmen als Andere und Nichtwaehlende als eigene Gruppen ergaenzen.
   residual <- data %>%
     dplyr::transmute(
       agg_schluessel = .data[[agg_col]],
@@ -130,38 +106,10 @@ prepare_vote_year <- function(data, jahr, threshold = 0.12, keep_parties = NULL)
       cols = c("Andere", "Nichtwaehler"),
       names_to = "gruppe",
       values_to = "votes"
-    ) %>%
-    dplyr::group_by(.data$agg_schluessel, .data$gruppe) %>%
-    dplyr::summarise(
-      votes = sum(.data$votes, na.rm = TRUE),
-      .groups = "drop"
     )
 
-  counts <- dplyr::bind_rows(long, residual) %>%
-    dplyr::group_by(.data$agg_schluessel, .data$gruppe) %>%
-    dplyr::summarise(
-      votes = sum(.data$votes, na.rm = TRUE),
-      .groups = "drop"
-    ) %>%
-    tidyr::complete(
-      agg_schluessel,
-      gruppe = output_groups,
-      fill = list(votes = 0)
-    )
-
-  wide <- counts %>%
-    dplyr::mutate(
-      gruppe = factor(.data$gruppe, levels = output_groups)
-    ) %>%
-    tidyr::pivot_wider(
-      names_from = gruppe,
-      values_from = votes,
-      values_fill = 0
-    ) %>%
-    dplyr::arrange(.data$agg_schluessel) %>%
-    dplyr::select(agg_schluessel, dplyr::all_of(output_groups))
-
-  check <- data %>%
+  # Amtliche Gesamtwerte fuer spaetere Rekonstruktionschecks je Einheit sichern.
+  check_base <- data %>%
     dplyr::transmute(
       agg_schluessel = .data[[agg_col]],
       wahlberechtigte = .data[[a_col]],
@@ -176,7 +124,53 @@ prepare_vote_year <- function(data, jahr, threshold = 0.12, keep_parties = NULL)
       gueltig_stimmen = sum(.data$gueltig_stimmen, na.rm = TRUE),
       ungueltig_stimmen = sum(.data$ungueltig_stimmen, na.rm = TRUE),
       .groups = "drop"
+    )
+
+  list(
+    jahr = jahr,
+    party_counts = party_counts,
+    residual = residual,
+    national = national,
+    check_base = check_base
+  )
+}
+
+# Kleine Parteien zu Andere zusammenfassen und eine vollstaendige Gruppenmatrix erzeugen.
+finalize_vote_year <- function(prepared_year, keep_parties) {
+  keep_parties <- sort(unique(keep_parties))
+  output_groups <- c(keep_parties, "Andere", "Nichtwaehler")
+
+  # Nicht separat gefuehrte Parteien und ungueltige Stimmen gemeinsam zu Andere addieren.
+  counts <- dplyr::bind_rows(
+    prepared_year$party_counts %>%
+      dplyr::transmute(
+        agg_schluessel,
+        gruppe = dplyr::if_else(.data$party %in% keep_parties, .data$party, "Andere"),
+        votes
+      ),
+    prepared_year$residual
+  ) %>%
+    dplyr::group_by(.data$agg_schluessel, .data$gruppe) %>%
+    dplyr::summarise(votes = sum(.data$votes, na.rm = TRUE), .groups = "drop") %>%
+    tidyr::complete(
+      agg_schluessel,
+      gruppe = output_groups,
+      fill = list(votes = 0)
+    )
+
+  # Fuer nslphom eine breite Matrix mit denselben Gruppen in jedem Jahr erzeugen.
+  wide <- counts %>%
+    dplyr::mutate(gruppe = factor(.data$gruppe, levels = output_groups)) %>%
+    tidyr::pivot_wider(
+      names_from = gruppe,
+      values_from = votes,
+      values_fill = 0
     ) %>%
+    dplyr::arrange(.data$agg_schluessel) %>%
+    dplyr::select(agg_schluessel, dplyr::all_of(output_groups))
+
+  # Pruefen, ob Parteien, Andere und Nichtwaehlende die amtliche Gesamtmasse ergeben.
+  check <- prepared_year$check_base %>%
     dplyr::left_join(
       counts %>%
         dplyr::group_by(.data$agg_schluessel) %>%
@@ -193,16 +187,23 @@ prepare_vote_year <- function(data, jahr, threshold = 0.12, keep_parties = NULL)
 
   list(
     wide = wide,
-    long = counts %>% dplyr::mutate(Jahr = jahr, .before = 1),
-    national = national %>% dplyr::mutate(Jahr = jahr, .before = 1),
-    check = check %>% dplyr::mutate(Jahr = jahr, .before = 1)
+    long = counts %>% dplyr::mutate(Jahr = prepared_year$jahr, .before = 1),
+    national = prepared_year$national %>%
+      dplyr::mutate(keep_party = .data$party %in% keep_parties) %>%
+      dplyr::mutate(
+        Jahr = prepared_year$jahr,
+        .before = 1
+      ),
+    check = check %>% dplyr::mutate(Jahr = prepared_year$jahr, .before = 1)
   )
 }
 
+# Alle 2025-Gruppen je Einheit proportional auf die Gesamtmasse von 2021 skalieren.
 scale_2025_to_2021 <- function(prepared2021, prepared2025) {
   groups <- setdiff(names(prepared2021$wide), "agg_schluessel")
   stopifnot(identical(groups, setdiff(names(prepared2025$wide), "agg_schluessel")))
 
+  # Je Einheit den Faktor Gesamtmasse 2021 geteilt durch Gesamtmasse 2025 berechnen.
   scale_factors <- prepared2021$wide %>%
     dplyr::transmute(
       agg_schluessel = .data$agg_schluessel,
@@ -238,6 +239,7 @@ scale_2025_to_2021 <- function(prepared2021, prepared2025) {
       input_skaliert_auf_2021 = FALSE
     )
 
+  # Jede Gruppe 2025 mit demselben einheitsspezifischen Faktor multiplizieren.
   prepared2025$wide <- prepared2025$wide %>%
     dplyr::left_join(
       scale_factors %>% dplyr::select(agg_schluessel, skalierungsfaktor_2025),
@@ -248,6 +250,7 @@ scale_2025_to_2021 <- function(prepared2021, prepared2025) {
     ) %>%
     dplyr::select(agg_schluessel, dplyr::all_of(groups))
 
+  # Rundungsreste einer Gruppe zuweisen, damit die skalierten Summen exakt 2021 entsprechen.
   adjustment_col <- if ("Nichtwaehler" %in% groups) "Nichtwaehler" else groups[[length(groups)]]
   other_groups <- setdiff(groups, adjustment_col)
   prepared2025$wide[[adjustment_col]] <- scale_factors$input_sum_2021 -
@@ -263,6 +266,7 @@ scale_2025_to_2021 <- function(prepared2021, prepared2025) {
       input_sum_scaled = rowSums(dplyr::across(dplyr::all_of(groups)))
     )
 
+  # Nach der Skalierung Longformat und Plausibilitaetswerte konsistent neu erzeugen.
   prepared2025$long <- prepared2025$wide %>%
     tidyr::pivot_longer(
       cols = dplyr::all_of(groups),
@@ -292,58 +296,7 @@ scale_2025_to_2021 <- function(prepared2021, prepared2025) {
   )
 }
 
-prepare_nslphom_inputs <- function(wahldaten2021, wahldaten2025, threshold = 0.12) {
-  initial2021 <- prepare_vote_year(wahldaten2021, 2021, threshold = threshold)
-  initial2025 <- prepare_vote_year(wahldaten2025, 2025, threshold = threshold)
-
-  keep_parties <- dplyr::bind_rows(initial2021$national, initial2025$national) %>%
-    dplyr::filter(.data$keep_party_year) %>%
-    dplyr::pull(party) %>%
-    unique() %>%
-    sort()
-
-  prepared2021 <- prepare_vote_year(wahldaten2021, 2021, threshold = threshold, keep_parties = keep_parties)
-  prepared2025 <- prepare_vote_year(wahldaten2025, 2025, threshold = threshold, keep_parties = keep_parties)
-
-  common_ids <- intersect(prepared2021$wide$agg_schluessel, prepared2025$wide$agg_schluessel)
-  stopifnot(length(common_ids) == nrow(prepared2021$wide))
-  stopifnot(length(common_ids) == nrow(prepared2025$wide))
-
-  prepared2021$wide <- prepared2021$wide %>%
-    dplyr::filter(.data$agg_schluessel %in% common_ids) %>%
-    dplyr::arrange(.data$agg_schluessel)
-  prepared2025$wide <- prepared2025$wide %>%
-    dplyr::filter(.data$agg_schluessel %in% common_ids) %>%
-    dplyr::arrange(.data$agg_schluessel)
-
-  stopifnot(identical(prepared2021$wide$agg_schluessel, prepared2025$wide$agg_schluessel))
-
-  scaled_inputs <- scale_2025_to_2021(prepared2021, prepared2025)
-  prepared2021 <- scaled_inputs$prepared2021
-  prepared2025 <- scaled_inputs$prepared2025
-  scale_factors <- scaled_inputs$scale_factors
-
-  input_groups <- setdiff(names(prepared2021$wide), "agg_schluessel")
-  stopifnot(!any(c("CDU", "CSU") %in% input_groups))
-  stopifnot("Union" %in% input_groups)
-  stopifnot(identical(input_groups, setdiff(names(prepared2025$wide), "agg_schluessel")))
-  stopifnot(all(rowSums(prepared2021$wide[input_groups]) == rowSums(prepared2025$wide[input_groups])))
-  stopifnot(all(abs(prepared2021$check$differenz_input_zu_referenz) < 1e-8))
-  stopifnot(all(abs(prepared2025$check$differenz_input_zu_referenz) < 1e-8))
-  stopifnot(all(abs(prepared2021$check$differenz_stimmen_zu_waehlenden) < 1e-8))
-  stopifnot(all(abs(prepared2025$check$differenz_stimmen_zu_waehlenden) < 1e-8))
-
-  diagnostics <- make_nslphom_input_diagnostics(prepared2021$wide, prepared2025$wide)
-
-  list(
-    prepared2021 = prepared2021,
-    prepared2025 = prepared2025,
-    keep_parties = keep_parties,
-    scale_factors = scale_factors,
-    diagnostics = diagnostics
-  )
-}
-
+# Plausibilitaetskennzahlen und Verteilungen fuer die fertigen Inputmatrizen berechnen.
 make_nslphom_input_diagnostics <- function(input2021, input2025) {
   wahlberechtigte_agg <- dplyr::bind_rows(
     input2021 %>%
@@ -382,6 +335,7 @@ make_nslphom_input_diagnostics <- function(input2021, input2025) {
   )
 }
 
+# Histogramme der Einheitsgroessen aus den Inputdiagnosen erzeugen.
 plot_nslphom_input_diagnostics <- function(diagnostics) {
   View(diagnostics$wahlberechtigte_summary)
   View(diagnostics$wahlberechtigte_agg)
@@ -418,18 +372,4 @@ plot_nslphom_input_diagnostics <- function(diagnostics) {
   )
 
   invisible(diagnostics)
-}
-
-save_nslphom_inputs <- function(prepared_inputs) {
-  prepared2021 <- prepared_inputs$prepared2021
-  prepared2025 <- prepared_inputs$prepared2025
-
-  saveRDS(prepared2021$wide, file.path(data_dir_cleaned, "vorlaeufig_nslphom_input_2021.rds"))
-  saveRDS(prepared2025$wide, file.path(data_dir_cleaned, "vorlaeufig_nslphom_input_2025.rds"))
-  saveRDS(dplyr::bind_rows(prepared2021$long, prepared2025$long), file.path(data_dir_cleaned, "vorlaeufig_nslphom_input_long.rds"))
-  saveRDS(dplyr::bind_rows(prepared2021$national, prepared2025$national), file.path(data_dir_cleaned, "vorlaeufig_partei_schwellenwerte.rds"))
-  saveRDS(dplyr::bind_rows(prepared2021$check, prepared2025$check), file.path(data_dir_validation, "vorlaeufig_nslphom_input_checks.rds"))
-  saveRDS(prepared_inputs$scale_factors, file.path(data_dir_validation, "vorlaeufig_nslphom_input_scaling_2025_to_2021.rds"))
-
-  invisible(prepared_inputs)
 }
