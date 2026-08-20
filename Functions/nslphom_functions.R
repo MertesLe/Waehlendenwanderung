@@ -645,6 +645,7 @@ nslphom_osqp <- function(
     verbose = TRUE,
     burnin = 0,
     tol = 10^-5,
+    keep_unit_sequences = FALSE,
     ...) {
   if (iter.max < 0 | iter.max %% 1 > 0) {
     stop("iter.max must be a positive integer")
@@ -656,6 +657,10 @@ nslphom_osqp <- function(
 
   if (!isFALSE(integers)) {
     stop("Der OSQP-Solver ist hier nur fuer kontinuierliche Uebergangswerte implementiert.")
+  }
+
+  if (!is.logical(keep_unit_sequences) || length(keep_unit_sequences) != 1L || is.na(keep_unit_sequences)) {
+    stop("keep_unit_sequences muss TRUE oder FALSE sein.")
   }
 
   if (iter.max <= burnin) {
@@ -773,7 +778,8 @@ nslphom_osqp <- function(
     uniform = uniform,
     distance.local = distance.local,
     burnin = burnin,
-    tol = tol
+    tol = tol,
+    keep_unit_sequences = keep_unit_sequences
   )
   inputs$osqp_local_solver <- local_solver
   inic <- lphom_inic[c(1L:6L, 10L)]
@@ -811,6 +817,9 @@ nslphom_osqp <- function(
     solution_init = inic,
     argg = c(as.list(environment()), list(...))
   )
+  if (isTRUE(keep_unit_sequences)) {
+    output$VTM.votes.units.sequence <- votos_units.sequence
+  }
   class(output) <- c("nslphom", "ei_lp", "lphom")
   output
 }

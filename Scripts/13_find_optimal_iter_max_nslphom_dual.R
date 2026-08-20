@@ -22,21 +22,42 @@ dir.create(chart_dir, recursive = TRUE, showWarnings = FALSE)
 
 threshold <- getOption("waehlendenwanderung.party_threshold", 0.12)
 max_iter <- as.integer(getOption("waehlendenwanderung.itermax_dual_max_iter", 100L))
-solver <- getOption("waehlendenwanderung.itermax_dual_solver", "symphony")
-solver <- match.arg(solver, c("lp_solve", "symphony"))
+solver <- getOption(
+  "waehlendenwanderung.itermax_dual_solver",
+  getOption("waehlendenwanderung.nslphom_solver", "osqp")
+)
+solver <- match.arg(solver, c("osqp", "lp_solve", "symphony"))
+osqp_local_solver <- if (solver == "osqp") {
+  match.arg(
+    getOption("waehlendenwanderung.osqp_local_solver", "lp_solve"),
+    c("lp_solve", "symphony", "osqp")
+  )
+} else {
+  NA_character_
+}
 selection_mode <- getOption("waehlendenwanderung.itermax_dual_selection", "all")
 selection_mode <- match.arg(selection_mode, c("all", "first", "last", "random"))
 n_units <- getOption("waehlendenwanderung.itermax_dual_units", Inf)
 seed <- getOption("waehlendenwanderung.itermax_dual_seed", 42L)
 run_label <- getOption(
   "waehlendenwanderung.itermax_dual_run_label",
-  paste0("dual_", selection_mode, "_", if (is.finite(n_units)) n_units else "all")
+  paste0(
+    "ost_dual_",
+    solver,
+    if (solver == "osqp") paste0("_local_", osqp_local_solver) else "",
+    "_",
+    if (selection_mode == "all") "all" else paste0(selection_mode, "_", n_units)
+  )
 )
 plot_matrix_type <- getOption("waehlendenwanderung.itermax_dual_plot_matrix_type", "weighted")
 plot_matrix_type <- match.arg(plot_matrix_type, c("weighted", "average"))
 
 if (max_iter < 1L) {
   stop("max_iter muss mindestens 1 sein.")
+}
+
+if (solver == "osqp") {
+  check_osqp_available()
 }
 
 # Fuer die iter_max-Diagnose wird tol absichtlich auf -Inf gesetzt.
@@ -76,13 +97,62 @@ nslphom_with_unit_sequences <- function(
     iter.max = 100L,
     min.first = FALSE,
     integers = FALSE,
-    solver = "symphony",
+    solver = "osqp",
     tol = -Inf) {
   if (iter.max < 0 || iter.max %% 1 > 0) {
     stop("iter.max must be a positive integer")
   }
   if (!isFALSE(integers)) {
     stop("Dieses Diagnose-Skript ist fuer kontinuierliche nslphom-Schaetzungen geschrieben.")
+  }
+
+  # Der OSQP-Hauptlauf verwendet einen eigenen nslphom-Wrapper. Dessen bereits
+  # berechnete lokale Iterationsfolge wird hier nur fuer die Diagnose behalten.
+  if (solver == "osqp") {
+    fit <- nslphom_osqp(
+      votes_election1 = votes_election1,
+      votes_election2 = votes_election2,
+      new_and_exit_voters = "simultaneous",
+      apriori = NULL,
+      uniform = TRUE,
+      iter.max = iter.max,
+      min.first = min.first,
+      structural_zeros = NULL,
+      integers = integers,
+      distance.local = "abs",
+      verbose = FALSE,
+      burnin = 0L,
+      tol = tol,
+      keep_unit_sequences = TRUE
+    )
+
+    unit_sequence_array <- fit$VTM.votes.units.sequence
+    votes_units_sequence <- vector("list", fit$iter + 1L)
+
+    for (iteration_index in seq_len(fit$iter)) {
+      sequence_slice <- unit_sequence_array[, , , iteration_index + 1L, drop = FALSE]
+      dim(sequence_slice) <- dim(unit_sequence_array)[1L:3L]
+      votes_units_sequence[[iteration_index + 1L]] <- sequence_slice
+    }
+
+    dimnames_by_unit <- c(
+      dimnames(fit$VTM.complete),
+      list(rownames(fit$origin))
+    )
+    for (i in seq_along(votes_units_sequence)) {
+      if (!is.null(votes_units_sequence[[i]])) {
+        dimnames(votes_units_sequence[[i]]) <- dimnames_by_unit
+      }
+    }
+
+    return(list(
+      origin = fit$origin,
+      destination = fit$destination,
+      HETe.sequence = fit$HETe.sequence,
+      VTM.votes.units.sequence = votes_units_sequence,
+      iter = fit$iter,
+      inputs = fit$inputs
+    ))
   }
 
   lphom_unit <- get_lphom_internal("lp_solver_local")(
@@ -175,7 +245,7 @@ nslphom_dual_with_itermax_sequence <- function(
     votes_election1,
     votes_election2,
     iter.max = 100L,
-    solver = "symphony",
+    solver = "osqp",
     tol = -Inf) {
   object12 <- nslphom_with_unit_sequences(
     votes_election1 = votes_election1,
@@ -278,8 +348,20 @@ nslphom_dual_with_itermax_sequence <- function(
   )
 }
 
-# Identische Einheiten fuer beide Richtungen auswaehlen und in Zaehldatenmatrizen umwandeln.
+# Dieselbe finale Oststichprobe ohne Berlin wie im Hauptlauf herstellen.
 inputs <- read_prepared_nslphom_inputs()
+ost_ids <- inputs$input2021$agg_schluessel[
+  is_ostdeutschland_ohne_berlin(inputs$input2021$agg_schluessel)
+]
+inputs$input2021 <- inputs$input2021 %>% filter(.data$agg_schluessel %in% ost_ids)
+inputs$input2025 <- inputs$input2025 %>% filter(.data$agg_schluessel %in% ost_ids)
+inputs$input_long <- inputs$input_long %>% filter(.data$agg_schluessel %in% ost_ids)
+inputs$input_checks <- inputs$input_checks %>% filter(.data$agg_schluessel %in% ost_ids)
+
+if (nrow(inputs$input2021) == 0L || any(substr(ost_ids, 1L, 2L) == "11")) {
+  stop("Die Ostdeutschland-Filterung ohne Berlin ist nicht plausibel.")
+}
+
 validation <- validate_prepared_nslphom_inputs(inputs, threshold = threshold)
 all_ids <- inputs$input2021$agg_schluessel
 selected_ids <- select_itermax_ids(all_ids, selection_mode, n_units, seed)
@@ -293,6 +375,7 @@ input2025_selected <- inputs$input2025 %>%
   arrange(match(agg_schluessel, selected_ids))
 
 stopifnot(identical(input2021_selected$agg_schluessel, input2025_selected$agg_schluessel))
+stopifnot(all(is_ostdeutschland_ohne_berlin(input2021_selected$agg_schluessel)))
 
 origin_counts <- make_count_matrix(input2021_selected)
 destination_counts <- make_count_matrix(input2025_selected)
@@ -303,11 +386,22 @@ settings <- tibble(
   max_iter = max_iter,
   sequence_tol = sequence_tol,
   solver = solver,
+  osqp_local_solver = osqp_local_solver,
   selection_mode = selection_mode,
   n_units = nrow(origin_counts),
+  n_units_available_ost = length(all_ids),
   seed = if (selection_mode == "random") seed else NA_integer_,
+  analysis_region = "ostdeutschland_ohne_berlin",
+  included_state_prefixes = "12, 13, 14, 15, 16",
+  berlin_included = FALSE,
   groups = paste(validation$group_names, collapse = ", "),
   keep_parties = paste(validation$kept_parties, collapse = ", "),
+  lphom_package_version = as.character(utils::packageVersion("lphom")),
+  osqp_package_version = if (solver == "osqp") as.character(utils::packageVersion("osqp")) else NA_character_,
+  osqp_max_iter = if (solver == "osqp") as.integer(getOption("waehlendenwanderung.osqp_max_iter", 100000L)) else NA_integer_,
+  osqp_eps_abs = if (solver == "osqp") getOption("waehlendenwanderung.osqp_eps_abs", 1e-3) else NA_real_,
+  osqp_eps_rel = if (solver == "osqp") getOption("waehlendenwanderung.osqp_eps_rel", 1e-3) else NA_real_,
+  osqp_polishing = if (solver == "osqp") isTRUE(getOption("waehlendenwanderung.osqp_polishing", TRUE)) else NA,
   note = paste(
     "iter_max wird aus einem vollstaendigen nslphom_dual-Lauf rekonstruiert;",
     "je iter_max wird pro Richtung die bis dahin beste HETe-Iteration verwendet."
@@ -323,6 +417,7 @@ message(
   max_iter,
   " und Solver ",
   solver,
+  if (solver == "osqp") paste0(" (lokal: ", osqp_local_solver, ")") else "",
   "."
 )
 
@@ -347,7 +442,7 @@ target_col <- if (plot_matrix_type == "weighted") {
   "HETe_dual_average"
 }
 
-# Das iter_max mit dem kleinsten gewichteten oder gemittelten Dual-HETe bestimmen.
+# Das beste im untersuchten Bereich beobachtete iter_max festhalten.
 best_iter <- sequence_table %>%
   slice_min(.data[[target_col]], n = 1, with_ties = FALSE) %>%
   transmute(
@@ -360,6 +455,14 @@ best_iter <- sequence_table %>%
     HETe_12_selected,
     HETe_21_selected
   )
+
+if (best_iter$best_iter_max == max(sequence_table$iter_max)) {
+  warning(
+    "Das kleinste beobachtete HETe liegt bei max_iter = ",
+    max_iter,
+    ". Fuer eine belastbare Einschaetzung sollte der Suchbereich erhoeht werden."
+  )
+}
 
 # Gewaehltes HETe je iter_max und HETe der exakten Iteration gemeinsam lang formatieren.
 plot_data <- sequence_table %>%
@@ -427,12 +530,58 @@ iter_plot <- ggplot(plot_data, aes(x = iter_max, y = HETe, color = matrix_type, 
     subtitle = paste0(
       "Run: ",
       run_label,
-      "; Ziel fuer Optimum: ",
+      "; Auswahlkriterium: ",
       plot_matrix_type
     ),
     x = "iter_max / Iteration",
     y = "HETe",
     color = "Matrix",
+    linetype = "HETe-Verlauf"
+  ) +
+  theme_minimal()
+
+# Richtungsspezifisch zeigen, ob HETe bereits stabil ist oder nur ein einzelnes
+# spaetes Minimum die kombinierte Dual-Kurve bestimmt.
+direction_plot_data <- sequence_table %>%
+  select(
+    iter_max,
+    HETe_12_at_iteration,
+    HETe_21_at_iteration,
+    HETe_12_selected,
+    HETe_21_selected
+  ) %>%
+  pivot_longer(
+    cols = -iter_max,
+    names_to = "series",
+    values_to = "HETe"
+  ) %>%
+  mutate(
+    direction = if_else(grepl("_12_", series), "2021 -> 2025", "2025 -> 2021"),
+    hete_type = if_else(
+      grepl("_at_iteration$", series),
+      "HETe exakt in Iteration",
+      "Bis iter_max ausgewaehltes HETe"
+    )
+  )
+
+direction_plot <- ggplot(
+  direction_plot_data,
+  aes(x = iter_max, y = HETe, color = direction, linetype = hete_type)
+) +
+  geom_line(linewidth = 0.7) +
+  scale_color_manual(values = c("2021 -> 2025" = "#1f4e79", "2025 -> 2021" = "#b2182b")) +
+  scale_linetype_manual(
+    values = c(
+      "Bis iter_max ausgewaehltes HETe" = "solid",
+      "HETe exakt in Iteration" = "longdash"
+    )
+  ) +
+  labs(
+    title = "nslphom_dual: HETe der beiden Schaetzrichtungen",
+    subtitle = paste0("Run: ", run_label),
+    x = "iter_max / Iteration",
+    y = "HETe",
+    color = "Richtung",
     linetype = "HETe-Verlauf"
   ) +
   theme_minimal()
@@ -448,8 +597,21 @@ ggsave(
   dpi = 300
 )
 
+ggsave(
+  filename = file.path(chart_dir, paste0("vorlaeufig_", run_label, "_hete_directions.png")),
+  plot = direction_plot,
+  width = 9,
+  height = 5.5,
+  dpi = 300
+)
+
+if (interactive()) {
+  print(iter_plot)
+  print(direction_plot)
+}
+
 message(
-  "Beste Iterationszahl fuer ",
+  "Bestes im Suchbereich beobachtetes iter_max fuer ",
   plot_matrix_type,
   ": iter_max = ",
   best_iter$best_iter_max,
@@ -458,4 +620,4 @@ message(
   "."
 )
 message("Ergebnisse gespeichert unter: ", output_dir)
-message("Grafik gespeichert unter: ", chart_dir)
+message("Grafiken gespeichert unter: ", chart_dir)

@@ -40,6 +40,7 @@ kreis_config <- indikator_config %>%
 struktur_variablen <- setdiff(unique(indikator_config$variable), "bevoelkerung")
 struktur_spalten <- paste0(struktur_variablen, "_", struktur_jahr)
 speziell_aggregierte_variablen <- c(
+  "anteilAuslaendischeArbeitslose",
   "haushaltsgroesseMean",
   "einwohnerdichte",
   "einwohnerArbeitsplatzDichte"
@@ -170,6 +171,14 @@ agg_struktur_long <- mapping_gemeinden %>%
       all_of(bevoelkerungsgewichtete_variablen),
       ~ weighted_mean_safe(.x, bevoelkerung)
     ),
+    # Anteil auslaendischer Arbeitsloser an allen Arbeitslosen auf die
+    # passende Grundgesamtheit beziehen: alle Arbeitslosen, angenaehert ueber
+    # Bevoelkerung * Arbeitslosenquote. Eine Gewichtung nach Auslaenderzahl
+    # waere fuer diesen INKAR-Indikator fachlich falsch.
+    anteilAuslaendischeArbeitslose = {
+      arbeitslose_gewicht <- bevoelkerung * arbeitslosigkeit
+      weighted_mean_safe(anteilAuslaendischeArbeitslose, arbeitslose_gewicht)
+    },
     # Durchschnittliche Haushaltsgroesse ueber die aus Bevoelkerung und
     # Haushaltsgroesse angenaeherte Zahl der Haushalte aggregieren.
     haushaltsgroesseMean = {

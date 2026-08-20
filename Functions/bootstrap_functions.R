@@ -5,10 +5,14 @@ draw_bootstrap_sample <- function(
     input2021,
     input2025,
     iteration,
-    sample_size = 2000L,
+    sample_size = NULL,
     seed = NULL) {
   stopifnot(identical(input2021$agg_schluessel, input2025$agg_schluessel))
   stopifnot(identical(names(input2021), names(input2025)))
+
+  if (is.null(sample_size)) {
+    sample_size <- nrow(input2021)
+  }
 
   sample_size <- as.integer(sample_size)
   if (is.na(sample_size) || sample_size <= 0) {
@@ -156,7 +160,7 @@ run_bootstrap_iteration <- function(
     input2025,
     struktur,
     covariates,
-    sample_size = 2000L,
+    sample_size = NULL,
     seed = 20260721L,
     iter_max = getOption("waehlendenwanderung.bootstrap_nslphom_iter_max", 10L),
     tol = getOption("waehlendenwanderung.bootstrap_nslphom_tol", 1e-5),

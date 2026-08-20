@@ -17,6 +17,7 @@ solver <- match.arg(
   c("osqp", "symphony", "lp_solve")
 )
 run_fit <- isTRUE(getOption("waehlendenwanderung.nslphom_run_fit", TRUE))
+run_ehet <- isTRUE(getOption("waehlendenwanderung.ost_ehet_run", TRUE))
 
 # Vorbereitete Wahlinputs einlesen.
 files <- c(
@@ -77,6 +78,11 @@ settings <- make_unblocked_settings(
   )
 
 message("Ost-Hauptanalyse umfasst ", nrow(inputs$input2021), " Aggregationseinheiten ohne Berlin.")
+
+endoutput_path <- file.path(
+  data_dir_model_nslphom_ost,
+  "vorlaeufig_nslphom_ost_endoutput.rds"
+)
 
 if (!run_fit) {
   message(
@@ -143,6 +149,14 @@ if (!run_fit) {
       NA_character_
     }
   )
+  endoutput <- list(
+    local_matrices_long = transition_long,
+    global_matrix = global_transition,
+    EHet = fit$EHet,
+    EHet_ids = ids,
+    settings = settings,
+    checks = checks
+  )
 
   # Ostoutputs getrennt von nationalen Diagnosefits speichern.
   saveRDS(settings, file.path(data_dir_model_nslphom_ost, "vorlaeufig_nslphom_settings.rds"))
@@ -151,6 +165,19 @@ if (!run_fit) {
   saveRDS(transition_wide, file.path(data_dir_model_nslphom_ost, "vorlaeufig_transition_matrices_wide.rds"))
   saveRDS(global_transition, file.path(data_dir_model_nslphom_ost, "vorlaeufig_nslphom_global_matrix.rds"))
   saveRDS(checks, file.path(data_dir_model_nslphom_ost, "vorlaeufig_transition_checks.rds"))
+  saveRDS(endoutput, endoutput_path)
 
   message("Ost-Hauptlauf abgeschlossen. Outputs liegen unter: ", data_dir_model_nslphom_ost)
+}
+
+# Dieselbe EHet-Auswertung wie fuer den Deutschlandfit auf den Ost-Hauptfit anwenden.
+if (run_ehet && file.exists(endoutput_path)) {
+  old_options <- options(
+    waehlendenwanderung.ehet_nslphom_output_path = endoutput_path,
+    waehlendenwanderung.ehet_run_label = "ostdeutschland_ohne_berlin"
+  )
+  source("Scripts/09_visualize_homogenitaetsannahme.R", encoding = "UTF-8")
+  options(old_options)
+} else if (run_ehet) {
+  message("EHet-Visualisierung uebersprungen, weil noch kein Ost-Endoutput vorliegt.")
 }

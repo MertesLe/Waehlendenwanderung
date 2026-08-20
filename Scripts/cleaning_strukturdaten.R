@@ -20,7 +20,7 @@ struktur_jahr <- as.integer(getOption("waehlendenwanderung.inkar_struktur_jahr",
 inkar_indikatoren <- data.table(
   Kuerzel = c( # noch möglich: Supermarktentfernung, Grundschulentfernung, Hausarzt- Apothekenentfernung, Verkehrsunfälle, Pendler (Ein, Aus, > 50 km, ...)
     "xbev", # Bevölkerungsgröße
-    "a_alo_ausländer", # Anteil Ausländer an Arbeitslosen
+    "a_alo_ausländer", # Anteil auslaendischer Arbeitsloser an allen Arbeitslosen
     "q_arbeitslosigkeit", # Anteil Arbeitslose
     "q_kaufkraft", # Kaufkraft / Einwohner
     "q_svw", # Anteil beschäftigte (Anzahl beschäftigte pro 100 Personen)
@@ -38,7 +38,7 @@ inkar_indikatoren <- data.table(
   ),
   variable = c(
     "bevoelkerung",
-    "auslaenderArbeitslose",
+    "anteilAuslaendischeArbeitslose",
     "arbeitslosigkeit",
     "kaufkraft",
     "beschaeftigte100",

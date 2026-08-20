@@ -277,13 +277,46 @@ ehet_region_summary <- ehet_unit_metrics %>%
   group_by(.data$region) %>%
   summarise(
     n_units = n(),
+    sum_wahlberechtigte = sum(.data$wahlberechtigte, na.rm = TRUE),
+    mean_wahlberechtigte = mean(.data$wahlberechtigte, na.rm = TRUE),
+    median_wahlberechtigte = median(.data$wahlberechtigte, na.rm = TRUE),
     mean_ehet = mean(.data$ehet_index, na.rm = TRUE),
     median_ehet = median(.data$ehet_index, na.rm = TRUE),
     weighted_ehet = sum(.data$ehet_abs_half, na.rm = TRUE) /
       sum(.data$wahlberechtigte, na.rm = TRUE),
+    q25_ehet = quantile(.data$ehet_index, 0.25, na.rm = TRUE),
+    q75_ehet = quantile(.data$ehet_index, 0.75, na.rm = TRUE),
     p90_ehet = quantile(.data$ehet_index, 0.90, na.rm = TRUE),
+    p95_ehet = quantile(.data$ehet_index, 0.95, na.rm = TRUE),
+    max_ehet = max(.data$ehet_index, na.rm = TRUE),
+    cor_ehet_log_wahlberechtigte = cor(
+      .data$ehet_index,
+      log1p(.data$wahlberechtigte),
+      use = "complete.obs"
+    ),
     .groups = "drop"
   )
+
+ehet_size_dependency <- ehet_unit_metrics %>%
+  filter(!is.na(.data$ehet_index), !is.na(.data$wahlberechtigte), .data$wahlberechtigte > 0) %>%
+  group_by(.data$region) %>%
+  group_modify(~ {
+    if (nrow(.x) < 3 || sd(.x$ehet_index, na.rm = TRUE) == 0) {
+      return(tibble::tibble(
+        n_units = nrow(.x),
+        slope_log_wahlberechtigte = NA_real_,
+        r_squared = NA_real_
+      ))
+    }
+
+    fit <- lm(ehet_index ~ log1p(wahlberechtigte), data = .x)
+    tibble::tibble(
+      n_units = nrow(.x),
+      slope_log_wahlberechtigte = unname(coef(fit)[["log1p(wahlberechtigte)"]]),
+      r_squared = summary(fit)$r.squared
+    )
+  }) %>%
+  ungroup()
 
 ehet_summary <- ehet_unit_metrics %>%
   summarise(
@@ -313,6 +346,7 @@ if (save_data_outputs) {
   saveRDS(ehet_by_to, data_file("nach_ziel.rds"))
   saveRDS(ehet_summary, data_file("summary.rds"))
   saveRDS(ehet_region_summary, data_file("region_summary.rds"))
+  saveRDS(ehet_size_dependency, data_file("groessenabhaengigkeit.rds"))
 }
 
 hist_plot <- ggplot(ehet_unit_metrics, aes(x = ehet_index)) +
