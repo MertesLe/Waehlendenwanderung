@@ -162,7 +162,7 @@ run_bootstrap_iteration <- function(
     covariates,
     sample_size = NULL,
     seed = 20260721L,
-    iter_max = getOption("waehlendenwanderung.bootstrap_nslphom_iter_max", 10L),
+    iter_max = getOption("waehlendenwanderung.bootstrap_nslphom_iter_max", 3L),
     tol = getOption("waehlendenwanderung.bootstrap_nslphom_tol", 1e-5),
     solver = getOption("waehlendenwanderung.bootstrap_nslphom_solver", getOption("waehlendenwanderung.nslphom_solver", "osqp")),
     threshold = 0.12) {

@@ -828,7 +828,7 @@ nslphom_osqp <- function(
 fit_nslphom_model <- function(
     origin_counts,
     destination_counts,
-    iter_max = getOption("waehlendenwanderung.nslphom_iter_max", 10L),
+    iter_max = getOption("waehlendenwanderung.nslphom_iter_max", 3L),
     tol = getOption("waehlendenwanderung.nslphom_tol", 1e-5),
     solver = getOption("waehlendenwanderung.nslphom_solver", "osqp"),
     verbose = FALSE,
@@ -1030,7 +1030,7 @@ prepare_dual_fit_for_workflow <- function(fit, solver) {
 fit_nslphom_dual_model <- function(
     origin_counts,
     destination_counts,
-    iter_max = getOption("waehlendenwanderung.nslphom_iter_max", 10L),
+    iter_max = getOption("waehlendenwanderung.nslphom_iter_max", 3L),
     tol = getOption("waehlendenwanderung.nslphom_tol", 1e-5),
     solver = getOption("waehlendenwanderung.nslphom_solver", "osqp"),
     verbose = FALSE,

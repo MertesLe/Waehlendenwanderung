@@ -10,7 +10,7 @@ source("Functions/nslphom_functions.R", encoding = "UTF-8")
 ensure_data_dirs()
 
 threshold <- getOption("waehlendenwanderung.party_threshold", 0.12)
-iter_max <- getOption("waehlendenwanderung.nslphom_iter_max", 10L)
+iter_max <- getOption("waehlendenwanderung.nslphom_iter_max", 3L)
 tol <- getOption("waehlendenwanderung.nslphom_tol", 1e-5)
 solver <- match.arg(
   getOption("waehlendenwanderung.nslphom_solver", "osqp"),

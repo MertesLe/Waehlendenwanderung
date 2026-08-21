@@ -18,7 +18,7 @@ settings <- list(
   n_sim = getOption("waehlendenwanderung.final_validation_n_sim", 100L),
   n_units = getOption("waehlendenwanderung.final_validation_n_units", 120L),
   seed = getOption("waehlendenwanderung.final_validation_seed", 20260820L),
-  iter_max = getOption("waehlendenwanderung.final_validation_iter_max", getOption("waehlendenwanderung.nslphom_iter_max", 10L)),
+  iter_max = getOption("waehlendenwanderung.final_validation_iter_max", getOption("waehlendenwanderung.nslphom_iter_max", 3L)),
   tol = getOption("waehlendenwanderung.final_validation_tol", getOption("waehlendenwanderung.nslphom_tol", 1e-5)),
   electorate_min = getOption("waehlendenwanderung.final_validation_electorate_min", 500L),
   electorate_max = getOption("waehlendenwanderung.final_validation_electorate_max", 2500L),

@@ -1,4 +1,4 @@
-# Globale Uebergangsmatrizen aggregieren und als Sankey-aehnliche Flussgrafik darstellen.
+# Globale ungeblockte Uebergangsmatrizen als Sankey-aehnliche Flussgrafik darstellen.
 
 library(dplyr)
 library(ggplot2)
@@ -12,14 +12,15 @@ if (!requireNamespace("ggplot2", quietly = TRUE)) {
   stop("Das Paket 'ggplot2' ist nicht installiert.")
 }
 
-fit_path <- file.path(data_dir_model_nslphom, "vorlaeufig_nslphom_fit.rds")
+ost_output_path <- getOption(
+  "waehlendenwanderung.global_matrix_ost_path",
+  file.path(data_dir_model_nslphom_ost, "vorlaeufig_nslphom_ost_endoutput.rds")
+)
 
-if (!file.exists(fit_path)) {
-  stop(
-    "Die blockweisen nslphom-Fits fehlen. Erwartet wurde: ",
-    fit_path
-  )
-}
+deutschland_output_path <- getOption(
+  "waehlendenwanderung.global_matrix_deutschland_path",
+  file.path(data_dir_model_nslphom_deutschland, "vorlaeufig_nslphom_deutschland_endoutput.rds")
+)
 
 party_order <- c(
   "Union",
@@ -45,46 +46,13 @@ party_colours <- c(
   Nichtwaehler = "#BDBDBD"
 )
 
-block_labels <- c(
-  "010+020+031+032+033+034+040" = "Nordblock: SH, HH, NI, HB",
-  "051" = "NRW: Düsseldorf",
-  "053" = "NRW: Köln",
-  "055" = "NRW: Münster",
-  "057" = "NRW: Detmold",
-  "059" = "NRW: Arnsberg",
-  "064" = "Hessen: Darmstadt",
-  "065" = "Hessen: Gießen",
-  "066" = "Hessen: Kassel",
-  "071" = "Rheinland-Pfalz: Koblenz",
-  "072" = "Rheinland-Pfalz: Trier",
-  "073" = "Rheinland-Pfalz: Rheinhessen-Pfalz",
-  "081" = "Baden-Württemberg: Stuttgart",
-  "082" = "Baden-Württemberg: Karlsruhe",
-  "083" = "Baden-Württemberg: Freiburg",
-  "084" = "Baden-Württemberg: Tübingen",
-  "091" = "Bayern: Oberbayern",
-  "092" = "Bayern: Niederbayern",
-  "093+094" = "Bayern: Oberpfalz/Oberfranken",
-  "095" = "Bayern: Mittelfranken",
-  "096" = "Bayern: Unterfranken",
-  "097" = "Bayern: Schwaben",
-  "100" = "Saarland",
-  "111+112+120" = "Berlin/Brandenburg",
-  "130" = "Mecklenburg-Vorpommern",
-  "145" = "Sachsen: Chemnitz",
-  "146" = "Sachsen: Dresden",
-  "147" = "Sachsen: Leipzig",
-  "150" = "Sachsen-Anhalt",
-  "160" = "Thüringen"
-)
-
 # Interne Gruppennamen in gut lesbare Beschriftungen fuer die Grafik umwandeln.
 label_group <- function(x) {
   dplyr::recode(
     x,
-    GRUNE = "GRÜNE",
+    GRUNE = "GR\u00dcNE",
     Die_Linke = "DIE LINKE",
-    Nichtwaehler = "Nichtwähler",
+    Nichtwaehler = "Nichtw\u00e4hler",
     .default = x
   )
 }
@@ -141,6 +109,71 @@ aggregate_matrices <- function(fits) {
   }
 
   total_matrix
+}
+
+# Globale absolute Uebergangsmatrix aus einem ungeblockten Endoutput rekonstruieren.
+endoutput_to_matrix <- function(path) {
+  if (!file.exists(path)) {
+    stop("Der nslphom-Endoutput fehlt: ", path)
+  }
+
+  output <- readRDS(path)
+
+  if (!"global_matrix" %in% names(output)) {
+    stop("Der nslphom-Endoutput enthaelt keine global_matrix: ", path)
+  }
+
+  required_cols <- c("from", "to", "estimated_transition_count")
+  missing_cols <- setdiff(required_cols, names(output$global_matrix))
+
+  if (length(missing_cols) > 0) {
+    stop(
+      "global_matrix enthaelt nicht alle benoetigten Spalten: ",
+      paste(missing_cols, collapse = ", ")
+    )
+  }
+
+  flows <- output$global_matrix %>%
+    transmute(
+      from = as.character(.data$from),
+      to = as.character(.data$to),
+      value = as.numeric(.data$estimated_transition_count)
+    )
+
+  row_order <- ordered_categories(flows$from)
+  col_order <- ordered_categories(flows$to)
+
+  matrix(
+    0,
+    nrow = length(row_order),
+    ncol = length(col_order),
+    dimnames = list(row_order, col_order)
+  ) %>%
+    {
+      out <- .
+
+      for (i in seq_len(nrow(flows))) {
+        out[flows$from[[i]], flows$to[[i]]] <-
+          out[flows$from[[i]], flows$to[[i]]] + flows$value[[i]]
+      }
+
+      out
+    }
+}
+
+# Anzahl der Aggregationseinheiten aus einem ungeblockten Endoutput lesen.
+endoutput_n_units <- function(path) {
+  output <- readRDS(path)
+
+  if ("settings" %in% names(output) && "n_units" %in% names(output$settings)) {
+    return(as.integer(output$settings$n_units[[1]]))
+  }
+
+  if ("EHet_ids" %in% names(output)) {
+    return(length(output$EHet_ids))
+  }
+
+  NA_integer_
 }
 
 # Matrixzellen in eine Tabelle von Flussbreiten zwischen Herkunft und Ziel umformen.
@@ -314,20 +347,14 @@ make_block_plot <- function(
   }
 
   if (is.null(title)) {
-    block_label <- ifelse(
-      block_id %in% names(block_labels),
-      block_labels[[block_id]],
-      paste("Block", block_id)
-    )
-
-    title <- paste0("Wählerwanderung 2021 -> 2025: ", block_label)
+    title <- paste0("W\u00e4hlerwanderung 2021 -> 2025: ", block_id)
   }
 
   subtitle <- paste0(
     subtitle_prefix,
     ", ",
     ifelse(is.na(n_units), "", paste0("n = ", n_units, " Einheiten, ")),
-    "geschätzte Übergangsmasse = ",
+    "gesch\u00e4tzte \u00dcbergangsmasse = ",
     format_count(total_value)
   )
 
@@ -396,55 +423,50 @@ make_block_plot <- function(
     )
 }
 
-nslphom_fit <- readRDS(fit_path)
-checks <- nslphom_fit$checks
-fits <- nslphom_fit$fits
-
-if (is.null(names(fits)) || any(names(fits) == "")) {
-  stop("Die Fits brauchen benannte Block-IDs.")
-}
-
-pdf_path <- file.path(charts_dir, "nslphom_global_matrizen_blockweise.pdf")
+pdf_path <- file.path(charts_dir, "nslphom_global_matrizen_ungeblockt.pdf")
 grDevices::pdf(pdf_path, width = 12, height = 7, onefile = TRUE)
 
-message("Erzeuge aggregierte Deutschlandmatrix aus absoluten Block-Uebergangszahlen.")
-national_matrix <- aggregate_matrices(fits)
-national_n_units <- if (!is.null(checks) && "n_units" %in% names(checks)) {
-  sum(checks$n_units, na.rm = TRUE)
-} else {
-  NA_integer_
-}
-
-national_plot <- make_block_plot(
-  block_id = "Deutschland",
-  matrix = national_matrix,
-  title = "Wählerwanderung 2021 -> 2025: Deutschland aggregiert",
-  subtitle_prefix = "Aus blockweisen nslphom-Schätzungen aggregierte nationale Matrix",
-  n_units_override = national_n_units
+message("Erzeuge globale Matrix fuer Ostdeutschland ohne Berlin.")
+ost_matrix <- endoutput_to_matrix(ost_output_path)
+ost_plot <- make_block_plot(
+  block_id = "Ostdeutschland ohne Berlin",
+  matrix = ost_matrix,
+  title = "W\u00e4hlerwanderung 2021 -> 2025: Ostdeutschland ohne Berlin",
+  subtitle_prefix = "Ungeblockte nslphom_dual-OSQP-Schaetzung",
+  n_units_override = endoutput_n_units(ost_output_path)
 )
 
 ggplot2::ggsave(
-  filename = file.path(charts_dir, "nslphom_global_matrix_deutschland_aggregiert.png"),
-  plot = national_plot,
+  filename = file.path(charts_dir, "nslphom_global_matrix_ostdeutschland_ungeblockt.png"),
+  plot = ost_plot,
   width = 12,
   height = 7,
   dpi = 300,
   bg = "white"
 )
 
-print(national_plot)
+print(ost_plot)
 
-for (block_id in names(fits)) {
-  message("Erzeuge Grafik fuer Block ", block_id)
+message("Erzeuge globale Matrix fuer Deutschland.")
+deutschland_matrix <- endoutput_to_matrix(deutschland_output_path)
+deutschland_plot <- make_block_plot(
+  block_id = "Deutschland",
+  matrix = deutschland_matrix,
+  title = "W\u00e4hlerwanderung 2021 -> 2025: Deutschland",
+  subtitle_prefix = "Ungeblockte nslphom_dual-OSQP-Schaetzung",
+  n_units_override = endoutput_n_units(deutschland_output_path)
+)
 
-  plot <- make_block_plot(
-    block_id = block_id,
-    fit = fits[[block_id]],
-    checks = checks
-  )
+ggplot2::ggsave(
+  filename = file.path(charts_dir, "nslphom_global_matrix_deutschland_ungeblockt.png"),
+  plot = deutschland_plot,
+  width = 12,
+  height = 7,
+  dpi = 300,
+  bg = "white"
+)
 
-  print(plot)
-}
+print(deutschland_plot)
 
 grDevices::dev.off()
 
