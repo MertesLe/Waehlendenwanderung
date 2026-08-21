@@ -33,7 +33,7 @@ weighted_mean_safe <- function(x, w) {
 make_ags <- function(data) {
   data %>%
     dplyr::mutate(
-      "Gemeindeschlüssel" := dplyr::if_else(
+      "Gemeindeschl\u00fcssel" := dplyr::if_else(
         is.na(.data$Land) | is.na(.data$Regierungsbezirk) | is.na(.data$Kreis) | is.na(.data$Gemeinde),
         NA_character_,
         paste0(
@@ -106,7 +106,7 @@ connected_components <- function(agg_strings) {
   groups <- groups[lengths(groups) > 0]
 
   if (length(groups) == 0) {
-    return(tibble::tibble(agg.schlüssel = character()))
+    return(tibble::tibble("agg.schl\u00fcssel" = character()))
   }
 
   all_keys <- sort(unique(unlist(groups, use.names = FALSE)))
@@ -151,11 +151,11 @@ connected_components <- function(agg_strings) {
   components <- split(all_keys, roots)
 
   tibble::tibble(
-    agg.schlüssel = vapply(
+    "agg.schl\u00fcssel" = vapply(
       components,
       collapse_keys,
       character(1)
     )
   ) %>%
-    dplyr::arrange(.data$agg.schlüssel)
+    dplyr::arrange(.data[["agg.schl\u00fcssel"]])
 }

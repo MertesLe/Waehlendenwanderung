@@ -1,4 +1,4 @@
-# Ergebnisse identischer Dual-Schaetzungen mit lp_solve und Symphony vergleichen.
+# Ergebnisse identischer Dual-Schaetzungen mit OSQP und RSymphony vergleichen.
 
 library(dplyr)
 library(tidyr)
@@ -10,27 +10,29 @@ ensure_data_dirs()
 output_dir <- file.path(data_dir_validation, "solververgleich")
 dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 
-lp_output_path <- getOption(
-  "waehlendenwanderung.solververgleich_lp_path",
+left_output_path <- getOption(
+  "waehlendenwanderung.solververgleich_left_path",
   file.path(
-    data_dir_model_nslphom,
-    "test5000_random_dual",
-    "vorlaeufig_test5000_random_nslphom_dual_endoutput.rds"
+    data_dir_model_nslphom_ost,
+    "vorlaeufig_nslphom_ost_endoutput.rds"
   )
 )
 
-symphony_output_path <- getOption(
-  "waehlendenwanderung.solververgleich_symphony_path",
+right_output_path <- getOption(
+  "waehlendenwanderung.solververgleich_right_path",
   file.path(
     data_dir_model_nslphom,
-    "testSymphony5000_random_dual",
-    "vorlaeufig_test5000_random_nslphom_dual_endoutput.rds"
+    "ostdeutschland_symphony",
+    "vorlaeufig_nslphom_ost_symphony_endoutput.rds"
   )
 )
+
+left_label <- getOption("waehlendenwanderung.solververgleich_left_label", "osqp_dual")
+right_label <- getOption("waehlendenwanderung.solververgleich_right_label", "symphony_dual")
 
 comparison_name <- getOption(
   "waehlendenwanderung.solververgleich_name",
-  "test5000_random_dual_lp_vs_symphony"
+  "ostdeutschland_osqp_dual_vs_symphony_dual"
 )
 
 comparison_name <- gsub("[^A-Za-z0-9_]+", "_", comparison_name)
@@ -105,14 +107,14 @@ summarise_diff <- function(data, diff_col) {
 }
 
 # Beide Outputs laden und zuerst identische Aggregationseinheiten sicherstellen.
-lp_output <- read_solver_output(lp_output_path, "lp_solve")
-symphony_output <- read_solver_output(symphony_output_path, "symphony")
+left_output <- read_solver_output(left_output_path, left_label)
+right_output <- read_solver_output(right_output_path, right_label)
 
-lp_ids <- as.character(lp_output$EHet_ids)
-symphony_ids <- as.character(symphony_output$EHet_ids)
+left_ids <- as.character(left_output$EHet_ids)
+right_ids <- as.character(right_output$EHet_ids)
 
-same_ids_ordered <- identical(lp_ids, symphony_ids)
-same_ids_unordered <- setequal(lp_ids, symphony_ids)
+same_ids_ordered <- identical(left_ids, right_ids)
+same_ids_unordered <- setequal(left_ids, right_ids)
 
 if (!same_ids_ordered) {
   stop(
@@ -123,7 +125,7 @@ if (!same_ids_ordered) {
 }
 
 # Lokale Matrizen zellgenau ueber Einheit, Herkunft und Ziel vergleichen.
-lp_local <- lp_output$local_matrices_long %>%
+left_local <- left_output$local_matrices_long %>%
   select(
     agg_schluessel,
     from,
@@ -134,7 +136,7 @@ lp_local <- lp_output$local_matrices_long %>%
     estimated_transition_count
   )
 
-symphony_local <- symphony_output$local_matrices_long %>%
+right_local <- right_output$local_matrices_long %>%
   select(
     agg_schluessel,
     from,
@@ -145,25 +147,25 @@ symphony_local <- symphony_output$local_matrices_long %>%
     estimated_transition_count
   )
 
-local_differences <- lp_local %>%
+local_differences <- left_local %>%
   inner_join(
-    symphony_local,
+    right_local,
     by = c("agg_schluessel", "from", "to"),
-    suffix = c("_lp", "_symphony")
+    suffix = c("_left", "_right")
   ) %>%
   mutate(
-    origin_count_diff = origin_count_symphony - origin_count_lp,
-    destination_count_diff = destination_count_symphony - destination_count_lp,
-    transition_probability_diff = transition_probability_symphony - transition_probability_lp,
-    estimated_transition_count_diff = estimated_transition_count_symphony - estimated_transition_count_lp
+    origin_count_diff = origin_count_right - origin_count_left,
+    destination_count_diff = destination_count_right - destination_count_left,
+    transition_probability_diff = transition_probability_right - transition_probability_left,
+    estimated_transition_count_diff = estimated_transition_count_right - estimated_transition_count_left
   )
 
-if (nrow(local_differences) != nrow(lp_local) || nrow(local_differences) != nrow(symphony_local)) {
+if (nrow(local_differences) != nrow(left_local) || nrow(local_differences) != nrow(right_local)) {
   stop("Die lokalen Matrizen konnten nicht vollstaendig ueber agg_schluessel, from, to verbunden werden.")
 }
 
 # Globale Matrizen zellgenau vergleichen.
-lp_global <- lp_output$global_matrix %>%
+left_global <- left_output$global_matrix %>%
   select(
     from,
     to,
@@ -173,7 +175,7 @@ lp_global <- lp_output$global_matrix %>%
     estimated_transition_count
   )
 
-symphony_global <- symphony_output$global_matrix %>%
+right_global <- right_output$global_matrix %>%
   select(
     from,
     to,
@@ -183,31 +185,31 @@ symphony_global <- symphony_output$global_matrix %>%
     estimated_transition_count
   )
 
-global_differences <- lp_global %>%
+global_differences <- left_global %>%
   inner_join(
-    symphony_global,
+    right_global,
     by = c("from", "to"),
-    suffix = c("_lp", "_symphony")
+    suffix = c("_left", "_right")
   ) %>%
   mutate(
-    transition_probability_diff = transition_probability_symphony - transition_probability_lp,
-    origin_count_diff = origin_count_symphony - origin_count_lp,
-    destination_count_diff = destination_count_symphony - destination_count_lp,
-    estimated_transition_count_diff = estimated_transition_count_symphony - estimated_transition_count_lp
+    transition_probability_diff = transition_probability_right - transition_probability_left,
+    origin_count_diff = origin_count_right - origin_count_left,
+    destination_count_diff = destination_count_right - destination_count_left,
+    estimated_transition_count_diff = estimated_transition_count_right - estimated_transition_count_left
   )
 
 # Auch die lokalen EHet-Abweichungen beider Solver gegenueberstellen.
-lp_ehet <- make_ehet_long(lp_output, "lp_solve")
-symphony_ehet <- make_ehet_long(symphony_output, "symphony")
+left_ehet <- make_ehet_long(left_output, left_label)
+right_ehet <- make_ehet_long(right_output, right_label)
 
-ehet_differences <- lp_ehet %>%
+ehet_differences <- left_ehet %>%
   inner_join(
-    symphony_ehet,
+    right_ehet,
     by = c("agg_schluessel", "to"),
-    suffix = c("_lp", "_symphony")
+    suffix = c("_left", "_right")
   ) %>%
   mutate(
-    ehet_diff = ehet_symphony - ehet_lp
+    ehet_diff = ehet_right - ehet_left
   )
 
 settings_comparison <- tibble(
@@ -220,25 +222,25 @@ settings_comparison <- tibble(
     "tol",
     "n_units"
   ),
-  lp_solve = c(
-    get_setting(lp_output, "solver"),
-    get_setting(lp_output, "selection_mode"),
-    get_setting(lp_output, "seed"),
-    get_setting(lp_output, "threshold"),
-    get_setting(lp_output, "iter_max"),
-    get_setting(lp_output, "tol"),
-    as.character(length(lp_ids))
+  left = c(
+    get_setting(left_output, "solver"),
+    get_setting(left_output, "selection_mode"),
+    get_setting(left_output, "seed"),
+    get_setting(left_output, "threshold"),
+    get_setting(left_output, "iter_max"),
+    get_setting(left_output, "tol"),
+    as.character(length(left_ids))
   ),
-  symphony = c(
-    get_setting(symphony_output, "solver"),
-    get_setting(symphony_output, "selection_mode"),
-    get_setting(symphony_output, "seed"),
-    get_setting(symphony_output, "threshold"),
-    get_setting(symphony_output, "iter_max"),
-    get_setting(symphony_output, "tol"),
-    as.character(length(symphony_ids))
+  right = c(
+    get_setting(right_output, "solver"),
+    get_setting(right_output, "selection_mode"),
+    get_setting(right_output, "seed"),
+    get_setting(right_output, "threshold"),
+    get_setting(right_output, "iter_max"),
+    get_setting(right_output, "tol"),
+    as.character(length(right_ids))
   ),
-  equal = lp_solve == symphony
+  equal = left == right
 )
 
 # Maximale und mittlere Differenzen aller verglichenen Ergebnistypen zusammenfassen.
@@ -268,10 +270,10 @@ identity_checks <- tibble(
   value = c(
     same_ids_ordered,
     same_ids_unordered,
-    nrow(local_differences) == nrow(lp_local) && nrow(local_differences) == nrow(symphony_local),
-    nrow(global_differences) == nrow(lp_global) && nrow(global_differences) == nrow(symphony_global),
-    nrow(ehet_differences) == nrow(lp_ehet) && nrow(ehet_differences) == nrow(symphony_ehet),
-    get_setting(lp_output, "solver") != get_setting(symphony_output, "solver")
+    nrow(local_differences) == nrow(left_local) && nrow(local_differences) == nrow(right_local),
+    nrow(global_differences) == nrow(left_global) && nrow(global_differences) == nrow(right_global),
+    nrow(ehet_differences) == nrow(left_ehet) && nrow(ehet_differences) == nrow(right_ehet),
+    get_setting(left_output, "solver") != get_setting(right_output, "solver")
   )
 )
 
@@ -294,9 +296,9 @@ saveRDS(largest_global_probability_differences, output_file("global_differences.
 saveRDS(largest_ehet_differences, output_file("largest_ehet_differences.rds"))
 
 message("Solververgleich gespeichert unter: ", output_dir)
-message("Vergleich: ", lp_output_path, " vs. ", symphony_output_path)
-message("Wichtig: settings$solver lp_solve = ", get_setting(lp_output, "solver"),
-        "; settings$solver symphony = ", get_setting(symphony_output, "solver"))
+message("Vergleich: ", left_output_path, " vs. ", right_output_path)
+message("Wichtig: settings$solver ", left_label, " = ", get_setting(left_output, "solver"),
+        "; settings$solver ", right_label, " = ", get_setting(right_output, "solver"))
 print(settings_comparison)
 print(identity_checks)
 print(comparison_summary)

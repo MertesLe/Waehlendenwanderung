@@ -14,11 +14,16 @@ ensure_data_dirs()
 nslphom_output_path <- getOption(
   "waehlendenwanderung.local_residual_nslphom_output_path",
   file.path(
-    data_dir_model_nslphom,
-    "testSymphony5965_random_dual",
-    "vorlaeufig_test5965_random_nslphom_dual_endoutput.rds"
+    data_dir_model_nslphom_ost,
+    "vorlaeufig_nslphom_ost_endoutput.rds"
   )
 )
+
+run_label <- getOption(
+  "waehlendenwanderung.local_residual_run_label",
+  "ostdeutschland_ohne_berlin"
+)
+run_label <- gsub("[^A-Za-z0-9_]+", "_", run_label)
 
 geometry_path <- getOption(
   "waehlendenwanderung.local_residual_geometry_path",
@@ -34,7 +39,7 @@ geometry_path <- getOption(
 
 geometry_layer <- getOption("waehlendenwanderung.local_residual_geometry_layer", "vg250_gem")
 residual_tolerance_count <- getOption("waehlendenwanderung.local_residual_tolerance_count", 1e-8)
-chart_dir <- file.path("Charts", "Homogenitaetsannahmentest")
+chart_dir <- file.path("Charts", "homogenitaetsannahme")
 output_dir <- file.path(data_dir_validation, "homogenitaetsannahme")
 
 dir.create(chart_dir, recursive = TRUE, showWarnings = FALSE)
@@ -42,22 +47,22 @@ dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 
 map_file <- file.path(
   chart_dir,
-  "vorlaeufig_testSymphony5965_random_dual_lokale_matrix_residuen_deutschlandkarte_agg.png"
+  paste0("vorlaeufig_", run_label, "_lokale_matrix_residuen_deutschlandkarte_agg.png")
 )
 
 hist_file <- file.path(
   chart_dir,
-  "vorlaeufig_testSymphony5965_random_dual_lokale_matrix_residuen_histogramm.png"
+  paste0("vorlaeufig_", run_label, "_lokale_matrix_residuen_histogramm.png")
 )
 
 metrics_file <- file.path(
   output_dir,
-  "vorlaeufig_testSymphony5965_random_dual_lokale_matrix_residuen.rds"
+  paste0("vorlaeufig_", run_label, "_lokale_matrix_residuen.rds")
 )
 
 summary_file <- file.path(
   output_dir,
-  "vorlaeufig_testSymphony5965_random_dual_lokale_matrix_residuen_summary.rds"
+  paste0("vorlaeufig_", run_label, "_lokale_matrix_residuen_summary.rds")
 )
 
 if (!file.exists(nslphom_output_path)) {
@@ -263,17 +268,6 @@ direct_map <- gemeinde_geometrien %>%
   left_join(
     geometry_status,
     by = "agg_schluessel"
-  ) %>%
-  group_by(agg_schluessel) %>%
-  summarise(
-    local_residual_abs_half = first(local_residual_abs_half),
-    local_residual_index = first(local_residual_index),
-    max_abs_target_residual = first(max_abs_target_residual),
-    wahlberechtigte = first(wahlberechtigte),
-    n_gemeindeschluessel = first(n_gemeindeschluessel.x),
-    n_fehlende_gemeindegeometrien = first(n_fehlende_gemeindegeometrien),
-    geometrie_status = first(geometrie_status),
-    .groups = "drop"
   )
 
 missing_substitute_lookup <- residual_ags_long %>%
