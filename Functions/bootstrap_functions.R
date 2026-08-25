@@ -273,24 +273,81 @@ summarise_bootstrap_betas <- function(beta_draws) {
     dplyr::arrange(.data$model_target, .data$from, .data$to, .data$term)
 }
 
-# Verteilungen der Bootstrap-Koeffizienten mit Nullreferenz und Intervallen plotten.
+# Verteilungen der Bootstrap-Koeffizienten mit Nullreferenz und signifikantem Hintergrund plotten.
 plot_bootstrap_beta_distributions <- function(beta_draws) {
-  beta_draws %>%
+  plot_data <- beta_draws %>%
     dplyr::filter(.data$term != "(Intercept)") %>%
+    dplyr::mutate(
+      model_label = dplyr::recode(
+        .data$model_target,
+        origin_to_AfD_probability = "AfD-Zufluss",
+        share_of_AfD_2025_by_source = "AfD-2025-Anteil",
+        .default = .data$model_target
+      ),
+      variable = sub("_2023_z$", "", .data$term),
+      row_label = paste(.data$variable, .data$model_label, sep = " - "),
+      row_label = factor(.data$row_label, levels = unique(.data$row_label))
+    )
+
+  # Ein Hintergrund wird eingefaerbt, wenn das 95-Prozent-Bootstrapintervall Null ausschliesst.
+  panel_backgrounds <- plot_data %>%
+    dplyr::group_by(
+      .data$row_label,
+      .data$from
+    ) %>%
+    dplyr::summarise(
+      ci_lower = stats::quantile(.data$estimate, 0.025, na.rm = TRUE),
+      ci_upper = stats::quantile(.data$estimate, 0.975, na.rm = TRUE),
+      significant_95 = .data$ci_lower > 0 | .data$ci_upper < 0,
+      .groups = "drop"
+    )
+
+  plot_data %>%
     ggplot2::ggplot(ggplot2::aes(x = .data$estimate)) +
+    ggplot2::geom_rect(
+      data = panel_backgrounds,
+      ggplot2::aes(
+        xmin = -Inf,
+        xmax = Inf,
+        ymin = -Inf,
+        ymax = Inf,
+        fill = .data$significant_95
+      ),
+      inherit.aes = FALSE,
+      alpha = 0.35
+    ) +
     ggplot2::geom_vline(xintercept = 0, color = "grey35", linewidth = 0.3) +
     ggplot2::geom_density(fill = "grey65", color = "grey30", alpha = 0.7) +
     ggplot2::facet_grid(
-      rows = ggplot2::vars(.data$model_target, .data$term),
+      rows = ggplot2::vars(.data$row_label),
       cols = ggplot2::vars(.data$from),
-      scales = "free"
+      scales = "free",
+      switch = "y"
+    ) +
+    ggplot2::scale_fill_manual(
+      values = c(`FALSE` = "white", `TRUE` = "#B7E4C7"),
+      labels = c(`FALSE` = "Nein", `TRUE` = "Ja"),
+      name = "95%-Intervall\nschliesst 0 aus"
     ) +
     ggplot2::labs(
       title = "Bootstrap-Verteilungen der Regressionskoeffizienten",
       x = "Geschaetzter Beta-Koeffizient",
-      y = "Dichte"
+      y = NULL
     ) +
-    ggplot2::theme_minimal()
+    ggplot2::theme_minimal() +
+    ggplot2::theme(
+      axis.text.y = ggplot2::element_blank(),
+      axis.ticks.y = ggplot2::element_blank(),
+      panel.grid.major.y = ggplot2::element_blank(),
+      panel.grid.minor.y = ggplot2::element_blank(),
+      strip.placement = "outside",
+      strip.background = ggplot2::element_blank(),
+      strip.text.y.left = ggplot2::element_text(
+        angle = 0,
+        hjust = 1,
+        size = 7
+      )
+    )
 }
 
 # Bootstrap-Ziehungen, Intervalle, Diagnosen und Grafiken als Analyseoutput speichern.
