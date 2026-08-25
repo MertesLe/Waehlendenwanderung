@@ -276,7 +276,10 @@ summarise_bootstrap_betas <- function(beta_draws) {
 # Verteilungen der Bootstrap-Koeffizienten mit Nullreferenz und signifikantem Hintergrund plotten.
 plot_bootstrap_beta_distributions <- function(beta_draws) {
   plot_data <- beta_draws %>%
-    dplyr::filter(.data$term != "(Intercept)") %>%
+    dplyr::filter(
+      .data$term != "(Intercept)",
+      .data$model_target == "origin_to_AfD_probability"
+    ) %>%
     dplyr::mutate(
       model_label = dplyr::recode(
         .data$model_target,
@@ -330,7 +333,7 @@ plot_bootstrap_beta_distributions <- function(beta_draws) {
       name = "95%-Intervall\nschliesst 0 aus"
     ) +
     ggplot2::labs(
-      title = "Bootstrap-Verteilungen der Regressionskoeffizienten",
+      title = "Bootstrap-Verteilungen der AfD-Zuflusskoeffizienten",
       x = "Geschaetzter Beta-Koeffizient",
       y = NULL
     ) +
