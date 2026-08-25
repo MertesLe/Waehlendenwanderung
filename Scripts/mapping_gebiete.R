@@ -11,7 +11,10 @@ source("paths.R", encoding = "UTF-8")
 
 ensure_data_dirs()
 
-pfad <- "Data/raw/gebietsänderungen"
+pfad <- getOption(
+  "waehlendenwanderung.gebietsaenderungen_path",
+  "Data/raw/gebiets\u00e4nderungen"
+)
 
 dateien <- list.files(
   pfad,
@@ -59,6 +62,8 @@ read_changes <- function(datei){
     mutate(
       
       Typ = as.integer(Typ),
+      Flaeche = as.numeric(Flaeche),
+      Einwohner = as.numeric(Einwohner),
       
       juristisch =
         as.Date(
@@ -85,13 +90,15 @@ read_changes <- function(datei){
       Typ,
       AGS_alt,
       Name_alt,
+      Flaeche,
+      Einwohner,
       AGS_neu,
       Name_neu
     )
 }
 
 # Alle Jahre einlesen
-gebietsänderungen <-
+gebietsaenderungen <-
   map_dfr(
     dateien,
     read_changes
@@ -99,7 +106,7 @@ gebietsänderungen <-
   distinct() %>%
   arrange(Datum)
 
-gebiets_edges <- gebietsänderungen %>%
+gebiets_edges <- gebietsaenderungen %>%
   filter(
     !is.na(AGS_alt),
     !is.na(AGS_neu),
@@ -109,32 +116,58 @@ gebiets_edges <- gebietsänderungen %>%
   ) %>%
   distinct() %>%
   mutate(
-    agg.schlüssel = purrr::map2_chr(
+    agg_schluessel = purrr::map2_chr(
       AGS_alt,
       AGS_neu,
       ~ collapse_keys(c(.x, .y))
     )
   )
 
-agg <- connected_components(gebiets_edges$agg.schlüssel) %>%
-  distinct() %>%
-  arrange(agg.schlüssel)
+# Gerichtete Alt-neu-Beziehungen fuer spaetere raeumliche Zuordnungen erhalten.
+saveRDS(
+  gebiets_edges %>%
+    select(
+      Datum,
+      Typ,
+      AGS_alt,
+      Name_alt,
+      Flaeche,
+      Einwohner,
+      AGS_neu,
+      Name_neu
+    ),
+  file = file.path(
+    data_dir_cleaned,
+    "mapping_gebietsaenderungen_gerichtet.rds"
+  )
+)
 
-mapping_gebietsänderungen <- agg %>%
+agg <- connected_components(gebiets_edges$agg_schluessel) %>%
+  rename(
+    agg_schluessel = all_of("agg.schl\u00fcssel")
+  ) %>%
+  distinct() %>%
+  arrange(agg_schluessel)
+
+mapping_gebietsaenderungen <- agg %>%
   mutate(
-    Gemeindeschlüssel = strsplit(
-      agg.schlüssel,
+    gemeindeschluessel = strsplit(
+      agg_schluessel,
       ",\\s*"
     )
   ) %>%
-  unnest(Gemeindeschlüssel) %>%
+  unnest(gemeindeschluessel) %>%
   select(
-    Gemeindeschlüssel,
-    agg.schlüssel
+    gemeindeschluessel,
+    agg_schluessel
   ) %>%
-  arrange(Gemeindeschlüssel)
+  arrange(gemeindeschluessel) %>%
+  rename(
+    !!"Gemeindeschl\u00fcssel" := gemeindeschluessel,
+    !!"agg.schl\u00fcssel" := agg_schluessel
+  )
 
 saveRDS(
-  mapping_gebietsänderungen,
+  mapping_gebietsaenderungen,
   file = file.path(data_dir_cleaned, "mapping_gebietsaenderungen.rds")
 )
