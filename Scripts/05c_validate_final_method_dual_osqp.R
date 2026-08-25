@@ -33,11 +33,11 @@ covariates <- c("x_binary_2023", "x_continuous_2023")
 true_afd_betas <- tibble::tribble(
   ~from,    ~term,                ~true_beta,
   "Union", "(Intercept)",          0.10,
-  "Union", "x_binary_2023_z",      0.06,
-  "Union", "x_continuous_2023_z",  0.04,
+  "Union", "x_binary_2023_z",      0.025,
+  "Union", "x_continuous_2023_z",  0.015,
   "SPD",   "(Intercept)",          0.08,
-  "SPD",   "x_binary_2023_z",      0.05,
-  "SPD",   "x_continuous_2023_z", -0.03
+  "SPD",   "x_binary_2023_z",      0.020,
+  "SPD",   "x_continuous_2023_z", -0.0125
 )
 
 # Zeilenweise Multinomialwahrscheinlichkeiten fuer das 2021-Ergebnis erzeugen.
