@@ -12,7 +12,7 @@ source("Functions/general_functions.R", encoding = "UTF-8")
 # Hier die zu visualisierenden Strukturvariablen auswaehlen.
 strukturvariablen <- c(
   "distanz_staatsgrenze_km_2023",
-  "bevoelkerung65_2023"
+  "einwohnerdichte_2023"
 )
 
 # Hier die zu visualisierenden nslphom-Uebergaenge auswaehlen.
@@ -25,7 +25,15 @@ uebergaenge <- tibble::tribble(
 # Lesbare Kartentitel fuer bekannte Strukturvariablen festlegen.
 struktur_labels <- c(
   distanz_staatsgrenze_km_2023 = "Entfernung zur auslaendischen Staatsgrenze (km)",
-  bevoelkerung65_2023 = "Bevoelkerungsanteil ab 65 Jahren (Prozent)"
+  einwohnerdichte_2023 = "Einwohnerdichte (Einwohner je km2)",
+  supermarktEntfernung_2023 = "Entfernung zum naechsten Supermarkt (m)",
+  alterMean_2023 = "Durchschnittsalter der Bevoelkerung (Jahre)",
+  wanderungssaldo_2023 = "Wanderungssaldo je 1.000 Einwohner",
+  pendler50_2023 = "Beschaeftigte mit mindestens 50 km Arbeitsweg (Prozent)",
+  steuereinnahmen_2023 = "Steuereinnahmen je Einwohner (Euro)",
+  haushaltsgroesseMean_2023 = "Durchschnittliche Haushaltsgroesse (Personen)",
+  anteilHaushalteNiedrigesEinkommen_2023 = "Haushalte mit niedrigem Einkommen (Prozent)",
+  arbeitslosenanteilErwerbsfaehige_2023 = "Arbeitslose an der Bevoelkerung von 15 bis unter 65 (Prozent)"
 )
 
 struktur_path <- file.path(

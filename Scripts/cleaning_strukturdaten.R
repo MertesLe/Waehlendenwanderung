@@ -18,40 +18,33 @@ force_rebuild <- isTRUE(getOption("waehlendenwanderung.inkar_basis_rebuild", FAL
 struktur_jahr <- as.integer(getOption("waehlendenwanderung.inkar_struktur_jahr", 2023L))
 
 inkar_indikatoren <- data.table(
-  Kuerzel = c( # noch möglich: Supermarktentfernung, Grundschulentfernung, Hausarzt- Apothekenentfernung, Verkehrsunfälle, Pendler (Ein, Aus, > 50 km, ...)
-    "xbev", # Bevölkerungsgröße
-    "a_alo_ausländer", # Anteil auslaendischer Arbeitsloser an allen Arbeitslosen
-    "q_arbeitslosigkeit", # Anteil Arbeitslose
-    "q_kaufkraft", # Kaufkraft / Einwohner
-    "q_svw", # Anteil beschäftigte (Anzahl beschäftigte pro 100 Personen)
-    "a_bev_0006", # Bevölkerungsanteil unter 6 Jähriger
-    "a_bev0618",   # Bevölkerungsanteil 6 bis 18 Jähriger
-    "a_bev65um",    # Einwohneranteil über 65 Jahren
-    "m_bev_alter",   # Durchschnittsalter Bevölkerung
-    "q_HH",          # Durchschnittliche Haushaltsgröße
-    "i_wans", # Zu und Abwanderung aus Gemeinde pro 1000 Einwohner (zuzüge - fortzüge) /  Einwohner x 1000
-    # Steuer nur 2021 bzw 2023 auf Kreisebene (heißt aber pro kreis immer derselbe Wert):
-    "d_steuereinnahme", # Steuereinnahmen der Gemeinden (höher heißt mehr finanzieller spielraum für gemeinde)
-    "a_bevd150_", # Ländlichkeit (Anteil Einwohner in Gemeinden mit Bevölkerungsdichte unter 150 Einwohner pro km^2)
-    "q_bev_fl", # Einwohnerdichte (E/km^2)
-    "q_bevsva_qkm" # Einwohner und Beschäftigte 7 km^2 (Einwohner-Arbeitsplatz-Dichte)
+  Kuerzel = c(
+    "xbev", # Bevoelkerung als Aggregationsgewicht
+    "q_bev_fl", # Einwohner je Quadratkilometer
+    "m_G02_SUP_DIST", # Einwohnergewichtete Entfernung zum naechsten Supermarkt
+    "m_bev_alter", # Durchschnittsalter der Bevoelkerung
+    "i_wans", # Wanderungssaldo je 1.000 Einwohner
+    "svw", # Beschaeftigte am Wohnort als Gewicht fuer a_pend50
+    "a_pend50", # Anteil Beschaeftigte mit mindestens 50 km Arbeitsweg
+    "d_steuereinnahme", # Steuereinnahmen je Einwohner auf Kreisebene
+    "q_HH", # Durchschnittliche Haushaltsgroesse
+    "a_hheink_niedrig", # Anteil Haushalte mit niedrigem Einkommen
+    "alo", # Arbeitslose als Zaehler fuer den kommunalen Arbeitslosenanteil
+    "ewf_1565_ges" # Bevoelkerung von 15 bis unter 65 als Nenner
   ),
   variable = c(
     "bevoelkerung",
-    "anteilAuslaendischeArbeitslose",
-    "arbeitslosigkeit",
-    "kaufkraft",
-    "beschaeftigte100",
-    "bevoelkerung6",
-    "bevoelkerung618",
-    "bevoelkerung65",
-    "alterMean",
-    "haushaltsgroesseMean",
-    "bevWanderung",
-    "steuereinnahmen",
-    "laendlichkeit",
     "einwohnerdichte",
-    "einwohnerArbeitsplatzDichte"
+    "supermarktEntfernung",
+    "alterMean",
+    "wanderungssaldo",
+    "beschaeftigteWohnort",
+    "pendler50",
+    "steuereinnahmen",
+    "haushaltsgroesseMean",
+    "anteilHaushalteNiedrigesEinkommen",
+    "arbeitslose",
+    "erwerbsfaehigeBevoelkerung"
   ),
   Raumbezug = c(
     "Gemeinden",
@@ -61,11 +54,8 @@ inkar_indikatoren <- data.table(
     "Gemeinden",
     "Gemeinden",
     "Gemeinden",
-    "Gemeinden",
-    "Gemeinden",
-    "Gemeinden",
-    "Gemeinden",
     "Kreise",
+    "Gemeinden",
     "Gemeinden",
     "Gemeinden",
     "Gemeinden"

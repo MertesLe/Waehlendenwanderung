@@ -38,16 +38,21 @@ gemeinde_config <- indikator_config %>%
   filter(Raumbezug == "Gemeinden")
 kreis_config <- indikator_config %>%
   filter(Raumbezug == "Kreise")
-struktur_variablen <- setdiff(unique(indikator_config$variable), "bevoelkerung")
-speziell_aggregierte_variablen <- c(
-  "anteilAuslaendischeArbeitslose",
-  "haushaltsgroesseMean",
-  "einwohnerdichte",
-  "einwohnerArbeitsplatzDichte"
+hilfsvariablen <- c(
+  "bevoelkerung",
+  "beschaeftigteWohnort",
+  "arbeitslose",
+  "erwerbsfaehigeBevoelkerung"
 )
-bevoelkerungsgewichtete_variablen <- setdiff(
-  struktur_variablen,
-  speziell_aggregierte_variablen
+struktur_variablen <- c(
+  setdiff(unique(indikator_config$variable), hilfsvariablen),
+  "arbeitslosenanteilErwerbsfaehige"
+)
+bevoelkerungsgewichtete_variablen <- c(
+  "supermarktEntfernung",
+  "alterMean",
+  "wanderungssaldo",
+  "steuereinnahmen"
 )
 
 if (!"bevoelkerung" %in% indikator_config$variable) {
@@ -478,13 +483,20 @@ agg_struktur_long <- mapping_gemeinden %>%
       all_of(bevoelkerungsgewichtete_variablen),
       ~ weighted_mean_safe(.x, bevoelkerung)
     ),
-    # Anteil auslaendischer Arbeitsloser an allen Arbeitslosen auf die
-    # passende Grundgesamtheit beziehen: alle Arbeitslosen, angenaehert ueber
-    # Bevoelkerung * Arbeitslosenquote. Eine Gewichtung nach Auslaenderzahl
-    # waere fuer diesen INKAR-Indikator fachlich falsch.
-    anteilAuslaendischeArbeitslose = {
-      arbeitslose_gewicht <- bevoelkerung * arbeitslosigkeit
-      weighted_mean_safe(anteilAuslaendischeArbeitslose, arbeitslose_gewicht)
+    # Den Pendleranteil nach der Zahl der sozialversicherungspflichtig
+    # Beschaeftigten am Wohnort gewichten.
+    pendler50 = {
+      weighted_mean_safe(pendler50, beschaeftigteWohnort)
+    },
+    # Den Anteil einkommensschwacher Haushalte nach der aus Bevoelkerung und
+    # durchschnittlicher Haushaltsgroesse rekonstruierten Haushaltszahl gewichten.
+    anteilHaushalteNiedrigesEinkommen = {
+      gueltig <- !is.na(bevoelkerung) & bevoelkerung > 0 &
+        !is.na(haushaltsgroesseMean) & haushaltsgroesseMean > 0
+
+      haushalte <- rep(NA_real_, length(bevoelkerung))
+      haushalte[gueltig] <- bevoelkerung[gueltig] / haushaltsgroesseMean[gueltig]
+      weighted_mean_safe(anteilHaushalteNiedrigesEinkommen, haushalte)
     },
     # Durchschnittliche Haushaltsgroesse ueber die aus Bevoelkerung und
     # Haushaltsgroesse angenaeherte Zahl der Haushalte aggregieren.
@@ -499,17 +511,16 @@ agg_struktur_long <- mapping_gemeinden %>%
         NA_real_
       }
     },
-    # Einwohner-Arbeitsplatz-Dichte mit der aus Bevoelkerung und Einwohnerdichte
-    # angenaeherten Gemeindeflaeche gewichten. Dies steht vor der Aggregation der
-    # Einwohnerdichte, damit hier noch deren gemeindescharfe Werte verwendet werden.
-    einwohnerArbeitsplatzDichte = {
-      gueltig <- !is.na(bevoelkerung) & bevoelkerung > 0 &
-        !is.na(einwohnerdichte) & einwohnerdichte > 0 &
-        !is.na(einwohnerArbeitsplatzDichte)
+    # Kommunalen Arbeitslosenanteil als Arbeitslose geteilt durch die
+    # Bevoelkerung von 15 bis unter 65 Jahren berechnen. Dies ist nicht die
+    # amtliche Arbeitslosenquote, deren Nenner die zivilen Erwerbspersonen sind.
+    arbeitslosenanteilErwerbsfaehige = {
+      gueltig <- !is.na(arbeitslose) & arbeitslose >= 0 &
+        !is.na(erwerbsfaehigeBevoelkerung) & erwerbsfaehigeBevoelkerung > 0
 
       if (any(gueltig)) {
-        flaeche <- bevoelkerung[gueltig] / einwohnerdichte[gueltig]
-        sum(einwohnerArbeitsplatzDichte[gueltig] * flaeche) / sum(flaeche)
+        100 * sum(arbeitslose[gueltig]) /
+          sum(erwerbsfaehigeBevoelkerung[gueltig])
       } else {
         NA_real_
       }
