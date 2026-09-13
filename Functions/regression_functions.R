@@ -68,26 +68,21 @@ fit_one_transition_lm <- function(
       stats::sd(data[[response_col]], na.rm = TRUE) < 1e-8 ||
       sum(data[[weight_col]], na.rm = TRUE) <= 0
   ) {
-    return(tibble::tibble(
-      term = character(),
-      estimate = numeric(),
-      std.error = numeric(),
-      statistic = numeric(),
-      p.value = numeric()
-    ))
+    return(NULL)
   }
 
   # Herkunfts- oder Zielmasse als Fallgewicht verwenden, damit groessere Einheiten staerker eingehen.
-  fit <- stats::lm(
+  stats::lm(
     stats::reformulate(
       covariates_z,
       response = response_col
     ),
     data = data,
-    weights = data[[weight_col]]
+    weights = data[[weight_col]],
+    model = TRUE,
+    x = TRUE,
+    y = TRUE
   )
-
-  tidy_lm(fit)
 }
 
 # AfD-Zufluesse nach Herkunftsgruppe deskriptiv zusammenfassen.
@@ -134,12 +129,39 @@ fit_grouped_transition_models <- function(
     weight_col,
     model_target,
     covariates_z) {
-  model_data %>%
-    dplyr::group_by(.data$from, .data$to) %>%
-    dplyr::group_modify(~ fit_one_transition_lm(.x, response_col, weight_col, covariates_z)) %>%
-    dplyr::ungroup() %>%
+  model_data <- model_data %>%
+    dplyr::arrange(.data$from, .data$agg_schluessel)
+
+  grouped_data <- split(model_data, model_data$from)
+  model_fits <- lapply(
+    grouped_data,
+    fit_one_transition_lm,
+    response_col = response_col,
+    weight_col = weight_col,
+    covariates_z = covariates_z
+  )
+
+  model_coefficients <- dplyr::bind_rows(lapply(names(model_fits), function(origin) {
+    fit <- model_fits[[origin]]
+
+    if (is.null(fit)) {
+      return(NULL)
+    }
+
+    tidy_lm(fit) %>%
+      dplyr::mutate(
+        from = origin,
+        to = unique(grouped_data[[origin]]$to),
+        .before = 1
+      )
+  })) %>%
     dplyr::mutate(model_target = model_target) %>%
     dplyr::arrange(.data$from, .data$to, .data$term)
+
+  list(
+    model_fits = model_fits,
+    model_coefficients = model_coefficients
+  )
 }
 
 # Modelldaten, Fits, Koeffizienten und Plausibilitaetschecks gemeinsam erzeugen.
@@ -153,13 +175,15 @@ make_transition_model_outputs <- function(
   model_data <- prepare_afd_model_data(transitions, struktur, covariates)
 
   # Fuer jede Herkunftsgruppe erklaeren, welcher Anteil 2025 zur AfD wechselt.
-  model_coefficients <- fit_grouped_transition_models(
+  fitted_models <- fit_grouped_transition_models(
     model_data,
     response_col = "transition_probability",
     weight_col = "origin_count",
     model_target = "origin_to_AfD_probability",
     covariates_z = covariates_z
   )
+  model_fits <- fitted_models$model_fits
+  model_coefficients <- fitted_models$model_coefficients
 
   # Beobachtungszahl und Streuung je Herkunft fuer die Modellierbarkeit dokumentieren.
   model_checks <- model_data %>%
@@ -176,6 +200,7 @@ make_transition_model_outputs <- function(
 
   list(
     model_data = model_data,
+    model_fits = model_fits,
     model_coefficients = model_coefficients,
     model_checks = model_checks,
     afd_source_summary = afd_source_summary
@@ -187,6 +212,7 @@ write_transition_model_outputs <- function(outputs, output_dir = data_dir_model_
   dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 
   saveRDS(outputs$model_data, file.path(output_dir, "modell_afd_zufluss_daten.rds"))
+  saveRDS(outputs$model_fits, file.path(output_dir, "modell_afd_zufluss_fits.rds"))
   saveRDS(outputs$model_coefficients, file.path(output_dir, "modell_afd_zufluss_coefficients.rds"))
   saveRDS(outputs$model_checks, file.path(output_dir, "modell_afd_zufluss_checks.rds"))
   saveRDS(outputs$afd_source_summary, file.path(output_dir, "modell_afd_source_summary.rds"))

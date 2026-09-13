@@ -13,6 +13,10 @@ model_data_path <- file.path(
   data_dir_model_regression_ost,
   "modell_afd_zufluss_daten.rds"
 )
+model_fits_path <- file.path(
+  data_dir_model_regression_ost,
+  "modell_afd_zufluss_fits.rds"
+)
 output_dir <- file.path(
   data_dir_model_regression_ost,
   "regressionsdiagnostik"
@@ -28,14 +32,19 @@ linearity_chart_dir <- file.path(chart_dir, "linearitaet")
 dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 dir.create(linearity_chart_dir, recursive = TRUE, showWarnings = FALSE)
 
-if (!file.exists(model_data_path)) {
+missing_inputs <- c(model_data_path, model_fits_path)
+missing_inputs <- missing_inputs[!file.exists(missing_inputs)]
+
+if (length(missing_inputs) > 0) {
   stop(
-    "Der Regressionsinput fehlt. Fuehre zuerst Scripts/04_model_transitions.R aus: ",
-    model_data_path
+    "Regressionsinput oder gespeicherte Fits fehlen. Fuehre zuerst ",
+    "Scripts/04_model_transitions.R aus: ",
+    paste(missing_inputs, collapse = ", ")
   )
 }
 
 model_data <- readRDS(model_data_path)
+model_fits <- readRDS(model_fits_path)
 strukturvariablen <- get_structure_covariates(model_data)
 strukturvariablen_z <- paste0(strukturvariablen, "_z")
 
@@ -76,26 +85,32 @@ if (length(missing_labels) > 0) {
   variablen_labels[missing_labels] <- sub("_z$", "", missing_labels)
 }
 
-# Fuer jede Herkunftsgruppe dasselbe gewichtete lineare Modell wie im Hauptskript schaetzen.
+# Die im Hauptskript geschaetzten Modelle direkt fuer die Diagnostik verwenden.
 origin_groups <- sort(unique(model_data$from))
-model_fits <- stats::setNames(vector("list", length(origin_groups)), origin_groups)
+
+if (!setequal(names(model_fits), origin_groups)) {
+  stop("Gespeicherte Fits und Herkunftsgruppen im Modelldatensatz stimmen nicht ueberein.")
+}
 
 for (origin in origin_groups) {
+  fit <- model_fits[[origin]]
   origin_data <- model_data %>%
     filter(.data$from == .env$origin) %>%
     arrange(.data$agg_schluessel)
 
-  model_fits[[origin]] <- lm(
-    reformulate(
-      strukturvariablen_z,
-      response = "transition_probability"
-    ),
-    data = origin_data,
-    weights = origin_data$origin_count,
-    model = TRUE,
-    x = TRUE,
-    y = TRUE
-  )
+  if (is.null(fit) || nobs(fit) != nrow(origin_data)) {
+    stop("Gespeicherter Fit und Modelldaten passen nicht fuer: ", origin)
+  }
+
+  fitted_response <- unname(stats::model.response(stats::model.frame(fit)))
+
+  if (!isTRUE(all.equal(
+    fitted_response,
+    origin_data$transition_probability,
+    tolerance = 1e-12
+  ))) {
+    stop("Zielwerte im gespeicherten Fit passen nicht zu den Modelldaten fuer: ", origin)
+  }
 }
 
 # Residuen, Hebelwerte und Cook-Distanzen jeder Aggregationseinheit zusammenfassen.
@@ -281,8 +296,7 @@ diagnostic_output <- list(
   vif = vif_results,
   influential_units = influential_units,
   diagnostic_rows = diagnostic_rows,
-  partial_residuals = partial_residuals,
-  model_fits = model_fits
+  partial_residuals = partial_residuals
 )
 
 saveRDS(
