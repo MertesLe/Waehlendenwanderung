@@ -14,12 +14,12 @@ if (!requireNamespace("ggplot2", quietly = TRUE)) {
 
 ost_output_path <- getOption(
   "waehlendenwanderung.global_matrix_ost_path",
-  file.path(data_dir_model_nslphom_ost, "vorlaeufig_nslphom_ost_endoutput.rds")
+  file.path(data_dir_model_nslphom_ost, "nslphom_ost_endoutput.rds")
 )
 
 deutschland_output_path <- getOption(
   "waehlendenwanderung.global_matrix_deutschland_path",
-  file.path(data_dir_model_nslphom_deutschland, "vorlaeufig_nslphom_deutschland_endoutput.rds")
+  file.path(data_dir_model_nslphom_deutschland, "nslphom_deutschland_endoutput.rds")
 )
 
 party_order <- c(

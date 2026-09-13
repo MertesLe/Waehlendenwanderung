@@ -93,7 +93,7 @@ fit_one_transition_lm <- function(
 # AfD-Zufluesse nach Herkunftsgruppe deskriptiv zusammenfassen.
 make_afd_source_summary <- function(transitions) {
   transitions %>%
-    dplyr::filter(.data$to == "AfD") %>%
+    dplyr::filter(.data$to == "AfD", .data$from != "AfD") %>%
     dplyr::group_by(.data$from) %>%
     dplyr::summarise(
       n_agg = dplyr::n(),
@@ -103,15 +103,8 @@ make_afd_source_summary <- function(transitions) {
       .groups = "drop"
     ) %>%
     dplyr::mutate(
-      source_type = dplyr::if_else(.data$from == "AfD", "AfD_Bestand", "AfD_Zufluss"),
-      share_of_estimated_afd_2025 = .data$estimated_transition_count /
-        sum(.data$estimated_transition_count, na.rm = TRUE),
-      share_of_estimated_afd_zufluss = dplyr::if_else(
-        .data$from == "AfD",
-        NA_real_,
-        .data$estimated_transition_count /
-          sum(.data$estimated_transition_count[.data$from != "AfD"], na.rm = TRUE)
-      )
+      share_of_estimated_afd_zufluss = .data$estimated_transition_count /
+        sum(.data$estimated_transition_count, na.rm = TRUE)
     ) %>%
     dplyr::arrange(dplyr::desc(.data$estimated_transition_count))
 }
@@ -126,11 +119,9 @@ prepare_afd_model_data <- function(
     dplyr::left_join(struktur, by = "agg_schluessel") %>%
     dplyr::filter(
       dplyr::if_all(dplyr::all_of(covariates), ~ !is.na(.x)),
-      .data$origin_count > 0,
-      .data$destination_count > 0
+      .data$origin_count > 0
     ) %>%
     dplyr::mutate(
-      afd_2025_source_share = .data$estimated_transition_count / .data$destination_count,
       afd_inflow_label = paste0(.data$from, "_to_AfD")
     ) %>%
     standardize_covariates(covariates)
@@ -161,21 +152,12 @@ make_transition_model_outputs <- function(
   afd_source_summary <- make_afd_source_summary(transitions)
   model_data <- prepare_afd_model_data(transitions, struktur, covariates)
 
-  # Modell 1 erklaert, welcher Anteil einer Herkunftsgruppe 2025 zur AfD wechselt.
+  # Fuer jede Herkunftsgruppe erklaeren, welcher Anteil 2025 zur AfD wechselt.
   model_coefficients <- fit_grouped_transition_models(
     model_data,
     response_col = "transition_probability",
     weight_col = "origin_count",
     model_target = "origin_to_AfD_probability",
-    covariates_z = covariates_z
-  )
-
-  # Modell 2 erklaert, welchen Anteil eine Herkunftsgruppe an allen AfD-Stimmen 2025 stellt.
-  afd_source_share_coefficients <- fit_grouped_transition_models(
-    model_data,
-    response_col = "afd_2025_source_share",
-    weight_col = "destination_count",
-    model_target = "share_of_AfD_2025_by_source",
     covariates_z = covariates_z
   )
 
@@ -188,52 +170,15 @@ make_transition_model_outputs <- function(
       sum_estimated_transition_count = sum(.data$estimated_transition_count, na.rm = TRUE),
       sum_destination_count = sum(.data$destination_count, na.rm = TRUE),
       mean_transition_probability = mean(.data$transition_probability, na.rm = TRUE),
-      mean_afd_2025_source_share = mean(.data$afd_2025_source_share, na.rm = TRUE),
       sd_transition_probability = stats::sd(.data$transition_probability, na.rm = TRUE),
-      sd_afd_2025_source_share = stats::sd(.data$afd_2025_source_share, na.rm = TRUE),
-      .groups = "drop"
-    )
-
-  all_model_coefficients <- dplyr::bind_rows(
-    model_coefficients,
-    afd_source_share_coefficients
-  ) %>%
-    dplyr::arrange(.data$model_target, .data$from, .data$to, .data$term)
-
-  # Zusatzoutput: bisherige Modelle fuer alle Herkunft-Ziel-Kombinationen weiter bereitstellen.
-  legacy_model_data <- transitions %>%
-    dplyr::left_join(struktur, by = "agg_schluessel") %>%
-    dplyr::filter(
-      dplyr::if_all(dplyr::all_of(covariates), ~ !is.na(.x)),
-      .data$origin_count > 0
-    ) %>%
-    standardize_covariates(covariates)
-
-  legacy_model_coefficients <- legacy_model_data %>%
-    dplyr::group_by(.data$from, .data$to) %>%
-    dplyr::group_modify(~ fit_one_transition_lm(.x, "transition_probability", "origin_count", covariates_z)) %>%
-    dplyr::ungroup() %>%
-    dplyr::arrange(.data$from, .data$to, .data$term)
-
-  legacy_model_checks <- legacy_model_data %>%
-    dplyr::group_by(.data$from, .data$to) %>%
-    dplyr::summarise(
-      n_agg = dplyr::n(),
-      sum_origin_count = sum(.data$origin_count, na.rm = TRUE),
-      sd_response = stats::sd(.data$transition_probability, na.rm = TRUE),
       .groups = "drop"
     )
 
   list(
     model_data = model_data,
     model_coefficients = model_coefficients,
-    afd_source_share_coefficients = afd_source_share_coefficients,
-    all_model_coefficients = all_model_coefficients,
     model_checks = model_checks,
-    afd_source_summary = afd_source_summary,
-    legacy_model_data = legacy_model_data,
-    legacy_model_coefficients = legacy_model_coefficients,
-    legacy_model_checks = legacy_model_checks
+    afd_source_summary = afd_source_summary
   )
 }
 
@@ -241,15 +186,10 @@ make_transition_model_outputs <- function(
 write_transition_model_outputs <- function(outputs, output_dir = data_dir_model_regression) {
   dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 
-  saveRDS(outputs$model_data, file.path(output_dir, "vorlaeufig_modell_afd_zufluss_daten.rds"))
-  saveRDS(outputs$model_coefficients, file.path(output_dir, "vorlaeufig_modell_afd_zufluss_coefficients.rds"))
-  saveRDS(outputs$afd_source_share_coefficients, file.path(output_dir, "vorlaeufig_modell_afd_source_share_coefficients.rds"))
-  saveRDS(outputs$all_model_coefficients, file.path(output_dir, "vorlaeufig_modell_afd_all_coefficients.rds"))
-  saveRDS(outputs$model_checks, file.path(output_dir, "vorlaeufig_modell_afd_zufluss_checks.rds"))
-  saveRDS(outputs$afd_source_summary, file.path(output_dir, "vorlaeufig_modell_afd_source_summary.rds"))
-  saveRDS(outputs$legacy_model_data, file.path(output_dir, "vorlaeufig_modell_daten.rds"))
-  saveRDS(outputs$legacy_model_coefficients, file.path(output_dir, "vorlaeufig_modell_coefficients.rds"))
-  saveRDS(outputs$legacy_model_checks, file.path(output_dir, "vorlaeufig_modell_checks.rds"))
+  saveRDS(outputs$model_data, file.path(output_dir, "modell_afd_zufluss_daten.rds"))
+  saveRDS(outputs$model_coefficients, file.path(output_dir, "modell_afd_zufluss_coefficients.rds"))
+  saveRDS(outputs$model_checks, file.path(output_dir, "modell_afd_zufluss_checks.rds"))
+  saveRDS(outputs$afd_source_summary, file.path(output_dir, "modell_afd_source_summary.rds"))
 
   invisible(outputs)
 }

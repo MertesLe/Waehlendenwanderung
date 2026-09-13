@@ -216,8 +216,8 @@ run_bootstrap_iteration <- function(
     covariates = covariates
   )
 
-  # Alle Beta-Schaetzungen mit Iterations- und Stichprobeninformation sammeln.
-  beta_draws <- model_outputs$all_model_coefficients %>%
+  # Nur die Beta-Schaetzungen der Uebergangswahrscheinlichkeiten zur AfD sammeln.
+  beta_draws <- model_outputs$model_coefficients %>%
     dplyr::mutate(
       bootstrap_id = iteration,
       sample_size = sample_size,
@@ -284,7 +284,6 @@ plot_bootstrap_beta_distributions <- function(beta_draws) {
       model_label = dplyr::recode(
         .data$model_target,
         origin_to_AfD_probability = "AfD-Zufluss",
-        share_of_AfD_2025_by_source = "AfD-2025-Anteil",
         .default = .data$model_target
       ),
       variable = sub("_2023_z$", "", .data$term),
@@ -364,12 +363,12 @@ write_bootstrap_outputs <- function(
     output_dir = data_dir_model_bootstrap) {
   dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 
-  saveRDS(beta_draws, file.path(output_dir, "vorlaeufig_bootstrap_beta_draws.rds"))
-  saveRDS(beta_intervals, file.path(output_dir, "vorlaeufig_bootstrap_beta_intervals.rds"))
-  saveRDS(checks, file.path(output_dir, "vorlaeufig_bootstrap_nslphom_checks.rds"))
-  saveRDS(mapping_checks, file.path(output_dir, "vorlaeufig_bootstrap_mapping_checks.rds"))
-  saveRDS(sample_summary, file.path(output_dir, "vorlaeufig_bootstrap_sample_summary.rds"))
-  saveRDS(settings, file.path(output_dir, "vorlaeufig_bootstrap_settings.rds"))
+  saveRDS(beta_draws, file.path(output_dir, "bootstrap_beta_draws.rds"))
+  saveRDS(beta_intervals, file.path(output_dir, "bootstrap_beta_intervals.rds"))
+  saveRDS(checks, file.path(output_dir, "bootstrap_nslphom_checks.rds"))
+  saveRDS(mapping_checks, file.path(output_dir, "bootstrap_mapping_checks.rds"))
+  saveRDS(sample_summary, file.path(output_dir, "bootstrap_sample_summary.rds"))
+  saveRDS(settings, file.path(output_dir, "bootstrap_settings.rds"))
 
   invisible(list(
     beta_draws = beta_draws,

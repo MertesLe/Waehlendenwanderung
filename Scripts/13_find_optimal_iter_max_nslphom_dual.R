@@ -408,7 +408,7 @@ settings <- tibble(
   )
 )
 
-saveRDS(settings, file.path(output_dir, paste0("vorlaeufig_", run_label, "_settings.rds")))
+saveRDS(settings, file.path(output_dir, paste0(run_label, "_settings.rds")))
 
 message(
   "Starte iter_max-Diagnose fuer nslphom_dual mit ",
@@ -586,11 +586,11 @@ direction_plot <- ggplot(
   ) +
   theme_minimal()
 
-saveRDS(sequence_table, file.path(output_dir, paste0("vorlaeufig_", run_label, "_hete_sequence.rds")))
-saveRDS(best_iter, file.path(output_dir, paste0("vorlaeufig_", run_label, "_best_iter_max.rds")))
+saveRDS(sequence_table, file.path(output_dir, paste0(run_label, "_hete_sequence.rds")))
+saveRDS(best_iter, file.path(output_dir, paste0(run_label, "_best_iter_max.rds")))
 
 ggsave(
-  filename = file.path(chart_dir, paste0("vorlaeufig_", run_label, "_hete_iter_max.png")),
+  filename = file.path(chart_dir, paste0(run_label, "_hete_iter_max.png")),
   plot = iter_plot,
   width = 9,
   height = 5.5,
@@ -598,7 +598,7 @@ ggsave(
 )
 
 ggsave(
-  filename = file.path(chart_dir, paste0("vorlaeufig_", run_label, "_hete_directions.png")),
+  filename = file.path(chart_dir, paste0(run_label, "_hete_directions.png")),
   plot = direction_plot,
   width = 9,
   height = 5.5,

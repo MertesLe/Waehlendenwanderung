@@ -38,7 +38,7 @@ settings <- make_unblocked_settings(
 
 endoutput_path <- file.path(
   data_dir_model_nslphom_deutschland,
-  "vorlaeufig_nslphom_deutschland_endoutput.rds"
+  "nslphom_deutschland_endoutput.rds"
 )
 
 if (!run_fit) {
@@ -105,12 +105,12 @@ if (!run_fit) {
   )
 
   # Nationale Outputs getrennt vom Ost-Hauptfit speichern.
-  saveRDS(settings, file.path(data_dir_model_nslphom_deutschland, "vorlaeufig_nslphom_settings.rds"))
-  saveRDS(nslphom_fit, file.path(data_dir_model_nslphom_deutschland, "vorlaeufig_nslphom_fit.rds"))
-  saveRDS(transition_long, file.path(data_dir_model_nslphom_deutschland, "vorlaeufig_transition_matrices_long.rds"))
-  saveRDS(transition_wide, file.path(data_dir_model_nslphom_deutschland, "vorlaeufig_transition_matrices_wide.rds"))
-  saveRDS(global_transition, file.path(data_dir_model_nslphom_deutschland, "vorlaeufig_nslphom_global_matrix.rds"))
-  saveRDS(checks, file.path(data_dir_model_nslphom_deutschland, "vorlaeufig_transition_checks.rds"))
+  saveRDS(settings, file.path(data_dir_model_nslphom_deutschland, "nslphom_settings.rds"))
+  saveRDS(nslphom_fit, file.path(data_dir_model_nslphom_deutschland, "nslphom_fit.rds"))
+  saveRDS(transition_long, file.path(data_dir_model_nslphom_deutschland, "transition_matrices_long.rds"))
+  saveRDS(transition_wide, file.path(data_dir_model_nslphom_deutschland, "transition_matrices_wide.rds"))
+  saveRDS(global_transition, file.path(data_dir_model_nslphom_deutschland, "nslphom_global_matrix.rds"))
+  saveRDS(checks, file.path(data_dir_model_nslphom_deutschland, "transition_checks.rds"))
   saveRDS(endoutput, endoutput_path)
 
   message("Deutschlandfit gespeichert unter: ", data_dir_model_nslphom_deutschland)

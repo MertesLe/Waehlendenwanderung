@@ -15,7 +15,7 @@ ehet_input_path <- getOption(
   "waehlendenwanderung.ehet_nslphom_output_path",
   file.path(
     data_dir_model_nslphom_deutschland,
-    "vorlaeufig_nslphom_deutschland_endoutput.rds"
+    "nslphom_deutschland_endoutput.rds"
   )
 )
 
@@ -36,7 +36,7 @@ output_dir <- file.path(data_dir_validation, "homogenitaetsannahme")
 chart_dir <- file.path("Charts", "homogenitaetsannahme")
 run_label <- getOption("waehlendenwanderung.ehet_run_label", basename(dirname(ehet_input_path)))
 run_label <- str_replace_all(run_label, "[^A-Za-z0-9_]+", "_")
-run_prefix <- paste0("vorlaeufig_", run_label, "_ehet")
+run_prefix <- paste0(run_label, "_ehet")
 save_data_outputs <- isTRUE(getOption("waehlendenwanderung.ehet_save_data_outputs", TRUE))
 save_diagnostic_plots <- isTRUE(getOption("waehlendenwanderung.ehet_save_diagnostic_plots", TRUE))
 save_map_plot <- isTRUE(getOption("waehlendenwanderung.ehet_save_map_plot", TRUE))

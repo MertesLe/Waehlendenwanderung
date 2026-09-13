@@ -11,8 +11,8 @@ source("paths.R", encoding = "UTF-8")
 ensure_data_dirs()
 
 # Kleine, bereits auf 2023 und relevante Indikatoren gefilterte INKAR-Basis laden.
-inkar_basis_rds <- file.path(data_dir_intermediate, "vorlaeufig_inkar_basis_gemeinden_kreise.rds")
-inkar_metadata_rds <- file.path(data_dir_intermediate, "vorlaeufig_inkar_basis_metadata.rds")
+inkar_basis_rds <- file.path(data_dir_intermediate, "inkar_basis_gemeinden_kreise.rds")
+inkar_metadata_rds <- file.path(data_dir_intermediate, "inkar_basis_metadata.rds")
 
 if (!file.exists(inkar_basis_rds) || !file.exists(inkar_metadata_rds)) {
   source("Scripts/cleaning_strukturdaten.R", encoding = "UTF-8")
@@ -64,7 +64,7 @@ if (!"bevoelkerung" %in% indikator_config$variable) {
 
 # Finales Gemeindemapping und die vollstaendige Menge der Analyse-Aggregationen laden.
 mapping_gemeinden <- readRDS(file.path(data_dir_cleaned, "mapping_gemeinden_final_manuell_validiert.rds"))
-all_aggs <- readRDS(file.path(data_dir_cleaned, "vorlaeufig_nslphom_input_2021.rds")) %>%
+all_aggs <- readRDS(file.path(data_dir_cleaned, "nslphom_input_2021.rds")) %>%
   select(agg_schluessel) %>%
   distinct() %>%
   arrange(agg_schluessel)
@@ -620,5 +620,5 @@ if (nrow(struktur_missing) > 0) {
   )
 }
 
-saveRDS(agg_struktur_long, file.path(data_dir_cleaned, "vorlaeufig_inkar_agg_long.rds"))
-saveRDS(agg_struktur_wide, file.path(data_dir_cleaned, "vorlaeufig_inkar_kovariaten_2023.rds"))
+saveRDS(agg_struktur_long, file.path(data_dir_cleaned, "inkar_agg_long.rds"))
+saveRDS(agg_struktur_wide, file.path(data_dir_cleaned, "inkar_kovariaten_2023.rds"))

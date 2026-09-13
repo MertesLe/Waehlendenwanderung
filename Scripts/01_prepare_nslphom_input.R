@@ -94,12 +94,12 @@ if (interactive()) {
 }
 
 # Finale Inputs und zugehoerige Pruefdaten speichern.
-saveRDS(input2021, file.path(data_dir_cleaned, "vorlaeufig_nslphom_input_2021.rds"))
-saveRDS(input2025, file.path(data_dir_cleaned, "vorlaeufig_nslphom_input_2025.rds"))
-saveRDS(input_long, file.path(data_dir_cleaned, "vorlaeufig_nslphom_input_long.rds"))
-saveRDS(party_thresholds, file.path(data_dir_cleaned, "vorlaeufig_partei_schwellenwerte.rds"))
-saveRDS(input_checks, file.path(data_dir_validation, "vorlaeufig_nslphom_input_checks.rds"))
-saveRDS(scale_factors, file.path(data_dir_validation, "vorlaeufig_nslphom_input_scaling_2025_to_2021.rds"))
+saveRDS(input2021, file.path(data_dir_cleaned, "nslphom_input_2021.rds"))
+saveRDS(input2025, file.path(data_dir_cleaned, "nslphom_input_2025.rds"))
+saveRDS(input_long, file.path(data_dir_cleaned, "nslphom_input_long.rds"))
+saveRDS(party_thresholds, file.path(data_dir_cleaned, "partei_schwellenwerte.rds"))
+saveRDS(input_checks, file.path(data_dir_validation, "nslphom_input_checks.rds"))
+saveRDS(scale_factors, file.path(data_dir_validation, "nslphom_input_scaling_2025_to_2021.rds"))
 
 message(
   "nslphom-Input gespeichert mit Gruppen: ",

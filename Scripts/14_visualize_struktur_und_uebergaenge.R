@@ -38,11 +38,11 @@ struktur_labels <- c(
 
 struktur_path <- file.path(
   data_dir_cleaned,
-  "vorlaeufig_inkar_kovariaten_2023.rds"
+  "inkar_kovariaten_2023.rds"
 )
 transition_path <- file.path(
   data_dir_model_nslphom_ost,
-  "vorlaeufig_transition_matrices_long.rds"
+  "transition_matrices_long.rds"
 )
 geometry_path <- paste0(
   "Data/raw/gebiete_visualisierung/",

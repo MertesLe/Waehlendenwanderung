@@ -282,7 +282,7 @@ endoutput <- list(
 
 output_file <- file.path(
   output_dir,
-  paste0("vorlaeufig_test", n_test_units, "_", selection_mode, "_nslphom_dual_endoutput.rds")
+  paste0("test", n_test_units, "_", selection_mode, "_nslphom_dual_endoutput.rds")
 )
 
 saveRDS(endoutput, output_file)

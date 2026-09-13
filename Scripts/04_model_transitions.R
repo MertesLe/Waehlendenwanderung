@@ -9,8 +9,8 @@ source("Functions/regression_functions.R", encoding = "UTF-8")
 
 ensure_data_dirs()
 
-transitions <- readRDS(file.path(data_dir_model_nslphom_ost, "vorlaeufig_transition_matrices_long.rds"))
-struktur <- readRDS(file.path(data_dir_cleaned, "vorlaeufig_inkar_kovariaten_2023.rds"))
+transitions <- readRDS(file.path(data_dir_model_nslphom_ost, "transition_matrices_long.rds"))
+struktur <- readRDS(file.path(data_dir_cleaned, "inkar_kovariaten_2023.rds"))
 struktur_covariates <- get_structure_covariates(struktur)
 
 if (!all(is_ostdeutschland_ohne_berlin(unique(transitions$agg_schluessel)))) {

@@ -312,7 +312,7 @@ beta_estimates <- bind_rows(lapply(simulation_results, `[[`, "beta_estimates"))
 run_status <- bind_rows(lapply(simulation_results, `[[`, "run_status"))
 
 if (nrow(local_errors) == 0L) {
-  saveRDS(run_status, file.path(validation_output_dir, "vorlaeufig_final_validation_run_status.rds"))
+  saveRDS(run_status, file.path(validation_output_dir, "final_validation_run_status.rds"))
   stop("Alle finalen Validierungssimulationen sind fehlgeschlagen.")
 }
 
@@ -376,14 +376,14 @@ settings_table <- tibble::tibble(
   )
 
 # Relevante Validierungsergebnisse nur als RDS speichern.
-saveRDS(local_errors, file.path(validation_output_dir, "vorlaeufig_final_validation_local_errors.rds"))
-saveRDS(validation_summary, file.path(validation_output_dir, "vorlaeufig_final_validation_summary.rds"))
-saveRDS(ei_unit, file.path(validation_output_dir, "vorlaeufig_final_validation_ei_unit.rds"))
-saveRDS(ei_summary, file.path(validation_output_dir, "vorlaeufig_final_validation_ei_summary.rds"))
-saveRDS(beta_estimates, file.path(validation_output_dir, "vorlaeufig_final_validation_beta_estimates.rds"))
-saveRDS(beta_summary, file.path(validation_output_dir, "vorlaeufig_final_validation_beta_summary.rds"))
-saveRDS(run_status, file.path(validation_output_dir, "vorlaeufig_final_validation_run_status.rds"))
-saveRDS(settings_table, file.path(validation_output_dir, "vorlaeufig_final_validation_settings.rds"))
-saveRDS(true_afd_betas, file.path(validation_output_dir, "vorlaeufig_final_validation_true_betas.rds"))
+saveRDS(local_errors, file.path(validation_output_dir, "final_validation_local_errors.rds"))
+saveRDS(validation_summary, file.path(validation_output_dir, "final_validation_summary.rds"))
+saveRDS(ei_unit, file.path(validation_output_dir, "final_validation_ei_unit.rds"))
+saveRDS(ei_summary, file.path(validation_output_dir, "final_validation_ei_summary.rds"))
+saveRDS(beta_estimates, file.path(validation_output_dir, "final_validation_beta_estimates.rds"))
+saveRDS(beta_summary, file.path(validation_output_dir, "final_validation_beta_summary.rds"))
+saveRDS(run_status, file.path(validation_output_dir, "final_validation_run_status.rds"))
+saveRDS(settings_table, file.path(validation_output_dir, "final_validation_settings.rds"))
+saveRDS(true_afd_betas, file.path(validation_output_dir, "final_validation_true_betas.rds"))
 
 message("Finale Methodenvalidierung gespeichert unter: ", validation_output_dir)

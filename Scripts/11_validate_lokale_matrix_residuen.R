@@ -15,7 +15,7 @@ nslphom_output_path <- getOption(
   "waehlendenwanderung.local_residual_nslphom_output_path",
   file.path(
     data_dir_model_nslphom_ost,
-    "vorlaeufig_nslphom_ost_endoutput.rds"
+    "nslphom_ost_endoutput.rds"
   )
 )
 
@@ -47,22 +47,22 @@ dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 
 map_file <- file.path(
   chart_dir,
-  paste0("vorlaeufig_", run_label, "_lokale_matrix_residuen_deutschlandkarte_agg.png")
+  paste0(run_label, "_lokale_matrix_residuen_deutschlandkarte_agg.png")
 )
 
 hist_file <- file.path(
   chart_dir,
-  paste0("vorlaeufig_", run_label, "_lokale_matrix_residuen_histogramm.png")
+  paste0(run_label, "_lokale_matrix_residuen_histogramm.png")
 )
 
 metrics_file <- file.path(
   output_dir,
-  paste0("vorlaeufig_", run_label, "_lokale_matrix_residuen.rds")
+  paste0(run_label, "_lokale_matrix_residuen.rds")
 )
 
 summary_file <- file.path(
   output_dir,
-  paste0("vorlaeufig_", run_label, "_lokale_matrix_residuen_summary.rds")
+  paste0(run_label, "_lokale_matrix_residuen_summary.rds")
 )
 
 if (!file.exists(nslphom_output_path)) {

@@ -34,12 +34,12 @@ settings <- make_unblocked_settings(
 )
 
 # Inputkopien und Einstellungen fuer den Lauf auf dem leistungsstaerkeren PC speichern.
-saveRDS(inputs$input2021, file.path(output_dir, "vorlaeufig_nslphom_unblocked_input_2021.rds"))
-saveRDS(inputs$input2025, file.path(output_dir, "vorlaeufig_nslphom_unblocked_input_2025.rds"))
-saveRDS(inputs$input_long, file.path(output_dir, "vorlaeufig_nslphom_unblocked_input_long.rds"))
-saveRDS(inputs$party_thresholds, file.path(output_dir, "vorlaeufig_nslphom_unblocked_party_thresholds.rds"))
-saveRDS(inputs$input_checks, file.path(output_dir, "vorlaeufig_nslphom_unblocked_input_checks.rds"))
-saveRDS(settings, file.path(output_dir, "vorlaeufig_nslphom_unblocked_settings.rds"))
+saveRDS(inputs$input2021, file.path(output_dir, "nslphom_unblocked_input_2021.rds"))
+saveRDS(inputs$input2025, file.path(output_dir, "nslphom_unblocked_input_2025.rds"))
+saveRDS(inputs$input_long, file.path(output_dir, "nslphom_unblocked_input_long.rds"))
+saveRDS(inputs$party_thresholds, file.path(output_dir, "nslphom_unblocked_party_thresholds.rds"))
+saveRDS(inputs$input_checks, file.path(output_dir, "nslphom_unblocked_input_checks.rds"))
+saveRDS(settings, file.path(output_dir, "nslphom_unblocked_settings.rds"))
 
 if (!run_fit) {
   message(
@@ -110,12 +110,12 @@ if (!run_fit) {
   )
 
   # Ergebnisse des unblocked Laufs speichern.
-  saveRDS(fit_bundle, file.path(output_dir, "vorlaeufig_nslphom_unblocked_fit.rds"))
-  saveRDS(transition_long, file.path(output_dir, "vorlaeufig_nslphom_unblocked_local_matrices_long.rds"))
-  saveRDS(transition_wide, file.path(output_dir, "vorlaeufig_nslphom_unblocked_local_matrices_wide.rds"))
-  saveRDS(global_transition, file.path(output_dir, "vorlaeufig_nslphom_unblocked_global_matrix.rds"))
-  saveRDS(global_transition_complete, file.path(output_dir, "vorlaeufig_nslphom_unblocked_global_matrix_complete.rds"))
-  saveRDS(checks, file.path(output_dir, "vorlaeufig_nslphom_unblocked_checks.rds"))
+  saveRDS(fit_bundle, file.path(output_dir, "nslphom_unblocked_fit.rds"))
+  saveRDS(transition_long, file.path(output_dir, "nslphom_unblocked_local_matrices_long.rds"))
+  saveRDS(transition_wide, file.path(output_dir, "nslphom_unblocked_local_matrices_wide.rds"))
+  saveRDS(global_transition, file.path(output_dir, "nslphom_unblocked_global_matrix.rds"))
+  saveRDS(global_transition_complete, file.path(output_dir, "nslphom_unblocked_global_matrix_complete.rds"))
+  saveRDS(checks, file.path(output_dir, "nslphom_unblocked_checks.rds"))
 
   message("Fertig. Ergebnisse gespeichert unter: ", output_dir)
 }

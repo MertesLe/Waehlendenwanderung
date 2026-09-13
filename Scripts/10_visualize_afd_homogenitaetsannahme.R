@@ -16,7 +16,7 @@ nslphom_output_path <- getOption(
   file.path(
     data_dir_model_nslphom,
     "testSymphony5965_random_dual",
-    "vorlaeufig_test5965_random_nslphom_dual_endoutput.rds"
+    "test5965_random_nslphom_dual_endoutput.rds"
   )
 )
 
@@ -36,7 +36,7 @@ geometry_layer <- getOption("waehlendenwanderung.afd_ehet_geometry_layer", "vg25
 chart_dir <- file.path("Charts", "Homogenitaetsannahmentest")
 chart_file <- file.path(
   chart_dir,
-  "vorlaeufig_testSymphony5965_random_dual_afd_ehet_deutschlandkarte_agg.png"
+  "testSymphony5965_random_dual_afd_ehet_deutschlandkarte_agg.png"
 )
 
 dir.create(chart_dir, recursive = TRUE, showWarnings = FALSE)

@@ -21,11 +21,11 @@ run_ehet <- isTRUE(getOption("waehlendenwanderung.ost_ehet_run", TRUE))
 
 # Vorbereitete Wahlinputs einlesen.
 files <- c(
-  input2021 = file.path(data_dir_cleaned, "vorlaeufig_nslphom_input_2021.rds"),
-  input2025 = file.path(data_dir_cleaned, "vorlaeufig_nslphom_input_2025.rds"),
-  input_long = file.path(data_dir_cleaned, "vorlaeufig_nslphom_input_long.rds"),
-  party_thresholds = file.path(data_dir_cleaned, "vorlaeufig_partei_schwellenwerte.rds"),
-  input_checks = file.path(data_dir_validation, "vorlaeufig_nslphom_input_checks.rds")
+  input2021 = file.path(data_dir_cleaned, "nslphom_input_2021.rds"),
+  input2025 = file.path(data_dir_cleaned, "nslphom_input_2025.rds"),
+  input_long = file.path(data_dir_cleaned, "nslphom_input_long.rds"),
+  party_thresholds = file.path(data_dir_cleaned, "partei_schwellenwerte.rds"),
+  input_checks = file.path(data_dir_validation, "nslphom_input_checks.rds")
 )
 
 missing_files <- files[!file.exists(files)]
@@ -81,7 +81,7 @@ message("Ost-Hauptanalyse umfasst ", nrow(inputs$input2021), " Aggregationseinhe
 
 endoutput_path <- file.path(
   data_dir_model_nslphom_ost,
-  "vorlaeufig_nslphom_ost_endoutput.rds"
+  "nslphom_ost_endoutput.rds"
 )
 
 if (!run_fit) {
@@ -159,12 +159,12 @@ if (!run_fit) {
   )
 
   # Ostoutputs getrennt von nationalen Diagnosefits speichern.
-  saveRDS(settings, file.path(data_dir_model_nslphom_ost, "vorlaeufig_nslphom_settings.rds"))
-  saveRDS(nslphom_fit, file.path(data_dir_model_nslphom_ost, "vorlaeufig_nslphom_fit.rds"))
-  saveRDS(transition_long, file.path(data_dir_model_nslphom_ost, "vorlaeufig_transition_matrices_long.rds"))
-  saveRDS(transition_wide, file.path(data_dir_model_nslphom_ost, "vorlaeufig_transition_matrices_wide.rds"))
-  saveRDS(global_transition, file.path(data_dir_model_nslphom_ost, "vorlaeufig_nslphom_global_matrix.rds"))
-  saveRDS(checks, file.path(data_dir_model_nslphom_ost, "vorlaeufig_transition_checks.rds"))
+  saveRDS(settings, file.path(data_dir_model_nslphom_ost, "nslphom_settings.rds"))
+  saveRDS(nslphom_fit, file.path(data_dir_model_nslphom_ost, "nslphom_fit.rds"))
+  saveRDS(transition_long, file.path(data_dir_model_nslphom_ost, "transition_matrices_long.rds"))
+  saveRDS(transition_wide, file.path(data_dir_model_nslphom_ost, "transition_matrices_wide.rds"))
+  saveRDS(global_transition, file.path(data_dir_model_nslphom_ost, "nslphom_global_matrix.rds"))
+  saveRDS(checks, file.path(data_dir_model_nslphom_ost, "transition_checks.rds"))
   saveRDS(endoutput, endoutput_path)
 
   message("Ost-Hauptlauf abgeschlossen. Outputs liegen unter: ", data_dir_model_nslphom_ost)

@@ -499,7 +499,7 @@ local_errors <- bind_rows(lapply(simulation_results, `[[`, "local_errors"))
 beta_estimates <- bind_rows(lapply(simulation_results, `[[`, "beta_estimates"))
 run_status <- bind_rows(lapply(simulation_results, `[[`, "run_status"))
 validation_summary <- summarise_local_errors(local_errors)
-# Note: sum(vorlaeufig_nslphom_validation_summary$bias_vs_true_probability) = 5.637851e-17 means 0
+# Note: sum(nslphom_validation_summary$bias_vs_true_probability) = 5.637851e-17 means 0
 estimation_error <- calculate_estimation_error(local_errors)
 estimation_error_summary <- summarise_estimation_error(estimation_error)
 beta_summary <- summarise_beta_recovery(
@@ -518,15 +518,15 @@ settings_table <- tibble(
 # - estimation_error und estimation_error_summary: EI auf der joined distribution.
 # - beta_estimates und beta_summary: Recovery der Kovariaten-Effekte.
 # - run_status, settings_table und transition_betas: Reproduzierbarkeit und Diagnose.
-saveRDS(local_errors, file.path(validation_output_dir, "vorlaeufig_nslphom_validation_local_errors.rds"))
-saveRDS(validation_summary, file.path(validation_output_dir, "vorlaeufig_nslphom_validation_summary.rds"))
-saveRDS(estimation_error, file.path(validation_output_dir, "vorlaeufig_nslphom_validation_ei_unit.rds"))
-saveRDS(estimation_error_summary, file.path(validation_output_dir, "vorlaeufig_nslphom_validation_ei_summary.rds"))
-saveRDS(beta_estimates, file.path(validation_output_dir, "vorlaeufig_nslphom_validation_beta_estimates.rds"))
-saveRDS(beta_summary, file.path(validation_output_dir, "vorlaeufig_nslphom_validation_beta_summary.rds"))
-saveRDS(run_status, file.path(validation_output_dir, "vorlaeufig_nslphom_validation_run_status.rds"))
-saveRDS(settings_table, file.path(validation_output_dir, "vorlaeufig_nslphom_validation_settings.rds"))
-saveRDS(transition_betas, file.path(validation_output_dir, "vorlaeufig_nslphom_validation_true_betas.rds"))
+saveRDS(local_errors, file.path(validation_output_dir, "nslphom_validation_local_errors.rds"))
+saveRDS(validation_summary, file.path(validation_output_dir, "nslphom_validation_summary.rds"))
+saveRDS(estimation_error, file.path(validation_output_dir, "nslphom_validation_ei_unit.rds"))
+saveRDS(estimation_error_summary, file.path(validation_output_dir, "nslphom_validation_ei_summary.rds"))
+saveRDS(beta_estimates, file.path(validation_output_dir, "nslphom_validation_beta_estimates.rds"))
+saveRDS(beta_summary, file.path(validation_output_dir, "nslphom_validation_beta_summary.rds"))
+saveRDS(run_status, file.path(validation_output_dir, "nslphom_validation_run_status.rds"))
+saveRDS(settings_table, file.path(validation_output_dir, "nslphom_validation_settings.rds"))
+saveRDS(transition_betas, file.path(validation_output_dir, "nslphom_validation_true_betas.rds"))
 
 # --- BEGIN Sensitivitaetschecks: andere Blockdefinitionen, Parteigruppierung und groessere Aggregationseinheiten ---
 sensitivity_settings <- list(
@@ -1191,12 +1191,12 @@ sensitivity_settings_table <- tibble(
 # - sensitivity_estimation_error und *_summary: EI je Variante.
 # - sensitivity_beta_estimates und *_summary: Beta-Recovery je Sensitivitaetsvariante.
 # - sensitivity_settings_table: Reproduzierbarkeit der Sensitivitaetslaeufe.
-saveRDS(sensitivity_local_errors, file.path(validation_output_dir, "vorlaeufig_nslphom_sensitivity_local_errors.rds"))
-saveRDS(sensitivity_summary, file.path(validation_output_dir, "vorlaeufig_nslphom_sensitivity_summary.rds"))
-saveRDS(sensitivity_estimation_error, file.path(validation_output_dir, "vorlaeufig_nslphom_sensitivity_ei_unit.rds"))
-saveRDS(sensitivity_estimation_error_summary, file.path(validation_output_dir, "vorlaeufig_nslphom_sensitivity_ei_summary.rds"))
-saveRDS(sensitivity_beta_estimates, file.path(validation_output_dir, "vorlaeufig_nslphom_sensitivity_beta_estimates.rds"))
-saveRDS(sensitivity_beta_summary, file.path(validation_output_dir, "vorlaeufig_nslphom_sensitivity_beta_summary.rds"))
-saveRDS(sensitivity_settings_table, file.path(validation_output_dir, "vorlaeufig_nslphom_sensitivity_settings.rds"))
+saveRDS(sensitivity_local_errors, file.path(validation_output_dir, "nslphom_sensitivity_local_errors.rds"))
+saveRDS(sensitivity_summary, file.path(validation_output_dir, "nslphom_sensitivity_summary.rds"))
+saveRDS(sensitivity_estimation_error, file.path(validation_output_dir, "nslphom_sensitivity_ei_unit.rds"))
+saveRDS(sensitivity_estimation_error_summary, file.path(validation_output_dir, "nslphom_sensitivity_ei_summary.rds"))
+saveRDS(sensitivity_beta_estimates, file.path(validation_output_dir, "nslphom_sensitivity_beta_estimates.rds"))
+saveRDS(sensitivity_beta_summary, file.path(validation_output_dir, "nslphom_sensitivity_beta_summary.rds"))
+saveRDS(sensitivity_settings_table, file.path(validation_output_dir, "nslphom_sensitivity_settings.rds"))
 
 # --- END Sensitivitaetschecks: andere Blockdefinitionen, Parteigruppierung und groessere Aggregationseinheiten ---

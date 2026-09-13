@@ -9,11 +9,11 @@ ensure_data_dirs()
 setDTthreads(max(1, parallel::detectCores() - 2))
 
 inkar_pfad <- "Data/raw/inkar_2025/inkar_2025.csv"
-inkar_basis_rds <- file.path(data_dir_intermediate, "vorlaeufig_inkar_basis_gemeinden_kreise.rds")
-inkar_metadata_rds <- file.path(data_dir_intermediate, "vorlaeufig_inkar_basis_metadata.rds")
+inkar_basis_rds <- file.path(data_dir_intermediate, "inkar_basis_gemeinden_kreise.rds")
+inkar_metadata_rds <- file.path(data_dir_intermediate, "inkar_basis_metadata.rds")
 
-legacy_basis_rds <- file.path(data_dir_cleaned, "vorlaeufig_inkar_workflow_rohdaten.rds")
-legacy_metadata_rds <- file.path(data_dir_cleaned, "vorlaeufig_inkar_workflow_metadata.rds")
+legacy_basis_rds <- file.path(data_dir_cleaned, "inkar_workflow_rohdaten.rds")
+legacy_metadata_rds <- file.path(data_dir_cleaned, "inkar_workflow_metadata.rds")
 force_rebuild <- isTRUE(getOption("waehlendenwanderung.inkar_basis_rebuild", FALSE))
 struktur_jahr <- as.integer(getOption("waehlendenwanderung.inkar_struktur_jahr", 2023L))
 

@@ -14,7 +14,7 @@ left_output_path <- getOption(
   "waehlendenwanderung.solververgleich_left_path",
   file.path(
     data_dir_model_nslphom_ost,
-    "vorlaeufig_nslphom_ost_endoutput.rds"
+    "nslphom_ost_endoutput.rds"
   )
 )
 
@@ -23,7 +23,7 @@ right_output_path <- getOption(
   file.path(
     data_dir_model_nslphom,
     "ostdeutschland_symphony",
-    "vorlaeufig_nslphom_ost_symphony_endoutput.rds"
+    "nslphom_ost_symphony_endoutput.rds"
   )
 )
 
@@ -40,7 +40,7 @@ diff_tolerance <- getOption("waehlendenwanderung.solververgleich_tolerance", 1e-
 
 # Dateinamen fuer die gespeicherten Vergleichstabellen im Zielordner erzeugen.
 output_file <- function(name) {
-  file.path(output_dir, paste0("vorlaeufig_", comparison_name, "_", name))
+  file.path(output_dir, paste0(comparison_name, "_", name))
 }
 
 # Solveroutput laden und seine benoetigten Bestandteile validieren.

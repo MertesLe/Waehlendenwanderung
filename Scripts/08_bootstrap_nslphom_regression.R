@@ -61,7 +61,7 @@ inputs$input_long <- inputs$input_long %>% filter(.data$agg_schluessel %in% ost_
 inputs$input_checks <- inputs$input_checks %>% filter(.data$agg_schluessel %in% ost_ids)
 
 validation <- validate_prepared_nslphom_inputs(inputs, threshold = threshold)
-struktur <- readRDS(file.path(data_dir_cleaned, "vorlaeufig_inkar_kovariaten_2023.rds"))
+struktur <- readRDS(file.path(data_dir_cleaned, "inkar_kovariaten_2023.rds"))
 struktur_covariates <- get_structure_covariates(struktur)
 
 # Fuer den Bootstrap wird die Population auf Einheiten begrenzt, die auch in der
@@ -97,9 +97,9 @@ sample_size <- if (is.null(sample_size_option)) {
 # Iterationscache nur wiederverwenden, wenn Inputs und Modelleinstellungen gleich sind.
 input_file_signature <- paste(
   unname(tools::md5sum(c(
-    file.path(data_dir_cleaned, "vorlaeufig_nslphom_input_2021.rds"),
-    file.path(data_dir_cleaned, "vorlaeufig_nslphom_input_2025.rds"),
-    file.path(data_dir_cleaned, "vorlaeufig_inkar_kovariaten_2023.rds")
+    file.path(data_dir_cleaned, "nslphom_input_2021.rds"),
+    file.path(data_dir_cleaned, "nslphom_input_2025.rds"),
+    file.path(data_dir_cleaned, "inkar_kovariaten_2023.rds")
   ))),
   collapse = "|"
 )
@@ -172,8 +172,8 @@ settings <- tibble::tibble(
   resampling = "Ostdeutschland ohne Berlin mit Zuruecklegen, ohne nslphom-Bloecke"
 )
 
-saveRDS(settings, file.path(output_dir, "vorlaeufig_bootstrap_settings.rds"))
-saveRDS(analysis_signature_components, file.path(output_dir, "vorlaeufig_bootstrap_cache_signature.rds"))
+saveRDS(settings, file.path(output_dir, "bootstrap_settings.rds"))
+saveRDS(analysis_signature_components, file.path(output_dir, "bootstrap_cache_signature.rds"))
 
 if (!run_bootstrap) {
   message(
@@ -186,7 +186,7 @@ if (!run_bootstrap) {
   for (iteration in seq_len(n_bootstrap)) {
     iteration_file <- file.path(
       iteration_dir,
-      sprintf("vorlaeufig_bootstrap_iteration_%04d.rds", iteration)
+      sprintf("bootstrap_iteration_%04d.rds", iteration)
     )
 
     if (resume_existing && file.exists(iteration_file)) {
@@ -202,6 +202,10 @@ if (!run_bootstrap) {
         setdiff(cached_terms, "(Intercept)"),
         expected_terms
       )
+      cache_uses_current_model_target <- identical(
+        unique(cached_result$beta_draws$model_target),
+        "origin_to_AfD_probability"
+      )
       cache_uses_current_settings <- identical(
         cached_result$analysis_signature,
         analysis_signature
@@ -210,6 +214,7 @@ if (!run_bootstrap) {
       if (
         is.null(cached_result$error) &&
           cache_uses_current_covariates &&
+          cache_uses_current_model_target &&
           cache_uses_current_settings
       ) {
         message("Lese erfolgreiche vorhandene Bootstrap-Iteration ", iteration, ".")
@@ -294,12 +299,12 @@ if (!run_bootstrap) {
     output_dir = output_dir
   )
 
-  saveRDS(failures, file.path(output_dir, "vorlaeufig_bootstrap_failures.rds"))
+  saveRDS(failures, file.path(output_dir, "bootstrap_failures.rds"))
 
   if (nrow(beta_draws) > 0) {
     beta_plot <- plot_bootstrap_beta_distributions(beta_draws)
     ggplot2::ggsave(
-      filename = file.path(chart_dir, "vorlaeufig_bootstrap_beta_verteilungen_ostdeutschland.pdf"),
+      filename = file.path(chart_dir, "bootstrap_beta_verteilungen_ostdeutschland.pdf"),
       plot = beta_plot,
       width = 14,
       height = 9,

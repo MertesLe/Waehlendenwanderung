@@ -36,11 +36,11 @@ get_lphom_internal <- function(name) {
 # Zentral vorbereitete nslphom-Inputs laden und in identischer Schluesselreihenfolge ausgeben.
 read_prepared_nslphom_inputs <- function() {
   files <- c(
-    input2021 = file.path(data_dir_cleaned, "vorlaeufig_nslphom_input_2021.rds"),
-    input2025 = file.path(data_dir_cleaned, "vorlaeufig_nslphom_input_2025.rds"),
-    input_long = file.path(data_dir_cleaned, "vorlaeufig_nslphom_input_long.rds"),
-    party_thresholds = file.path(data_dir_cleaned, "vorlaeufig_partei_schwellenwerte.rds"),
-    input_checks = file.path(data_dir_validation, "vorlaeufig_nslphom_input_checks.rds")
+    input2021 = file.path(data_dir_cleaned, "nslphom_input_2021.rds"),
+    input2025 = file.path(data_dir_cleaned, "nslphom_input_2025.rds"),
+    input_long = file.path(data_dir_cleaned, "nslphom_input_long.rds"),
+    party_thresholds = file.path(data_dir_cleaned, "partei_schwellenwerte.rds"),
+    input_checks = file.path(data_dir_validation, "nslphom_input_checks.rds")
   )
 
   missing_files <- files[!file.exists(files)]

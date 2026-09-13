@@ -147,7 +147,7 @@ endoutput <- list(
 
 saveRDS(
   endoutput,
-  file.path(output_dir, "vorlaeufig_test2000_nslphom_unblocked_endoutput.rds")
+  file.path(output_dir, "test2000_nslphom_unblocked_endoutput.rds")
 )
 
 message("Fertig. Endoutput gespeichert unter: ", output_dir)
