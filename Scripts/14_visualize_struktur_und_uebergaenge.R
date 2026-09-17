@@ -66,6 +66,11 @@ struktur <- readRDS(struktur_path) %>%
 transitions <- readRDS(transition_path) %>%
   filter(is_ostdeutschland_ohne_berlin(.data$agg_schluessel))
 
+assert_final_nslphom_groups(
+  unique(c(transitions$from, transitions$to)),
+  "Die Uebergangsdaten fuer die Karten"
+)
+
 missing_strukturvariablen <- setdiff(strukturvariablen, names(struktur))
 
 if (length(missing_strukturvariablen) > 0) {
@@ -271,7 +276,7 @@ for (i in seq_len(nrow(uebergaenge))) {
 
   save_map(
     map_data = build_agg_map(values),
-    title = paste(selection$from, "zu", selection$to),
+    title = paste(label_party_group(selection$from), "zu", label_party_group(selection$to)),
     legend_title = metric_label,
     filename = paste0(
       "uebergang_",

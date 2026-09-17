@@ -29,6 +29,40 @@ weighted_mean_safe <- function(x, w) {
   sum(x[ok] * w[ok]) / sum(w[ok])
 }
 
+# Die sechs im finalen Wahlmodell verwendeten Gruppen in fester Reihenfolge ausgeben.
+final_nslphom_groups <- function() {
+  c("AfD", "LINKE_GRUENE", "SPD", "Union", "Andere", "Nichtwaehler")
+}
+
+# Sicherstellen, dass ein Datensatz genau die finale Parteigruppierung verwendet.
+assert_final_nslphom_groups <- function(groups, context = "nslphom-Datensatz") {
+  groups <- unique(as.character(groups))
+  expected <- final_nslphom_groups()
+
+  if (!setequal(groups, expected)) {
+    stop(
+      context,
+      " verwendet nicht die finalen Gruppen. Erwartet: ",
+      paste(expected, collapse = ", "),
+      "; vorhanden: ",
+      paste(sort(groups), collapse = ", "),
+      ". Fuehre Scripts/01_prepare_nslphom_input.R und alle davon abhaengigen Skripte neu aus."
+    )
+  }
+
+  invisible(expected)
+}
+
+# Interne Gruppennamen fuer Tabellen und Grafiken lesbar darstellen.
+label_party_group <- function(x) {
+  dplyr::recode(
+    as.character(x),
+    LINKE_GRUENE = "Linke/Gr\u00fcne",
+    Nichtwaehler = "Nichtw\u00e4hler",
+    .default = as.character(x)
+  )
+}
+
 # Achtstelligen amtlichen Gemeindeschluessel aus den amtlichen Gebietsteilen zusammensetzen.
 make_ags <- function(data) {
   data %>%

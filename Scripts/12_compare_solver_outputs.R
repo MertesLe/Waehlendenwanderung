@@ -4,6 +4,7 @@ library(dplyr)
 library(tidyr)
 
 source("paths.R", encoding = "UTF-8")
+source("Functions/general_functions.R", encoding = "UTF-8")
 
 ensure_data_dirs()
 
@@ -57,6 +58,11 @@ read_solver_output <- function(path, label) {
   if (length(missing) > 0) {
     stop(label, "-Output enthaelt nicht alle benoetigten Elemente: ", paste(missing, collapse = ", "))
   }
+
+  assert_final_nslphom_groups(
+    unique(c(obj$local_matrices_long$from, obj$local_matrices_long$to)),
+    paste0(label, "-Output")
+  )
 
   obj
 }

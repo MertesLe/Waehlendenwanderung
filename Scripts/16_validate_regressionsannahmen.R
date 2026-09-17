@@ -5,6 +5,7 @@ library(ggplot2)
 library(tidyr)
 
 source("paths.R", encoding = "UTF-8")
+source("Functions/general_functions.R", encoding = "UTF-8")
 source("Functions/regression_functions.R", encoding = "UTF-8")
 
 ensure_data_dirs()
@@ -88,6 +89,14 @@ if (length(missing_labels) > 0) {
 # Die im Hauptskript geschaetzten Modelle direkt fuer die Diagnostik verwenden.
 origin_groups <- sort(unique(model_data$from))
 
+if (!setequal(origin_groups, setdiff(final_nslphom_groups(), "AfD"))) {
+  stop(
+    "Die Regressionsdaten verwenden nicht die finalen Herkunftsgruppen. ",
+    "Fuehre Scripts/01_prepare_nslphom_input.R, Scripts/02_estimate_transitions.R ",
+    "und Scripts/04_model_transitions.R neu aus."
+  )
+}
+
 if (!setequal(names(model_fits), origin_groups)) {
   stop("Gespeicherte Fits und Herkunftsgruppen im Modelldatensatz stimmen nicht ueberein.")
 }
@@ -133,6 +142,9 @@ diagnostic_rows <- bind_rows(lapply(origin_groups, function(origin) {
     origin_count = origin_data$origin_count
   )
 }))
+
+diagnostic_rows <- diagnostic_rows %>%
+  mutate(from_label = label_party_group(.data$from))
 
 # Breusch-Pagan-Test auf verbleibende Heteroskedastizitaet nach Beruecksichtigung der Gewichte.
 # Dieser Test betrifft die Regressionsannahme der Homoskedastizitaet. Die nslphom-
@@ -312,7 +324,7 @@ plot_residual_fitted <- ggplot(
   geom_point(alpha = 0.25, size = 0.8) +
   geom_hline(yintercept = 0, color = "grey40", linewidth = 0.4) +
   geom_smooth(method = "loess", formula = y ~ x, se = FALSE, color = "#B22222") +
-  facet_wrap(vars(.data$from), scales = "free_x") +
+  facet_wrap(vars(.data$from_label), scales = "free_x") +
   labs(
     title = "Standardisierte Residuen gegen Vorhersagen",
     subtitle = "Gewichtete lineare Modelle der AfD-Zufluesse",
@@ -334,7 +346,7 @@ ggsave(
 plot_qq <- ggplot(diagnostic_rows, aes(sample = .data$standardized_residual)) +
   stat_qq(alpha = 0.35, size = 0.9) +
   stat_qq_line(color = "#B22222", linewidth = 0.7) +
-  facet_wrap(vars(.data$from), scales = "free") +
+  facet_wrap(vars(.data$from_label), scales = "free") +
   labs(
     title = "Q-Q-Plots der standardisierten Residuen",
     subtitle = "Abweichungen an den Raendern sind bei grossen Stichproben besonders sichtbar",
@@ -358,7 +370,7 @@ plot_scale_location <- diagnostic_rows %>%
   ggplot(aes(x = .data$fitted, y = .data$sqrt_abs_standardized_residual)) +
   geom_point(alpha = 0.25, size = 0.8) +
   geom_smooth(method = "loess", formula = y ~ x, se = FALSE, color = "#B22222") +
-  facet_wrap(vars(.data$from), scales = "free_x") +
+  facet_wrap(vars(.data$from_label), scales = "free_x") +
   labs(
     title = "Scale-Location-Plot",
     subtitle = "Eine etwa horizontale rote Linie spricht fuer konstante Residuenstreuung",
@@ -387,7 +399,7 @@ plot_influence <- ggplot(
 ) +
   geom_point(alpha = 0.35, color = "#4472C4") +
   geom_hline(yintercept = c(-3, 3), linetype = "dashed", color = "#B22222") +
-  facet_wrap(vars(.data$from), scales = "free_x") +
+  facet_wrap(vars(.data$from_label), scales = "free_x") +
   scale_size_continuous(range = c(0.5, 5)) +
   labs(
     title = "Einflussdiagnostik",
@@ -434,7 +446,7 @@ for (origin in origin_groups) {
     ) +
     facet_wrap(vars(.data$variable_label), scales = "free", ncol = 2) +
     labs(
-      title = paste("Partielle Residuen fuer", origin, "-> AfD"),
+      title = paste("Partielle Residuen fuer", label_party_group(origin), "-> AfD"),
       subtitle = "Rot: lokale Glaettung; grau: angenommener linearer Zusammenhang",
       x = "Standardisierte Strukturvariable",
       y = "Partielles Residuum"

@@ -23,6 +23,10 @@ transition_path <- file.path(
   data_dir_model_nslphom_ost,
   "transition_matrices_long.rds"
 )
+model_data_path <- file.path(
+  data_dir_model_regression_ost,
+  "modell_afd_zufluss_daten.rds"
+)
 output_dir <- file.path(
   data_dir_model_regression_ost,
   "deskriptiv"
@@ -36,7 +40,7 @@ chart_dir <- file.path(
 dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 dir.create(chart_dir, recursive = TRUE, showWarnings = FALSE)
 
-required_files <- c(struktur_path, transition_path)
+required_files <- c(struktur_path, transition_path, model_data_path)
 missing_files <- required_files[!file.exists(required_files)]
 
 if (length(missing_files) > 0) {
@@ -121,6 +125,11 @@ korrelation_long <- as.data.frame(as.table(korrelation), stringsAsFactors = FALS
 
 # Den ausgewaehlten lokalen Uebergang aus dem Ost-nslphom-Ergebnis auswaehlen.
 transitions <- readRDS(transition_path)
+
+assert_final_nslphom_groups(
+  unique(c(transitions$from, transitions$to)),
+  "Die Uebergangsdaten der deskriptiven Analyse"
+)
 
 if (!ziel_kennzahl %in% names(transitions)) {
   stop("Die Zielkennzahl fehlt im nslphom-Output: ", ziel_kennzahl)
@@ -228,6 +237,81 @@ ggsave(
   dpi = 300
 )
 
+# Die im Regressionsmodell verwendeten z-standardisierten Kovariaten direkt einlesen.
+model_data <- readRDS(model_data_path)
+strukturvariablen_z <- paste0(strukturvariablen, "_z")
+fehlende_z_variablen <- setdiff(strukturvariablen_z, names(model_data))
+
+if (length(fehlende_z_variablen) > 0) {
+  stop(
+    "Folgende z-standardisierte Kovariaten fehlen im Regressionsinput: ",
+    paste(fehlende_z_variablen, collapse = ", ")
+  )
+}
+
+# Jede Aggregationseinheit steht wegen der Herkunftsmodelle mehrfach in model_data.
+# Fuer die Verteilungen wird sie genau einmal mit ihren Modellkovariaten verwendet.
+struktur_z <- model_data %>%
+  select(.data$agg_schluessel, all_of(strukturvariablen_z)) %>%
+  distinct()
+
+if (anyDuplicated(struktur_z$agg_schluessel) > 0) {
+  stop("Eine Aggregationseinheit besitzt unterschiedliche z-standardisierte Kovariaten.")
+}
+
+struktur_z_long <- struktur_z %>%
+  pivot_longer(
+    cols = all_of(strukturvariablen_z),
+    names_to = "variable_z",
+    values_to = "wert_standardisiert"
+  ) %>%
+  mutate(
+    variable = sub("_z$", "", .data$variable_z),
+    variable_label = factor(
+      unname(variablen_labels[.data$variable]),
+      levels = unname(variablen_labels[strukturvariablen])
+    )
+  )
+
+# Die Verteilungen der tatsaechlich modellierten z-Werte auf gemeinsamer x-Achse darstellen.
+plot_verteilungen_z <- ggplot(
+  struktur_z_long,
+  aes(x = .data$wert_standardisiert)
+) +
+  geom_histogram(
+    aes(y = after_stat(density)),
+    bins = 30,
+    fill = "#4472C4",
+    color = "white"
+  ) +
+  geom_density(color = "#B22222", linewidth = 0.7, na.rm = TRUE) +
+  geom_vline(xintercept = 0, color = "grey35", linewidth = 0.35) +
+  facet_wrap(
+    vars(.data$variable_label),
+    scales = "free_y",
+    ncol = 2
+  ) +
+  labs(
+    title = "Verteilungen der z-standardisierten Strukturvariablen",
+    subtitle = "Im Regressionsmodell verwendete Oststichprobe ohne Berlin",
+    x = "Z-standardisierter Wert",
+    y = "Dichte"
+  ) +
+  theme_minimal() +
+  theme(
+    panel.spacing = grid::unit(1, "lines"),
+    strip.text = element_text(face = "bold"),
+    strip.background = element_rect(fill = "grey95", color = NA)
+  )
+
+ggsave(
+  file.path(chart_dir, "strukturvariablen_verteilungen_z_standardisiert.png"),
+  plot_verteilungen_z,
+  width = 12,
+  height = 14,
+  dpi = 300
+)
+
 # Einen gemeinsamen standardisierten Boxplot zum Erkennen von Ausreissern erzeugen.
 boxplot_data <- struktur_long %>%
   group_by(.data$variable) %>%
@@ -316,7 +400,12 @@ plot_scatter <- ggplot(
   ) +
   scale_y_continuous(labels = scales::label_percent(accuracy = 1)) +
   labs(
-    title = paste("Lokaler Uebergang", ziel_herkunft, "->", ziel_partei),
+    title = paste(
+      "Lokaler Uebergang",
+      label_party_group(ziel_herkunft),
+      "->",
+      label_party_group(ziel_partei)
+    ),
     subtitle = "Punkte ungewichtet, Regressionslinien nach Herkunftsstaerken gewichtet",
     x = "Strukturvariable",
     y = "Geschaetzte Uebergangswahrscheinlichkeit"

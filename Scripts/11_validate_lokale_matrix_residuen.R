@@ -85,6 +85,11 @@ if (!"local_matrices_long" %in% names(nslphom_output)) {
 
 local_transitions <- nslphom_output$local_matrices_long
 
+assert_final_nslphom_groups(
+  unique(c(local_transitions$from, local_transitions$to)),
+  "Der Output fuer die lokale Residuenvalidierung"
+)
+
 required_cols <- c(
   "agg_schluessel",
   "from",

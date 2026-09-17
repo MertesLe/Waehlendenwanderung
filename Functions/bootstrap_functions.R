@@ -287,6 +287,7 @@ plot_bootstrap_beta_distributions <- function(beta_draws) {
         .default = .data$model_target
       ),
       variable = sub("_2023_z$", "", .data$term),
+      from_label = label_party_group(.data$from),
       row_label = paste(.data$variable, .data$model_label, sep = " - "),
       row_label = factor(.data$row_label, levels = unique(.data$row_label))
     )
@@ -322,7 +323,7 @@ plot_bootstrap_beta_distributions <- function(beta_draws) {
     ggplot2::geom_density(fill = "grey65", color = "grey30", alpha = 0.7) +
     ggplot2::facet_grid(
       rows = ggplot2::vars(.data$row_label),
-      cols = ggplot2::vars(.data$from),
+      cols = ggplot2::vars(.data$from_label),
       scales = "free",
       switch = "y"
     ) +

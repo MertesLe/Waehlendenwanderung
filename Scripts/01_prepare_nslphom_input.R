@@ -16,9 +16,9 @@ party_threshold <- getOption("waehlendenwanderung.party_threshold", 0.12)
 wahldaten2021 <- readRDS(file.path(data_dir_cleaned, "wahldaten2021_gemappt.rds"))
 wahldaten2025 <- readRDS(file.path(data_dir_cleaned, "wahldaten2025_gemappt.rds"))
 
-# Fuer nslphom werden Zweitstimmen verwendet. CDU und CSU werden vorher zur
-# Union zusammengefasst; Parteien bleiben separat, wenn sie bundesweit in
-# mindestens einer Wahl den angegebenen Zweitstimmenanteil erreichen.
+# Fuer nslphom werden Zweitstimmen verwendet. CDU und CSU werden zur Union,
+# DIE LINKE und GRUENE zu LINKE_GRUENE zusammengefasst. Die Schwelle wird erst
+# auf diese gemeinsamen Gruppen angewendet.
 invalid_col2021 <- first_existing(wahldaten2021, c("^Z_Ung.ltige$"))
 valid_col2021 <- first_existing(wahldaten2021, c("^Z_G.ltige$"))
 invalid_col2025 <- first_existing(wahldaten2025, c("^Ung.ltige\\.\\.\\.Zweitstimmen$"))
@@ -80,8 +80,7 @@ party_thresholds <- bind_rows(prepared2021$national, prepared2025$national)
 input_checks <- bind_rows(prepared2021$check, prepared2025$check)
 
 input_groups <- setdiff(names(input2021), "agg_schluessel")
-stopifnot(!any(c("CDU", "CSU") %in% input_groups))
-stopifnot("Union" %in% input_groups)
+assert_final_nslphom_groups(input_groups, "Der erzeugte nslphom-Input")
 stopifnot(identical(input_groups, setdiff(names(input2025), "agg_schluessel")))
 stopifnot(all(rowSums(input2021[input_groups]) == rowSums(input2025[input_groups])))
 stopifnot(all(abs(input_checks$differenz_input_zu_referenz) < 1e-8))

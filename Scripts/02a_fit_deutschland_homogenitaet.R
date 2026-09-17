@@ -4,6 +4,7 @@ library(dplyr)
 library(tidyr)
 
 source("paths.R", encoding = "UTF-8")
+source("Functions/general_functions.R", encoding = "UTF-8")
 source("Functions/nslphom_functions.R", encoding = "UTF-8")
 
 ensure_data_dirs()

@@ -14,9 +14,8 @@ ensure_data_dirs()
 nslphom_output_path <- getOption(
   "waehlendenwanderung.afd_ehet_nslphom_output_path",
   file.path(
-    data_dir_model_nslphom,
-    "testSymphony5965_random_dual",
-    "test5965_random_nslphom_dual_endoutput.rds"
+    data_dir_model_nslphom_deutschland,
+    "nslphom_deutschland_endoutput.rds"
   )
 )
 
@@ -36,7 +35,7 @@ geometry_layer <- getOption("waehlendenwanderung.afd_ehet_geometry_layer", "vg25
 chart_dir <- file.path("Charts", "Homogenitaetsannahmentest")
 chart_file <- file.path(
   chart_dir,
-  "testSymphony5965_random_dual_afd_ehet_deutschlandkarte_agg.png"
+  "deutschland_afd_ehet_deutschlandkarte_agg.png"
 )
 
 dir.create(chart_dir, recursive = TRUE, showWarnings = FALSE)
@@ -73,6 +72,11 @@ if (length(afd_col) != 1) {
 }
 
 local_transitions <- nslphom_output$local_matrices_long
+
+assert_final_nslphom_groups(
+  unique(c(local_transitions$from, local_transitions$to)),
+  "Der AfD-EHet-Endoutput"
+)
 
 required_cols <- c("agg_schluessel", "from", "origin_count")
 missing_cols <- setdiff(required_cols, names(local_transitions))

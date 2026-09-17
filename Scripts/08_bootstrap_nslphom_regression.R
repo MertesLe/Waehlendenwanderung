@@ -25,7 +25,7 @@ run_bootstrap <- isTRUE(getOption("waehlendenwanderung.bootstrap_run", TRUE))
 resume_existing <- isTRUE(getOption("waehlendenwanderung.bootstrap_resume", TRUE))
 model_type <- "nslphom_dual"
 analysis_region <- "ostdeutschland_ohne_berlin"
-cache_version <- "ost_dual_osqp_selected_structure_covariates_v2"
+cache_version <- "ost_dual_osqp_linke_gruene_selected_structure_covariates_v3"
 
 output_dir <- data_dir_model_bootstrap_ost
 iteration_dir <- file.path(output_dir, "iterations")

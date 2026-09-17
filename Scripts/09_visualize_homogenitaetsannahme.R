@@ -71,6 +71,11 @@ if (!all(c("local_matrices_long", "global_matrix") %in% names(nslphom_output))) 
 local_transitions <- nslphom_output$local_matrices_long
 global_matrix <- nslphom_output$global_matrix
 
+assert_final_nslphom_groups(
+  unique(c(local_transitions$from, local_transitions$to)),
+  "Der EHet-Endoutput"
+)
+
 required_transition_cols <- c(
   "agg_schluessel",
   "from",

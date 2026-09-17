@@ -20,8 +20,10 @@ standardize_party <- function(x) {
     CDU = "Union",
     CSU = "Union",
     AFD = "AfD",
-    DIE_LINKE = "Die_Linke",
-    GRUENE = "GRUNE",
+    DIE_LINKE = "LINKE_GRUENE",
+    Die_Linke = "LINKE_GRUENE",
+    GRUENE = "LINKE_GRUENE",
+    GRUNE = "LINKE_GRUENE",
     .default = party
   )
 }
@@ -48,7 +50,7 @@ prepare_vote_year <- function(
     party = standardize_party(party_cols)
   )
 
-  # Stimmen gleicher Partei, insbesondere CDU und CSU als Union, je Einheit addieren.
+  # CDU und CSU sowie DIE LINKE und GRUENE jeweils zu ihrer gemeinsamen Gruppe addieren.
   party_counts <- data %>%
     dplyr::transmute(
       agg_schluessel = .data[[agg_col]],

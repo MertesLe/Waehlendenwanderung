@@ -70,6 +70,7 @@ validate_prepared_nslphom_inputs <- function(inputs, threshold = 0.12) {
   group_names <- setdiff(names(inputs$input2021), "agg_schluessel")
   stopifnot(!any(c("CDU", "CSU") %in% group_names))
   stopifnot("Union" %in% group_names)
+  assert_final_nslphom_groups(group_names, "Die vorbereiteten nslphom-Inputs")
   stopifnot(all(rowSums(inputs$input2021[group_names]) == rowSums(inputs$input2025[group_names])))
   stopifnot(all(abs(inputs$input_checks$differenz_input_zu_referenz) < 1e-8))
   stopifnot(all(abs(inputs$input_checks$differenz_stimmen_zu_waehlenden) < 1e-8))

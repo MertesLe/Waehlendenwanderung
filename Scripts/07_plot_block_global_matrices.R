@@ -4,6 +4,7 @@ library(dplyr)
 library(ggplot2)
 
 source("paths.R", encoding = "UTF-8")
+source("Functions/general_functions.R", encoding = "UTF-8")
 
 charts_dir <- "Charts"
 dir.create(charts_dir, recursive = TRUE, showWarnings = FALSE)
@@ -25,36 +26,24 @@ deutschland_output_path <- getOption(
 party_order <- c(
   "Union",
   "AfD",
-  "BSW",
-  "GRUNE",
-  "Die_Linke",
+  "LINKE_GRUENE",
   "SPD",
-  "FDP",
   "Andere",
   "Nichtwaehler"
 )
 
 party_colours <- c(
   AfD = "#58B9E8",
-  BSW = "#F06D2F",
   Union = "#111111",
-  GRUNE = "#54B82A",
-  Die_Linke = "#C85A9B",
+  LINKE_GRUENE = "#7A9B50",
   SPD = "#D7193F",
-  FDP = "#FFD500",
   Andere = "#6E6E6E",
   Nichtwaehler = "#BDBDBD"
 )
 
 # Interne Gruppennamen in gut lesbare Beschriftungen fuer die Grafik umwandeln.
 label_group <- function(x) {
-  dplyr::recode(
-    x,
-    GRUNE = "GR\u00dcNE",
-    Die_Linke = "DIE LINKE",
-    Nichtwaehler = "Nichtw\u00e4hler",
-    .default = x
-  )
+  label_party_group(x)
 }
 
 # Absolute Stimmenzahlen mit deutschen Tausendertrennzeichen formatieren.
@@ -139,6 +128,11 @@ endoutput_to_matrix <- function(path) {
       to = as.character(.data$to),
       value = as.numeric(.data$estimated_transition_count)
     )
+
+  assert_final_nslphom_groups(
+    unique(c(flows$from, flows$to)),
+    paste0("Die globale Matrix in ", path)
+  )
 
   row_order <- ordered_categories(flows$from)
   col_order <- ordered_categories(flows$to)
