@@ -7,4 +7,5 @@
 Data/
 .DS_Store
 .RDataTmp*
+.codex_tmp_*
 # .positai

@@ -15,14 +15,6 @@ ziel_herkunft <- "Union"
 ziel_partei <- "AfD"
 ziel_kennzahl <- "transition_probability"
 
-struktur_path <- file.path(
-  data_dir_cleaned,
-  "inkar_kovariaten_2023.rds"
-)
-transition_path <- file.path(
-  data_dir_model_nslphom_ost,
-  "transition_matrices_long.rds"
-)
 model_data_path <- file.path(
   data_dir_model_regression_ost,
   "modell_afd_zufluss_daten.rds"
@@ -40,18 +32,54 @@ chart_dir <- file.path(
 dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 dir.create(chart_dir, recursive = TRUE, showWarnings = FALSE)
 
-required_files <- c(struktur_path, transition_path, model_data_path)
+required_files <- model_data_path
 missing_files <- required_files[!file.exists(required_files)]
 
 if (length(missing_files) > 0) {
   stop("Folgende Eingabedateien fehlen: ", paste(missing_files, collapse = ", "))
 }
 
-struktur <- readRDS(struktur_path) %>%
-  filter(is_ostdeutschland_ohne_berlin(.data$agg_schluessel)) %>%
-  arrange(.data$agg_schluessel)
+# Exakt die fuer die Regression erzeugten Rohwerte, z-Werte und Zielwerte einlesen.
+model_data <- readRDS(model_data_path)
+strukturvariablen <- get_structure_covariates(model_data)
+strukturvariablen_z <- paste0(strukturvariablen, "_z")
 
-strukturvariablen <- get_structure_covariates(struktur)
+assert_final_nslphom_groups(
+  unique(c(model_data$from, model_data$to)),
+  "Die Modelldaten der deskriptiven Analyse"
+)
+
+required_model_columns <- c(
+  "agg_schluessel",
+  "from",
+  "to",
+  "transition_probability",
+  "origin_count",
+  strukturvariablen,
+  strukturvariablen_z
+)
+missing_model_columns <- setdiff(required_model_columns, names(model_data))
+
+if (length(missing_model_columns) > 0) {
+  stop(
+    "Folgende Spalten fehlen im Regressionsinput: ",
+    paste(missing_model_columns, collapse = ", ")
+  )
+}
+
+# Die Kovariaten stehen fuer jede Herkunftsgruppe wiederholt im Modellinput.
+# Fuer ihre Verteilungen wird jede Aggregationseinheit genau einmal verwendet.
+struktur_model <- model_data %>%
+  select(
+    .data$agg_schluessel,
+    all_of(strukturvariablen),
+    all_of(strukturvariablen_z)
+  ) %>%
+  distinct()
+
+if (anyDuplicated(struktur_model$agg_schluessel) > 0) {
+  stop("Eine Aggregationseinheit besitzt im Modellinput unterschiedliche Kovariatenwerte.")
+}
 
 # Kurze, lesbare Bezeichnungen fuer Tabellen und Grafiken festlegen.
 variablen_labels <- c(
@@ -74,7 +102,7 @@ if (length(fehlende_labels) > 0) {
 }
 
 # Strukturwerte in ein Longformat fuer Kennzahlen und Grafiken bringen.
-struktur_long <- struktur %>%
+struktur_long <- struktur_model %>%
   select(.data$agg_schluessel, all_of(strukturvariablen)) %>%
   pivot_longer(
     cols = all_of(strukturvariablen),
@@ -109,7 +137,7 @@ struktur_summary <- struktur_long %>%
 
 # Pearson-Korrelationen der Strukturvariablen berechnen.
 korrelation <- stats::cor(
-  struktur[strukturvariablen],
+  struktur_model[strukturvariablen],
   use = "pairwise.complete.obs",
   method = "pearson"
 )
@@ -123,23 +151,11 @@ korrelation_long <- as.data.frame(as.table(korrelation), stringsAsFactors = FALS
     korrelation = as.numeric(.data$Freq)
   )
 
-# Den ausgewaehlten lokalen Uebergang aus dem Ost-nslphom-Ergebnis auswaehlen.
-transitions <- readRDS(transition_path)
-
-assert_final_nslphom_groups(
-  unique(c(transitions$from, transitions$to)),
-  "Die Uebergangsdaten der deskriptiven Analyse"
-)
-
-if (!ziel_kennzahl %in% names(transitions)) {
-  stop("Die Zielkennzahl fehlt im nslphom-Output: ", ziel_kennzahl)
-}
-
-zielvariable <- transitions %>%
+# Den ausgewaehlten lokalen Uebergang direkt aus dem Regressionsinput auswaehlen.
+zielvariable <- model_data %>%
   filter(
     .data$from == .env$ziel_herkunft,
-    .data$to == .env$ziel_partei,
-    is_ostdeutschland_ohne_berlin(.data$agg_schluessel)
+    .data$to == .env$ziel_partei
   ) %>%
   transmute(
     agg_schluessel,
@@ -160,6 +176,26 @@ if (nrow(zielvariable) == 0) {
 if (anyDuplicated(zielvariable$agg_schluessel) > 0) {
   stop("Der ausgewaehlte Uebergang ist nicht eindeutig je agg_schluessel.")
 }
+
+# Die Verteilung aller im Modell untersuchten Uebergangswahrscheinlichkeiten zur AfD beschreiben.
+zielverteilungen <- model_data %>%
+  filter(.data$to == .env$ziel_partei) %>%
+  mutate(
+    herkunft = label_party_group(.data$from)
+  )
+
+zielvariable_summary <- zielverteilungen %>%
+  group_by(.data$from, .data$herkunft) %>%
+  summarise(
+    n = sum(!is.na(.data$transition_probability)),
+    minimum = min(.data$transition_probability, na.rm = TRUE),
+    median = median(.data$transition_probability, na.rm = TRUE),
+    maximum = max(.data$transition_probability, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  arrange(.data$from)
+
+print(zielvariable_summary)
 
 # Strukturwerte und nslphom-Zielwert ueber denselben agg_schluessel verbinden.
 scatter_data <- struktur_long %>%
@@ -188,13 +224,14 @@ deskriptiv_output <- list(
     ziel_herkunft = ziel_herkunft,
     ziel_partei = ziel_partei,
     ziel_kennzahl = ziel_kennzahl,
-    n_agg = nrow(struktur),
+    n_agg = nrow(struktur_model),
     strukturvariablen = paste(strukturvariablen, collapse = ", ")
   ),
   struktur_summary = struktur_summary,
   korrelation = korrelation,
   korrelation_long = korrelation_long,
-  ziel_korrelationen = ziel_korrelationen
+  ziel_korrelationen = ziel_korrelationen,
+  zielvariable_summary = zielvariable_summary
 )
 
 saveRDS(
@@ -237,29 +274,9 @@ ggsave(
   dpi = 300
 )
 
-# Die im Regressionsmodell verwendeten z-standardisierten Kovariaten direkt einlesen.
-model_data <- readRDS(model_data_path)
-strukturvariablen_z <- paste0(strukturvariablen, "_z")
-fehlende_z_variablen <- setdiff(strukturvariablen_z, names(model_data))
-
-if (length(fehlende_z_variablen) > 0) {
-  stop(
-    "Folgende z-standardisierte Kovariaten fehlen im Regressionsinput: ",
-    paste(fehlende_z_variablen, collapse = ", ")
-  )
-}
-
-# Jede Aggregationseinheit steht wegen der Herkunftsmodelle mehrfach in model_data.
-# Fuer die Verteilungen wird sie genau einmal mit ihren Modellkovariaten verwendet.
-struktur_z <- model_data %>%
+# Die bereits im Regressionsinput gespeicherten z-Werte ins Longformat bringen.
+struktur_z_long <- struktur_model %>%
   select(.data$agg_schluessel, all_of(strukturvariablen_z)) %>%
-  distinct()
-
-if (anyDuplicated(struktur_z$agg_schluessel) > 0) {
-  stop("Eine Aggregationseinheit besitzt unterschiedliche z-standardisierte Kovariaten.")
-}
-
-struktur_z_long <- struktur_z %>%
   pivot_longer(
     cols = all_of(strukturvariablen_z),
     names_to = "variable_z",
@@ -312,11 +329,56 @@ ggsave(
   dpi = 300
 )
 
-# Einen gemeinsamen standardisierten Boxplot zum Erkennen von Ausreissern erzeugen.
-boxplot_data <- struktur_long %>%
-  group_by(.data$variable) %>%
-  mutate(wert_standardisiert = as.numeric(scale(.data$wert))) %>%
-  ungroup()
+# Die AfD-Uebergangswahrscheinlichkeiten je Herkunft mit ihren Kennzahlen darstellen.
+zielvariable_labels <- zielvariable_summary %>%
+  transmute(
+    herkunft,
+    label = sprintf(
+      "Minimum: %.1f %%\nMedian: %.1f %%\nMaximum: %.1f %%",
+      100 * .data$minimum,
+      100 * .data$median,
+      100 * .data$maximum
+    )
+  )
+
+plot_zielvariable <- ggplot(
+  zielverteilungen,
+  aes(x = .data$transition_probability)
+) +
+  geom_histogram(bins = 30, fill = "#4472C4", color = "white") +
+  geom_text(
+    data = zielvariable_labels,
+    aes(x = Inf, y = Inf, label = .data$label),
+    inherit.aes = FALSE,
+    hjust = 1.05,
+    vjust = 1.15,
+    size = 3.2
+  ) +
+  facet_wrap(vars(.data$herkunft), scales = "free_y", ncol = 2) +
+  scale_x_continuous(labels = scales::label_percent(accuracy = 1)) +
+  labs(
+    title = "Verteilungen der geschätzten Übergangswahrscheinlichkeiten zur AfD",
+    subtitle = "Im Regressionsmodell verwendete Oststichprobe ohne Berlin",
+    x = "Übergangswahrscheinlichkeit zur AfD",
+    y = "Anzahl der Aggregationseinheiten"
+  ) +
+  theme_minimal() +
+  theme(
+    panel.spacing = grid::unit(1, "lines"),
+    strip.text = element_text(face = "bold"),
+    strip.background = element_rect(fill = "grey95", color = NA)
+  )
+
+ggsave(
+  file.path(chart_dir, "afd_uebergangswahrscheinlichkeiten_verteilungen.png"),
+  plot_zielvariable,
+  width = 12,
+  height = 9,
+  dpi = 300
+)
+
+# Einen gemeinsamen Boxplot der bereits im Modell verwendeten z-Werte erzeugen.
+boxplot_data <- struktur_z_long
 
 plot_boxplots <- ggplot(
   boxplot_data,
