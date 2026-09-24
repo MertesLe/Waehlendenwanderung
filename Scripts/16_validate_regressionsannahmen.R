@@ -326,9 +326,7 @@ plot_residual_fitted <- ggplot(
   geom_smooth(method = "loess", formula = y ~ x, se = FALSE, color = "#B22222") +
   facet_wrap(vars(.data$from_label), scales = "free_x") +
   labs(
-    title = "Standardisierte Residuen gegen Vorhersagen",
-    subtitle = "Gewichtete lineare Modelle der AfD-Zufluesse",
-    x = "Vorhergesagte Uebergangswahrscheinlichkeit",
+    x = "Vorhergesagte \u00dcbergangswahrscheinlichkeit",
     y = "Standardisiertes Residuum"
   ) +
   theme_minimal() +
@@ -348,8 +346,6 @@ plot_qq <- ggplot(diagnostic_rows, aes(sample = .data$standardized_residual)) +
   stat_qq_line(color = "#B22222", linewidth = 0.7) +
   facet_wrap(vars(.data$from_label), scales = "free") +
   labs(
-    title = "Q-Q-Plots der standardisierten Residuen",
-    subtitle = "Abweichungen an den Raendern sind bei grossen Stichproben besonders sichtbar",
     x = "Theoretische Quantile",
     y = "Beobachtete Quantile"
   ) +
@@ -372,9 +368,7 @@ plot_scale_location <- diagnostic_rows %>%
   geom_smooth(method = "loess", formula = y ~ x, se = FALSE, color = "#B22222") +
   facet_wrap(vars(.data$from_label), scales = "free_x") +
   labs(
-    title = "Scale-Location-Plot",
-    subtitle = "Eine etwa horizontale rote Linie spricht fuer konstante Residuenstreuung",
-    x = "Vorhergesagte Uebergangswahrscheinlichkeit",
+    x = "Vorhergesagte \u00dcbergangswahrscheinlichkeit",
     y = "Wurzel des absoluten standardisierten Residuums"
   ) +
   theme_minimal() +
@@ -402,8 +396,6 @@ plot_influence <- ggplot(
   facet_wrap(vars(.data$from_label), scales = "free_x") +
   scale_size_continuous(range = c(0.5, 5)) +
   labs(
-    title = "Einflussdiagnostik",
-    subtitle = "Punktgroesse entspricht der Cook-Distanz",
     x = "Leverage",
     y = "Studentisiertes Residuum",
     size = "Cook-Distanz"
@@ -446,8 +438,6 @@ for (origin in origin_groups) {
     ) +
     facet_wrap(vars(.data$variable_label), scales = "free", ncol = 2) +
     labs(
-      title = paste("Partielle Residuen fuer", label_party_group(origin), "-> AfD"),
-      subtitle = "Rot: lokale Glaettung; grau: angenommener linearer Zusammenhang",
       x = "Standardisierte Strukturvariable",
       y = "Partielles Residuum"
     ) +

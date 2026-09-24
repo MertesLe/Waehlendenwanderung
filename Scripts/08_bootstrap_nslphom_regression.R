@@ -306,8 +306,8 @@ if (!run_bootstrap) {
     ggplot2::ggsave(
       filename = file.path(chart_dir, "bootstrap_beta_verteilungen_ostdeutschland.pdf"),
       plot = beta_plot,
-      width = 14,
-      height = 9,
+      width = 16,
+      height = 10,
       device = grDevices::cairo_pdf
     )
   }

@@ -399,6 +399,7 @@ result_output <- list(
   result_summary = result_summary,
   fit_diagnostics = fit_diagnostics,
   margin_checks = margin_checks,
+  local_comparison = local_comparison,
   global_comparison = global_comparison,
   largest_local_differences = largest_local_differences,
   ehet_comparison = ehet_comparison
@@ -418,10 +419,8 @@ runtime_plot <- ggplot(
   geom_point(position = position_jitter(width = 0.05), size = 2) +
   scale_fill_manual(values = c(osqp_dual = "#4472C4", lphom_dual = "#B22222")) +
   labs(
-    title = "Laufzeitvergleich der beiden nslphom_dual-Varianten",
-    subtitle = paste(nrow(origin_counts), "Aggregationseinheiten und", n_repetitions, "Wiederholungen"),
     x = NULL,
-    y = "Laufzeit in Sekunden"
+    y = "Laufzeit (Sekunden)"
   ) +
   theme_minimal() +
   theme(legend.position = "none")
@@ -444,10 +443,8 @@ local_plot <- ggplot(
   scale_x_continuous(labels = scales::label_percent()) +
   scale_y_continuous(labels = scales::label_percent()) +
   labs(
-    title = "Vergleich der lokalen Uebergangswahrscheinlichkeiten",
-    subtitle = "Rote Linie: identische Ergebnisse",
-    x = "lphom::nslphom_dual mit lp_solve",
-    y = "nslphom_dual_osqp"
+    x = "Lokale \u00dcbergangswahrscheinlichkeit: lphom::nslphom_dual",
+    y = "Lokale \u00dcbergangswahrscheinlichkeit: nslphom_dual_osqp"
   ) +
   theme_minimal()
 

@@ -526,17 +526,10 @@ iter_plot <- ggplot(plot_data, aes(x = iter_max, y = HETe, color = matrix_type, 
     )
   ) +
   labs(
-    title = "nslphom_dual: HETe nach Iteration und iter_max",
-    subtitle = paste0(
-      "Run: ",
-      run_label,
-      "; Auswahlkriterium: ",
-      plot_matrix_type
-    ),
-    x = "iter_max / Iteration",
+    x = "Maximale Iterationszahl",
     y = "HETe",
-    color = "Matrix",
-    linetype = "HETe-Verlauf"
+    color = "Kombination",
+    linetype = "HETe-Wert"
   ) +
   theme_minimal()
 
@@ -577,12 +570,10 @@ direction_plot <- ggplot(
     )
   ) +
   labs(
-    title = "nslphom_dual: HETe der beiden Schaetzrichtungen",
-    subtitle = paste0("Run: ", run_label),
-    x = "iter_max / Iteration",
+    x = "Maximale Iterationszahl",
     y = "HETe",
     color = "Richtung",
-    linetype = "HETe-Verlauf"
+    linetype = "HETe-Wert"
   ) +
   theme_minimal()
 

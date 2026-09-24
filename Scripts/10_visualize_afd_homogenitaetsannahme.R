@@ -288,20 +288,10 @@ map_plot <- ggplot() +
     limits = c(-scale_limit, scale_limit),
     oob = squish,
     labels = percent_format(accuracy = 1),
-    name = "AfD-Abweichung"
+    name = "Relative\nAfD-Abweichung"
   ) +
   coord_sf(datum = NA) +
-  labs(
-    title = "AfD-Abweichung von der homogenen globalen Matrix",
-    subtitle = "Rot: mehr AfD-Zielstimmen als homogen erwartet; Blau: weniger. Berlin/Hamburg sind als Gesamtstadt aggregiert.",
-    caption = "AfD-Abweichung = EHet_AfD / Wahlberechtigte. Farbskala am 99%-Quantil der absoluten Abweichung gekappt."
-  ) +
-  theme_void() +
-  theme(
-    plot.title = element_text(face = "bold"),
-    plot.subtitle = element_text(color = "grey35"),
-    plot.caption = element_text(color = "grey45", hjust = 0)
-  )
+  theme_void()
 
 ggsave(
   chart_file,

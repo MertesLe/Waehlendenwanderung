@@ -46,17 +46,6 @@ label_group <- function(x) {
   label_party_group(x)
 }
 
-# Absolute Stimmenzahlen mit deutschen Tausendertrennzeichen formatieren.
-format_count <- function(x) {
-  format(
-    round(x),
-    big.mark = ".",
-    decimal.mark = ",",
-    scientific = FALSE,
-    trim = TRUE
-  )
-}
-
 # Vorhandene Kategorien entsprechend der festgelegten Parteienreihenfolge sortieren.
 ordered_categories <- function(categories) {
   categories <- unique(categories)
@@ -153,21 +142,6 @@ endoutput_to_matrix <- function(path) {
 
       out
     }
-}
-
-# Anzahl der Aggregationseinheiten aus einem ungeblockten Endoutput lesen.
-endoutput_n_units <- function(path) {
-  output <- readRDS(path)
-
-  if ("settings" %in% names(output) && "n_units" %in% names(output$settings)) {
-    return(as.integer(output$settings$n_units[[1]]))
-  }
-
-  if ("EHet_ids" %in% names(output)) {
-    return(length(output$EHet_ids))
-  }
-
-  NA_integer_
 }
 
 # Matrixzellen in eine Tabelle von Flussbreiten zwischen Herkunft und Ziel umformen.
@@ -272,11 +246,7 @@ make_ribbon_data <- function(positioned_flows, n_points = 80L) {
 make_block_plot <- function(
   block_id,
   fit = NULL,
-  checks = NULL,
-  matrix = NULL,
-  title = NULL,
-  subtitle_prefix = "Globale blockweise nslphom-Matrix",
-  n_units_override = NA_integer_
+  matrix = NULL
 ) {
   if (is.null(matrix)) {
     matrix <- get_matrix(fit)
@@ -330,28 +300,6 @@ make_block_plot <- function(
     plot_colours <- c(plot_colours, extra_colours)
   }
 
-  n_units <- n_units_override
-
-  if (is.na(n_units) && !is.null(checks)) {
-    block_check <- checks %>% filter(nslphom_block == block_id)
-
-    if (nrow(block_check) > 0 && "n_units" %in% names(block_check)) {
-      n_units <- block_check$n_units[[1]]
-    }
-  }
-
-  if (is.null(title)) {
-    title <- paste0("W\u00e4hlerwanderung 2021 -> 2025: ", block_id)
-  }
-
-  subtitle <- paste0(
-    subtitle_prefix,
-    ", ",
-    ifelse(is.na(n_units), "", paste0("n = ", n_units, " Einheiten, ")),
-    "gesch\u00e4tzte \u00dcbergangsmasse = ",
-    format_count(total_value)
-  )
-
   ggplot() +
     geom_polygon(
       data = ribbon_data,
@@ -403,16 +351,8 @@ make_block_plot <- function(
       ylim = c(0, stack_height * 1.09),
       clip = "off"
     ) +
-    labs(
-      title = title,
-      subtitle = subtitle,
-      caption = "Breite der Baender = geschaetzte absolute Uebergangsmasse. Die 2025-Inputs wurden je Einheit auf die 2021-Gesamtmasse skaliert."
-    ) +
     theme_void(base_size = 11) +
     theme(
-      plot.title = element_text(face = "bold", colour = "#203A8F", size = 15),
-      plot.subtitle = element_text(colour = "#555555", size = 10, margin = margin(t = 3, b = 10)),
-      plot.caption = element_text(colour = "#777777", size = 8, hjust = 0),
       plot.margin = margin(12, 72, 12, 72)
     )
 }
@@ -424,10 +364,7 @@ message("Erzeuge globale Matrix fuer Ostdeutschland ohne Berlin.")
 ost_matrix <- endoutput_to_matrix(ost_output_path)
 ost_plot <- make_block_plot(
   block_id = "Ostdeutschland ohne Berlin",
-  matrix = ost_matrix,
-  title = "W\u00e4hlerwanderung 2021 -> 2025: Ostdeutschland ohne Berlin",
-  subtitle_prefix = "Ungeblockte nslphom_dual-OSQP-Schaetzung",
-  n_units_override = endoutput_n_units(ost_output_path)
+  matrix = ost_matrix
 )
 
 ggplot2::ggsave(
@@ -445,10 +382,7 @@ message("Erzeuge globale Matrix fuer Deutschland.")
 deutschland_matrix <- endoutput_to_matrix(deutschland_output_path)
 deutschland_plot <- make_block_plot(
   block_id = "Deutschland",
-  matrix = deutschland_matrix,
-  title = "W\u00e4hlerwanderung 2021 -> 2025: Deutschland",
-  subtitle_prefix = "Ungeblockte nslphom_dual-OSQP-Schaetzung",
-  n_units_override = endoutput_n_units(deutschland_output_path)
+  matrix = deutschland_matrix
 )
 
 ggplot2::ggsave(

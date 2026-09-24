@@ -168,22 +168,12 @@ tomography_plot <- ggplot(tomography) +
   scale_y_continuous(labels = percent_format(accuracy = 1)) +
   coord_equal(xlim = c(0, 1), ylim = c(0, 1)) +
   labs(
-    title = "Tomography Plot der ostdeutschen Aggregationseinheiten",
-    subtitle = paste0(
-      format(nrow(tomography), big.mark = ".", decimal.mark = ","),
-      " zulaessige Linien aus den beobachteten Wahlraendern"
-    ),
-    x = "b[i] = P(AfD 2025 | Union 2021)",
-    y = "w[i] = P(AfD 2025 | uebrige Gruppen 2021)",
-    caption = paste(
-      "Zur Illustration auf ein 2x2-Problem reduziert.",
-      "Die eigentliche Schaetzung verwendet vollstaendige 6x6-Uebergangstabellen."
-    )
+    x = "P(AfD 2025 | Union 2021)",
+    y = "P(AfD 2025 | \u00fcbrige Gruppen 2021)"
   ) +
   theme_minimal(base_size = 12) +
   theme(
-    panel.grid.minor = element_blank(),
-    plot.title.position = "plot"
+    panel.grid.minor = element_blank()
   )
 
 ggsave(
@@ -248,22 +238,12 @@ principle_plot <- ggplot(selected_units) +
   scale_y_continuous(labels = percent_format(accuracy = 1)) +
   coord_equal(xlim = c(0, 1), ylim = c(0, 1)) +
   labs(
-    title = "Schematische Projektion des nslphom-Prinzips",
-    subtitle = paste0(
-      "Graue Linien: zulaessige Loesungen; blaue Punkte: lokale Schaetzungen\n",
-      "Rote Verbindungen: Abstand zur globalen Referenz"
-    ),
-    x = "b[i] = P(AfD 2025 | Union 2021)",
-    y = "w[i] = P(AfD 2025 | uebrige Gruppen 2021)",
-    caption = paste0(
-      "Didaktische Auswahl von ", nrow(selected_units), " Einheiten. ",
-      "Die zweidimensionale Projektion bildet nicht die vollstaendige Optimierung ab."
-    )
+    x = "P(AfD 2025 | Union 2021)",
+    y = "P(AfD 2025 | \u00fcbrige Gruppen 2021)"
   ) +
   theme_minimal(base_size = 12) +
   theme(
-    panel.grid.minor = element_blank(),
-    plot.title.position = "plot"
+    panel.grid.minor = element_blank()
   )
 
 ggsave(

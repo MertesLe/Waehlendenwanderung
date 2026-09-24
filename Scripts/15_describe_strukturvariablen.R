@@ -254,9 +254,7 @@ plot_verteilungen <- ggplot(struktur_long, aes(x = .data$wert)) +
     ncol = 2
   ) +
   labs(
-    title = "Verteilungen der Strukturvariablen",
-    subtitle = "Ostdeutschland ohne Berlin",
-    x = "Wert",
+    x = "Auspr\u00e4gung",
     y = "Dichte"
   ) +
   theme_minimal() +
@@ -309,8 +307,6 @@ plot_verteilungen_z <- ggplot(
     ncol = 2
   ) +
   labs(
-    title = "Verteilungen der z-standardisierten Strukturvariablen",
-    subtitle = "Im Regressionsmodell verwendete Oststichprobe ohne Berlin",
     x = "Z-standardisierter Wert",
     y = "Dichte"
   ) +
@@ -357,9 +353,7 @@ plot_zielvariable <- ggplot(
   facet_wrap(vars(.data$herkunft), scales = "free_y", ncol = 2) +
   scale_x_continuous(labels = scales::label_percent(accuracy = 1)) +
   labs(
-    title = "Verteilungen der geschätzten Übergangswahrscheinlichkeiten zur AfD",
-    subtitle = "Im Regressionsmodell verwendete Oststichprobe ohne Berlin",
-    x = "Übergangswahrscheinlichkeit zur AfD",
+    x = "\u00dcbergangswahrscheinlichkeit zur AfD",
     y = "Anzahl der Aggregationseinheiten"
   ) +
   theme_minimal() +
@@ -387,8 +381,6 @@ plot_boxplots <- ggplot(
   geom_boxplot(fill = "#9DC3E6", outlier.alpha = 0.35) +
   geom_vline(xintercept = 0, color = "grey45", linewidth = 0.3) +
   labs(
-    title = "Standardisierte Strukturvariablen",
-    subtitle = "Boxplots fuer Ostdeutschland ohne Berlin",
     x = "Standardisierter Wert",
     y = NULL
   ) +
@@ -423,8 +415,6 @@ plot_korrelation <- ggplot(
   ) +
   coord_equal() +
   labs(
-    title = "Korrelation der Strukturvariablen",
-    subtitle = "Ostdeutschland ohne Berlin",
     x = NULL,
     y = NULL
   ) +
@@ -462,15 +452,11 @@ plot_scatter <- ggplot(
   ) +
   scale_y_continuous(labels = scales::label_percent(accuracy = 1)) +
   labs(
-    title = paste(
-      "Lokaler Uebergang",
-      label_party_group(ziel_herkunft),
-      "->",
-      label_party_group(ziel_partei)
-    ),
-    subtitle = "Punkte ungewichtet, Regressionslinien nach Herkunftsstaerken gewichtet",
     x = "Strukturvariable",
-    y = "Geschaetzte Uebergangswahrscheinlichkeit"
+    y = paste0(
+      "P(", label_party_group(ziel_partei), " 2025 | ",
+      label_party_group(ziel_herkunft), " 2021)"
+    )
   ) +
   theme_minimal() +
   theme(

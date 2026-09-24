@@ -176,10 +176,8 @@ hist_plot <- ggplot(local_residual_metrics, aes(x = local_residual_index)) +
   geom_histogram(bins = 60, fill = "grey55", color = "white") +
   scale_x_continuous(labels = percent_format(accuracy = 0.000001)) +
   labs(
-    title = "Lokaler Matrix-Residual",
-    subtitle = "Abweichung zwischen beobachteten Zielstimmen und lokal geschaetzter Matrix",
-    x = "0.5 * Summe absoluter Zielabweichungen / Wahlberechtigte",
-    y = "Anzahl Aggregationseinheiten"
+    x = "Relativer Rekonstruktionsfehler",
+    y = "Anzahl der Aggregationseinheiten"
   ) +
   theme_minimal()
 
@@ -347,20 +345,10 @@ map_plot <- ggplot() +
     limits = c(0, scale_limit),
     oob = squish,
     labels = percent_format(accuracy = 0.000001),
-    name = "Residual relativ"
+    name = "Relativer\nRekonstruktionsfehler"
   ) +
   coord_sf(datum = NA) +
-  labs(
-    title = "Residual der lokalen Uebergangsmatrizen",
-    subtitle = "Vergleich beobachteter Zielstimmen mit den durch lokale Matrizen reproduzierten Zielstimmen",
-    caption = "Index = 0.5 * Summe absoluter lokaler Zielabweichungen / Wahlberechtigte. Berlin/Hamburg sind als Gesamtstadt aggregiert."
-  ) +
-  theme_void() +
-  theme(
-    plot.title = element_text(face = "bold"),
-    plot.subtitle = element_text(color = "grey35"),
-    plot.caption = element_text(color = "grey45", hjust = 0)
-  )
+  theme_void()
 
 ggsave(
   map_file,

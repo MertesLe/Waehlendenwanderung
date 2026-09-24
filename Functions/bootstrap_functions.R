@@ -281,14 +281,9 @@ plot_bootstrap_beta_distributions <- function(beta_draws) {
       .data$model_target == "origin_to_AfD_probability"
     ) %>%
     dplyr::mutate(
-      model_label = dplyr::recode(
-        .data$model_target,
-        origin_to_AfD_probability = "AfD-Zufluss",
-        .default = .data$model_target
-      ),
       variable = sub("_2023_z$", "", .data$term),
       from_label = label_party_group(.data$from),
-      row_label = paste(.data$variable, .data$model_label, sep = " - "),
+      row_label = .data$variable,
       row_label = factor(.data$row_label, levels = unique(.data$row_label))
     )
 
@@ -296,7 +291,8 @@ plot_bootstrap_beta_distributions <- function(beta_draws) {
   panel_backgrounds <- plot_data %>%
     dplyr::group_by(
       .data$row_label,
-      .data$from
+      .data$from,
+      .data$from_label
     ) %>%
     dplyr::summarise(
       ci_lower = stats::quantile(.data$estimate, 0.025, na.rm = TRUE),
@@ -316,8 +312,7 @@ plot_bootstrap_beta_distributions <- function(beta_draws) {
         ymax = Inf,
         fill = .data$significant_95
       ),
-      inherit.aes = FALSE,
-      alpha = 0.35
+      inherit.aes = FALSE
     ) +
     ggplot2::geom_vline(xintercept = 0, color = "grey35", linewidth = 0.3) +
     ggplot2::geom_density(fill = "grey65", color = "grey30", alpha = 0.7) +
@@ -330,11 +325,15 @@ plot_bootstrap_beta_distributions <- function(beta_draws) {
     ggplot2::scale_fill_manual(
       values = c(`FALSE` = "white", `TRUE` = "#B7E4C7"),
       labels = c(`FALSE` = "Nein", `TRUE` = "Ja"),
-      name = "95%-Intervall\nschliesst 0 aus"
+      name = "95%-Intervall\nschlie\u00dft 0 aus"
+    ) +
+    ggplot2::scale_x_continuous(
+      breaks = scales::breaks_pretty(n = 3),
+      labels = scales::label_number(decimal.mark = ","),
+      guide = ggplot2::guide_axis(check.overlap = TRUE)
     ) +
     ggplot2::labs(
-      title = "Bootstrap-Verteilungen der AfD-Zuflusskoeffizienten",
-      x = "Geschaetzter Beta-Koeffizient",
+      x = "Gesch\u00e4tzter Beta-Koeffizient",
       y = NULL
     ) +
     ggplot2::theme_minimal() +
@@ -345,11 +344,17 @@ plot_bootstrap_beta_distributions <- function(beta_draws) {
       panel.grid.minor.y = ggplot2::element_blank(),
       strip.placement = "outside",
       strip.background = ggplot2::element_blank(),
+      axis.title.x = ggplot2::element_text(size = 14),
+      axis.text.x = ggplot2::element_text(size = 11),
+      strip.text.x = ggplot2::element_text(size = 12),
       strip.text.y.left = ggplot2::element_text(
         angle = 0,
         hjust = 1,
-        size = 7
-      )
+        size = 10
+      ),
+      legend.title = ggplot2::element_text(size = 12),
+      legend.text = ggplot2::element_text(size = 11),
+      legend.key = ggplot2::element_rect(color = "grey70")
     )
 }
 

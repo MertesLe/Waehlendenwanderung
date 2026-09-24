@@ -358,10 +358,8 @@ hist_plot <- ggplot(ehet_unit_metrics, aes(x = ehet_index)) +
   geom_histogram(bins = 60, fill = "grey55", color = "white") +
   scale_x_continuous(labels = percent_format(accuracy = 1)) +
   labs(
-    title = "Heterogenitaet der lokalen Uebergangsmatrizen",
-    subtitle = "0.5 * Summe absoluter Zellabweichungen von der globalen Matrix, relativ zu Wahlberechtigten",
-    x = "Heterogenitaetsindex",
-    y = "Anzahl agg.schluessel"
+    x = "Relativer Heterogenit\u00e4tsindex",
+    y = "Anzahl der Aggregationseinheiten"
   ) +
   theme_minimal()
 
@@ -370,9 +368,8 @@ size_plot <- ggplot(ehet_unit_metrics, aes(x = wahlberechtigte, y = ehet_index))
   scale_x_log10(labels = label_number(big.mark = ".", decimal.mark = ",")) +
   scale_y_continuous(labels = percent_format(accuracy = 1)) +
   labs(
-    title = "Heterogenitaet nach Groesse der Analyseeinheit",
-    x = "Wahlberechtigte, log-Skala",
-    y = "Heterogenitaetsindex"
+    x = "Wahlberechtigte (logarithmische Skala)",
+    y = "Relativer Heterogenit\u00e4tsindex"
   ) +
   theme_minimal()
 
@@ -383,9 +380,8 @@ top_plot <- ehet_unit_metrics %>%
   geom_col(fill = "grey40") +
   scale_x_continuous(labels = percent_format(accuracy = 1)) +
   labs(
-    title = "Top-25 Einheiten nach Heterogenitaetsindex",
-    x = "Heterogenitaetsindex",
-    y = "agg.schluessel"
+    x = "Relativer Heterogenit\u00e4tsindex",
+    y = "Aggregationsschl\u00fcssel"
   ) +
   theme_minimal()
 
@@ -395,10 +391,8 @@ region_plot <- ehet_unit_metrics %>%
   geom_boxplot(outlier.alpha = 0.25, show.legend = FALSE) +
   scale_y_continuous(labels = percent_format(accuracy = 1)) +
   labs(
-    title = "Heterogenitaetsindex im Ost-West-Vergleich",
-    subtitle = "Deutschlandfit; Berlin separat ausgeschlossen",
     x = NULL,
-    y = "Heterogenitaetsindex"
+    y = "Relativer Heterogenit\u00e4tsindex"
   ) +
   theme_minimal()
 
@@ -591,20 +585,10 @@ if (!save_map_plot) {
     scale_fill_gradientn(
       colors = c("#f7fbff", "#9ecae1", "#3182bd", "#08519c"),
       labels = percent_format(accuracy = 1),
-      name = "EHet relativ"
+      name = "Relativer\nHeterogenit\u00e4tsindex"
     ) +
     coord_sf(datum = NA) +
-    labs(
-      title = "Heterogenitaet der lokalen Uebergangsmatrizen",
-      subtitle = "Berlin/Hamburg sind als Gesamtstadt aggregiert. Grau: keine passende kleinraeumige Gemeindegeometrie im VG250-Stand 01.01.2025",
-      caption = "Index = 0.5 * Summe absoluter Zellabweichungen von der globalen Matrix / Wahlberechtigte"
-    ) +
-    theme_void() +
-    theme(
-      plot.title = element_text(face = "bold"),
-      plot.subtitle = element_text(color = "grey35"),
-      plot.caption = element_text(color = "grey45", hjust = 0)
-    )
+    theme_void()
 
   ggsave(
     chart_file("deutschlandkarte_agg.png"),

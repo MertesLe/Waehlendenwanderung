@@ -22,18 +22,18 @@ uebergaenge <- tibble::tribble(
   "Union",  "AfD", "transition_probability"
 )
 
-# Lesbare Kartentitel fuer bekannte Strukturvariablen festlegen.
+# Lesbare Legendenbeschriftungen fuer bekannte Strukturvariablen festlegen.
 struktur_labels <- c(
-  distanz_staatsgrenze_km_2023 = "Entfernung zur auslaendischen Staatsgrenze (km)",
+  distanz_staatsgrenze_km_2023 = "Entfernung zur ausl\u00e4ndischen Staatsgrenze (km)",
   einwohnerdichte_2023 = "Einwohnerdichte (Einwohner je km2)",
-  supermarktEntfernung_2023 = "Entfernung zum naechsten Supermarkt (m)",
-  alterMean_2023 = "Durchschnittsalter der Bevoelkerung (Jahre)",
+  supermarktEntfernung_2023 = "Entfernung zum n\u00e4chsten Supermarkt (m)",
+  alterMean_2023 = "Durchschnittsalter der Bev\u00f6lkerung (Jahre)",
   wanderungssaldo_2023 = "Wanderungssaldo je 1.000 Einwohner",
-  pendler50_2023 = "Beschaeftigte mit mindestens 50 km Arbeitsweg (Prozent)",
+  pendler50_2023 = "Besch\u00e4ftigte mit mindestens 50 km Arbeitsweg (Prozent)",
   steuereinnahmen_2023 = "Steuereinnahmen je Einwohner (Euro)",
-  haushaltsgroesseMean_2023 = "Durchschnittliche Haushaltsgroesse (Personen)",
+  haushaltsgroesseMean_2023 = "Durchschnittliche Haushaltsgr\u00f6\u00dfe (Personen)",
   anteilHaushalteNiedrigesEinkommen_2023 = "Haushalte mit niedrigem Einkommen (Prozent)",
-  arbeitslosenanteilErwerbsfaehige_2023 = "Arbeitslose an der Bevoelkerung von 15 bis unter 65 (Prozent)"
+  arbeitslosenanteilErwerbsfaehige_2023 = "Arbeitslose an der Bev\u00f6lkerung von 15 bis unter 65 (Prozent)"
 )
 
 struktur_path <- file.path(
@@ -173,7 +173,7 @@ safe_filename <- function(x) {
 }
 
 # Eine Ostdeutschlandkarte fuer einen numerischen Wert speichern.
-save_map <- function(map_data, title, legend_title, filename, probability = FALSE) {
+save_map <- function(map_data, legend_title, filename, probability = FALSE) {
   legend_labels <- if (probability) {
     scales::label_percent(accuracy = 0.1)
   } else {
@@ -200,15 +200,8 @@ save_map <- function(map_data, title, legend_title, filename, probability = FALS
       name = legend_title
     ) +
     coord_sf(datum = NA, expand = FALSE) +
-    labs(
-      title = title,
-      subtitle = "Brandenburg, Mecklenburg-Vorpommern, Sachsen, Sachsen-Anhalt und Thueringen",
-      caption = "Grau: kein Wert vorhanden; Geometriestand: 01.01.2025"
-    ) +
     theme_void() +
     theme(
-      plot.title = element_text(face = "bold", size = 14),
-      plot.subtitle = element_text(color = "grey35"),
       legend.position = "right"
     )
 
@@ -238,7 +231,6 @@ for (variable in strukturvariablen) {
 
   save_map(
     map_data = build_agg_map(values),
-    title = variable_label,
     legend_title = variable_label,
     filename = paste0("struktur_", safe_filename(variable), ".png")
   )
@@ -269,14 +261,19 @@ for (i in seq_len(nrow(uebergaenge))) {
 
   is_probability <- selection$kennzahl == "transition_probability"
   metric_label <- if (is_probability) {
-    "Uebergangswahrscheinlichkeit"
+    paste0(
+      "P(", label_party_group(selection$to), " 2025 | ",
+      label_party_group(selection$from), " 2021)"
+    )
   } else {
-    "Geschaetzte Uebergaenge"
+    paste(
+      "Gesch\u00e4tzte \u00dcberg\u00e4nge:",
+      label_party_group(selection$from), "->", label_party_group(selection$to)
+    )
   }
 
   save_map(
     map_data = build_agg_map(values),
-    title = paste(label_party_group(selection$from), "zu", label_party_group(selection$to)),
     legend_title = metric_label,
     filename = paste0(
       "uebergang_",

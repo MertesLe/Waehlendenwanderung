@@ -347,9 +347,8 @@ plot_nslphom_input_diagnostics <- function(diagnostics) {
       ggplot2::geom_histogram(bins = 80, fill = "grey50", color = "white") +
       ggplot2::facet_wrap(~Jahr, scales = "free_y") +
       ggplot2::labs(
-        title = "Wahlberechtigte pro agg.schluessel",
-        x = "Wahlberechtigte / Input-Gesamtmasse",
-        y = "Anzahl agg.schluessel"
+        x = "Wahlberechtigte je Aggregationseinheit",
+        y = "Anzahl der Aggregationseinheiten"
       ) +
       ggplot2::theme_minimal()
   )
@@ -365,10 +364,8 @@ plot_nslphom_input_diagnostics <- function(diagnostics) {
       ggplot2::geom_histogram(bins = 80, fill = "grey50", color = "white") +
       ggplot2::facet_wrap(~Jahr, scales = "free_y") +
       ggplot2::labs(
-        title = "Wahlberechtigte pro agg.schluessel, untere 95 %",
-        subtitle = paste("Rechter Rand abgeschnitten bei", round(cutoff), "Wahlberechtigten"),
-        x = "Wahlberechtigte / Input-Gesamtmasse",
-        y = "Anzahl agg.schluessel"
+        x = "Wahlberechtigte je Aggregationseinheit (bis zum 95-%-Quantil)",
+        y = "Anzahl der Aggregationseinheiten"
       ) +
       ggplot2::theme_minimal()
   )
