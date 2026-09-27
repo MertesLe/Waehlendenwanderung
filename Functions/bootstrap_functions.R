@@ -336,7 +336,7 @@ plot_bootstrap_beta_distributions <- function(beta_draws) {
       x = "Gesch\u00e4tzter Beta-Koeffizient",
       y = NULL
     ) +
-    ggplot2::theme_minimal() +
+    ggplot2::theme_minimal(base_size = 16) +
     ggplot2::theme(
       axis.text.y = ggplot2::element_blank(),
       axis.ticks.y = ggplot2::element_blank(),
@@ -344,16 +344,16 @@ plot_bootstrap_beta_distributions <- function(beta_draws) {
       panel.grid.minor.y = ggplot2::element_blank(),
       strip.placement = "outside",
       strip.background = ggplot2::element_blank(),
-      axis.title.x = ggplot2::element_text(size = 14),
-      axis.text.x = ggplot2::element_text(size = 11),
-      strip.text.x = ggplot2::element_text(size = 12),
+      axis.title.x = ggplot2::element_text(size = 18),
+      axis.text.x = ggplot2::element_text(size = 15),
+      strip.text.x = ggplot2::element_text(size = 16),
       strip.text.y.left = ggplot2::element_text(
         angle = 0,
         hjust = 1,
-        size = 10
+        size = 14
       ),
-      legend.title = ggplot2::element_text(size = 12),
-      legend.text = ggplot2::element_text(size = 11),
+      legend.title = ggplot2::element_text(size = 16),
+      legend.text = ggplot2::element_text(size = 15),
       legend.key = ggplot2::element_rect(color = "grey70")
     )
 }

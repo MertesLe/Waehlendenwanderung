@@ -200,7 +200,7 @@ save_map <- function(map_data, legend_title, filename, probability = FALSE) {
       name = legend_title
     ) +
     coord_sf(datum = NA, expand = FALSE) +
-    theme_void() +
+    theme_void(base_size = 16) +
     theme(
       legend.position = "right"
     )

@@ -25,7 +25,7 @@ run_bootstrap <- isTRUE(getOption("waehlendenwanderung.bootstrap_run", TRUE))
 resume_existing <- isTRUE(getOption("waehlendenwanderung.bootstrap_resume", TRUE))
 model_type <- "nslphom_dual"
 analysis_region <- "ostdeutschland_ohne_berlin"
-cache_version <- "ost_dual_osqp_linke_gruene_selected_structure_covariates_v3"
+cache_version <- "ost_dual_osqp_linke_gruene_raw_response_v5"
 
 output_dir <- data_dir_model_bootstrap_ost
 iteration_dir <- file.path(output_dir, "iterations")
@@ -118,10 +118,10 @@ analysis_signature <- hash_r_object(list(
   iter_max = iter_max,
   tol = tol,
   solver = solver,
-  osqp_local_solver = if (solver == "osqp") getOption("waehlendenwanderung.osqp_local_solver", "lp_solve") else NA_character_,
-  osqp_max_iter = if (solver == "osqp") as.integer(getOption("waehlendenwanderung.osqp_max_iter", 100000L)) else NA_integer_,
-  osqp_eps_abs = if (solver == "osqp") getOption("waehlendenwanderung.osqp_eps_abs", 1e-3) else NA_real_,
-  osqp_eps_rel = if (solver == "osqp") getOption("waehlendenwanderung.osqp_eps_rel", 1e-3) else NA_real_,
+  osqp_local_solver = if (solver == "osqp") "lp_solve" else NA_character_,
+  osqp_max_iter = if (solver == "osqp") as.integer(getOption("waehlendenwanderung.osqp_max_iter", 300000L)) else NA_integer_,
+  osqp_eps_abs = if (solver == "osqp") getOption("waehlendenwanderung.osqp_eps_abs", 1e-5) else NA_real_,
+  osqp_eps_rel = if (solver == "osqp") getOption("waehlendenwanderung.osqp_eps_rel", 1e-5) else NA_real_,
   osqp_polishing = if (solver == "osqp") isTRUE(getOption("waehlendenwanderung.osqp_polishing", TRUE)) else NA,
   covariates = struktur_covariates,
   lphom_package_version = as.character(utils::packageVersion("lphom")),
@@ -137,7 +137,7 @@ analysis_signature_components <- tibble::tibble(
   iter_max,
   tol,
   solver,
-  osqp_local_solver = if (solver == "osqp") getOption("waehlendenwanderung.osqp_local_solver", "lp_solve") else NA_character_,
+  osqp_local_solver = if (solver == "osqp") "lp_solve" else NA_character_,
   model = model_type,
   analysis_region = analysis_region,
   covariates = paste(struktur_covariates, collapse = ","),

@@ -22,10 +22,6 @@ selection_mode <- match.arg(
   c("all", "first", "random")
 )
 seed <- getOption("waehlendenwanderung.speed_comparison_seed", 42L)
-osqp_local_solver <- match.arg(
-  getOption("waehlendenwanderung.speed_comparison_osqp_local_solver", "lp_solve"),
-  c("lp_solve", "symphony", "osqp")
-)
 
 if (n_repetitions < 1L || n_repetitions %% 1L != 0L) {
   stop("n_repetitions muss eine positive ganze Zahl sein.")
@@ -123,11 +119,6 @@ compact_fit <- function(fit) {
 
 runtime_results <- list()
 comparison_fits <- list()
-
-old_options <- options(
-  waehlendenwanderung.osqp_local_solver = osqp_local_solver
-)
-on.exit(options(old_options), add = TRUE)
 
 message(
   "Vergleiche beide Dual-Varianten mit ", nrow(origin_counts),
@@ -233,7 +224,7 @@ settings <- tibble(
   n_repetitions = n_repetitions,
   selection_mode = selection_mode,
   seed = seed,
-  osqp_local_solver = osqp_local_solver,
+  osqp_local_solver = "lp_solve",
   speedup_lphom_over_osqp = speedup_lphom_over_osqp,
   lphom_version = as.character(utils::packageVersion("lphom")),
   osqp_version = as.character(utils::packageVersion("osqp"))
@@ -422,7 +413,7 @@ runtime_plot <- ggplot(
     x = NULL,
     y = "Laufzeit (Sekunden)"
   ) +
-  theme_minimal() +
+  theme_minimal(base_size = 16) +
   theme(legend.position = "none")
 
 ggsave(
@@ -446,7 +437,7 @@ local_plot <- ggplot(
     x = "Lokale \u00dcbergangswahrscheinlichkeit: lphom::nslphom_dual",
     y = "Lokale \u00dcbergangswahrscheinlichkeit: nslphom_dual_osqp"
   ) +
-  theme_minimal()
+  theme_minimal(base_size = 16)
 
 ggsave(
   file.path(chart_dir, paste0(run_label, "_local_probability_comparison.png")),

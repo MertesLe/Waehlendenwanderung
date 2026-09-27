@@ -317,7 +317,7 @@ make_block_plot <- function(
       data = left_bars,
       aes(x = 0.065, y = y_mid, label = label),
       hjust = 1,
-      size = 3.4,
+      size = 4.2,
       colour = "#555555",
       lineheight = 0.9
     ) +
@@ -325,7 +325,7 @@ make_block_plot <- function(
       data = right_bars,
       aes(x = 0.935, y = y_mid, label = label),
       hjust = 0,
-      size = 3.4,
+      size = 4.2,
       colour = "#555555",
       lineheight = 0.9
     ) +
@@ -351,7 +351,7 @@ make_block_plot <- function(
       ylim = c(0, stack_height * 1.09),
       clip = "off"
     ) +
-    theme_void(base_size = 11) +
+    theme_void(base_size = 16) +
     theme(
       plot.margin = margin(12, 72, 12, 72)
     )

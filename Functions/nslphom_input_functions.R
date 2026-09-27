@@ -350,7 +350,7 @@ plot_nslphom_input_diagnostics <- function(diagnostics) {
         x = "Wahlberechtigte je Aggregationseinheit",
         y = "Anzahl der Aggregationseinheiten"
       ) +
-      ggplot2::theme_minimal()
+      ggplot2::theme_minimal(base_size = 16)
   )
 
   cutoff <- stats::quantile(diagnostics$wahlberechtigte_agg$wahlberechtigte_input, 0.95, na.rm = TRUE)
@@ -367,7 +367,7 @@ plot_nslphom_input_diagnostics <- function(diagnostics) {
         x = "Wahlberechtigte je Aggregationseinheit (bis zum 95-%-Quantil)",
         y = "Anzahl der Aggregationseinheiten"
       ) +
-      ggplot2::theme_minimal()
+      ggplot2::theme_minimal(base_size = 16)
   )
 
   invisible(diagnostics)

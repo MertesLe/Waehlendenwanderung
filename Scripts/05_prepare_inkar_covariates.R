@@ -15,7 +15,7 @@ inkar_basis_rds <- file.path(data_dir_intermediate, "inkar_basis_gemeinden_kreis
 inkar_metadata_rds <- file.path(data_dir_intermediate, "inkar_basis_metadata.rds")
 
 if (!file.exists(inkar_basis_rds) || !file.exists(inkar_metadata_rds)) {
-  source("Scripts/cleaning_strukturdaten.R", encoding = "UTF-8")
+  source("Scripts/04_cleaning_strukturdaten.R", encoding = "UTF-8")
 }
 
 inkar <- as_tibble(readRDS(inkar_basis_rds))
@@ -29,7 +29,7 @@ struktur_jahr <- if ("struktur_jahr" %in% names(metadata)) {
 if (!"inkar_indikatoren" %in% names(metadata)) {
   stop(
     "Die INKAR-Metadaten enthalten keine Indikatorkonfiguration. ",
-    "Fuehre zuerst Scripts/cleaning_strukturdaten.R aus."
+    "Fuehre zuerst Scripts/04_cleaning_strukturdaten.R aus."
   )
 }
 
@@ -87,7 +87,7 @@ gerichtetes_mapping_path <- file.path(
 )
 
 if (!file.exists(gerichtetes_mapping_path)) {
-  source("Scripts/mapping_gebiete.R", encoding = "UTF-8")
+  source("Scripts/01_mapping_gebiete.R", encoding = "UTF-8")
 }
 
 if (!file.exists(geometry_path)) {

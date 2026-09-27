@@ -46,7 +46,7 @@ assert_final_nslphom_groups <- function(groups, context = "nslphom-Datensatz") {
       paste(expected, collapse = ", "),
       "; vorhanden: ",
       paste(sort(groups), collapse = ", "),
-      ". Fuehre Scripts/01_prepare_nslphom_input.R und alle davon abhaengigen Skripte neu aus."
+      ". Fuehre Scripts/03_prepare_nslphom_input.R und alle davon abhaengigen Skripte neu aus."
     )
   }
 

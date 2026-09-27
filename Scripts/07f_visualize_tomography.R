@@ -82,7 +82,7 @@ fit_groups <- sort(unique(c(as.character(local_matrices$from), as.character(loca
 if (!setequal(fit_groups, groups2021)) {
   stop(
     "Der gespeicherte Ost-Fit verwendet nicht dieselben Gruppen wie die aktuellen Inputs. ",
-    "Fuehre zuerst Scripts/02_estimate_transitions.R erneut aus. Fit: ",
+    "Fuehre zuerst Scripts/07_estimate_transitions.R erneut aus. Fit: ",
     paste(fit_groups, collapse = ", "), "; Input: ", paste(groups2021, collapse = ", ")
   )
 }
@@ -171,7 +171,7 @@ tomography_plot <- ggplot(tomography) +
     x = "P(AfD 2025 | Union 2021)",
     y = "P(AfD 2025 | \u00fcbrige Gruppen 2021)"
   ) +
-  theme_minimal(base_size = 12) +
+  theme_minimal(base_size = 16) +
   theme(
     panel.grid.minor = element_blank()
   )
@@ -241,7 +241,7 @@ principle_plot <- ggplot(selected_units) +
     x = "P(AfD 2025 | Union 2021)",
     y = "P(AfD 2025 | \u00fcbrige Gruppen 2021)"
   ) +
-  theme_minimal(base_size = 12) +
+  theme_minimal(base_size = 16) +
   theme(
     panel.grid.minor = element_blank()
   )

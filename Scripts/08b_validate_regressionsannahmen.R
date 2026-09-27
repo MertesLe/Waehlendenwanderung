@@ -39,7 +39,7 @@ missing_inputs <- missing_inputs[!file.exists(missing_inputs)]
 if (length(missing_inputs) > 0) {
   stop(
     "Regressionsinput oder gespeicherte Fits fehlen. Fuehre zuerst ",
-    "Scripts/04_model_transitions.R aus: ",
+    "Scripts/08_model_transitions.R aus: ",
     paste(missing_inputs, collapse = ", ")
   )
 }
@@ -92,8 +92,8 @@ origin_groups <- sort(unique(model_data$from))
 if (!setequal(origin_groups, setdiff(final_nslphom_groups(), "AfD"))) {
   stop(
     "Die Regressionsdaten verwenden nicht die finalen Herkunftsgruppen. ",
-    "Fuehre Scripts/01_prepare_nslphom_input.R, Scripts/02_estimate_transitions.R ",
-    "und Scripts/04_model_transitions.R neu aus."
+    "Fuehre Scripts/03_prepare_nslphom_input.R, Scripts/07_estimate_transitions.R ",
+    "und Scripts/08_model_transitions.R neu aus."
   )
 }
 
@@ -148,7 +148,7 @@ diagnostic_rows <- diagnostic_rows %>%
 
 # Breusch-Pagan-Test auf verbleibende Heteroskedastizitaet nach Beruecksichtigung der Gewichte.
 # Dieser Test betrifft die Regressionsannahme der Homoskedastizitaet. Die nslphom-
-# Homogenitaetsannahme wird getrennt ueber EHet in Scripts/09 und 10 untersucht.
+# Homogenitaetsannahme wird getrennt ueber EHet in Skript 07b und 07c untersucht.
 breusch_pagan <- bind_rows(lapply(origin_groups, function(origin) {
   fit <- model_fits[[origin]]
   auxiliary_data <- as.data.frame(fit$model[strukturvariablen_z])
@@ -329,7 +329,7 @@ plot_residual_fitted <- ggplot(
     x = "Vorhergesagte \u00dcbergangswahrscheinlichkeit",
     y = "Standardisiertes Residuum"
   ) +
-  theme_minimal() +
+  theme_minimal(base_size = 16) +
   theme(strip.text = element_text(face = "bold"))
 
 ggsave(
@@ -349,7 +349,7 @@ plot_qq <- ggplot(diagnostic_rows, aes(sample = .data$standardized_residual)) +
     x = "Theoretische Quantile",
     y = "Beobachtete Quantile"
   ) +
-  theme_minimal() +
+  theme_minimal(base_size = 16) +
   theme(strip.text = element_text(face = "bold"))
 
 ggsave(
@@ -371,7 +371,7 @@ plot_scale_location <- diagnostic_rows %>%
     x = "Vorhergesagte \u00dcbergangswahrscheinlichkeit",
     y = "Wurzel des absoluten standardisierten Residuums"
   ) +
-  theme_minimal() +
+  theme_minimal(base_size = 16) +
   theme(strip.text = element_text(face = "bold"))
 
 ggsave(
@@ -400,7 +400,7 @@ plot_influence <- ggplot(
     y = "Studentisiertes Residuum",
     size = "Cook-Distanz"
   ) +
-  theme_minimal() +
+  theme_minimal(base_size = 16) +
   theme(strip.text = element_text(face = "bold"))
 
 ggsave(
@@ -441,7 +441,7 @@ for (origin in origin_groups) {
       x = "Standardisierte Strukturvariable",
       y = "Partielles Residuum"
     ) +
-    theme_minimal() +
+    theme_minimal(base_size = 16) +
     theme(
       panel.spacing = grid::unit(1, "lines"),
       strip.text = element_text(face = "bold"),

@@ -257,7 +257,7 @@ plot_verteilungen <- ggplot(struktur_long, aes(x = .data$wert)) +
     x = "Auspr\u00e4gung",
     y = "Dichte"
   ) +
-  theme_minimal() +
+  theme_minimal(base_size = 16) +
   theme(
     panel.spacing = grid::unit(1, "lines"),
     strip.text = element_text(face = "bold"),
@@ -310,7 +310,7 @@ plot_verteilungen_z <- ggplot(
     x = "Z-standardisierter Wert",
     y = "Dichte"
   ) +
-  theme_minimal() +
+  theme_minimal(base_size = 16) +
   theme(
     panel.spacing = grid::unit(1, "lines"),
     strip.text = element_text(face = "bold"),
@@ -348,7 +348,7 @@ plot_zielvariable <- ggplot(
     inherit.aes = FALSE,
     hjust = 1.05,
     vjust = 1.15,
-    size = 3.2
+    size = 4
   ) +
   facet_wrap(vars(.data$herkunft), scales = "free_y", ncol = 2) +
   scale_x_continuous(labels = scales::label_percent(accuracy = 1)) +
@@ -356,7 +356,7 @@ plot_zielvariable <- ggplot(
     x = "\u00dcbergangswahrscheinlichkeit zur AfD",
     y = "Anzahl der Aggregationseinheiten"
   ) +
-  theme_minimal() +
+  theme_minimal(base_size = 16) +
   theme(
     panel.spacing = grid::unit(1, "lines"),
     strip.text = element_text(face = "bold"),
@@ -384,7 +384,7 @@ plot_boxplots <- ggplot(
     x = "Standardisierter Wert",
     y = NULL
   ) +
-  theme_minimal()
+  theme_minimal(base_size = 16)
 
 ggsave(
   file.path(chart_dir, "strukturvariablen_boxplots.png"),
@@ -404,7 +404,7 @@ plot_korrelation <- ggplot(
   )
 ) +
   geom_tile(color = "white") +
-  geom_text(aes(label = sprintf("%.2f", .data$korrelation)), size = 3) +
+  geom_text(aes(label = sprintf("%.2f", .data$korrelation)), size = 3.6) +
   scale_fill_gradient2(
     low = "#B2182B",
     mid = "white",
@@ -418,7 +418,7 @@ plot_korrelation <- ggplot(
     x = NULL,
     y = NULL
   ) +
-  theme_minimal() +
+  theme_minimal(base_size = 16) +
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1),
     panel.grid = element_blank()
@@ -458,7 +458,7 @@ plot_scatter <- ggplot(
       label_party_group(ziel_herkunft), " 2021)"
     )
   ) +
-  theme_minimal() +
+  theme_minimal(base_size = 16) +
   theme(
     panel.spacing = grid::unit(1, "lines"),
     strip.text = element_text(face = "bold"),

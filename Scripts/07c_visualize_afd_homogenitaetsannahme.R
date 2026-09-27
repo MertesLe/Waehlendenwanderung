@@ -291,7 +291,7 @@ map_plot <- ggplot() +
     name = "Relative\nAfD-Abweichung"
   ) +
   coord_sf(datum = NA) +
-  theme_void()
+  theme_void(base_size = 16)
 
 ggsave(
   chart_file,

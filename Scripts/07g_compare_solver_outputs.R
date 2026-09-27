@@ -1,4 +1,4 @@
-# Ergebnisse identischer Dual-Schaetzungen mit OSQP und RSymphony vergleichen.
+# Identische Dual-Schaetzungen mit hybridem OSQP und lp_solve vergleichen.
 
 library(dplyr)
 library(tidyr)
@@ -23,17 +23,17 @@ right_output_path <- getOption(
   "waehlendenwanderung.solververgleich_right_path",
   file.path(
     data_dir_model_nslphom,
-    "ostdeutschland_symphony",
-    "nslphom_ost_symphony_endoutput.rds"
+    "ostdeutschland_lp_solve",
+    "nslphom_ost_endoutput.rds"
   )
 )
 
-left_label <- getOption("waehlendenwanderung.solververgleich_left_label", "osqp_dual")
-right_label <- getOption("waehlendenwanderung.solververgleich_right_label", "symphony_dual")
+left_label <- getOption("waehlendenwanderung.solververgleich_left_label", "hybrid_osqp_dual")
+right_label <- getOption("waehlendenwanderung.solververgleich_right_label", "lp_solve_dual")
 
 comparison_name <- getOption(
   "waehlendenwanderung.solververgleich_name",
-  "ostdeutschland_osqp_dual_vs_symphony_dual"
+  "ostdeutschland_hybrid_osqp_vs_lp_solve"
 )
 
 comparison_name <- gsub("[^A-Za-z0-9_]+", "_", comparison_name)
@@ -115,6 +115,20 @@ summarise_diff <- function(data, diff_col) {
 # Beide Outputs laden und zuerst identische Aggregationseinheiten sicherstellen.
 left_output <- read_solver_output(left_output_path, left_label)
 right_output <- read_solver_output(right_output_path, right_label)
+
+if (
+  !identical(get_setting(left_output, "solver"), "osqp") ||
+    !identical(get_setting(left_output, "osqp_local_solver"), "lp_solve") ||
+    !identical(get_setting(right_output, "solver"), "lp_solve")
+) {
+  stop("Der Vergleich erwartet links hybrides OSQP und rechts lp_solve.")
+}
+
+for (setting in c("threshold", "iter_max", "tol")) {
+  if (!identical(get_setting(left_output, setting), get_setting(right_output, setting))) {
+    stop("Die Fit-Einstellung unterscheidet sich zwischen den Solvern: ", setting)
+  }
+}
 
 left_ids <- as.character(left_output$EHet_ids)
 right_ids <- as.character(right_output$EHet_ids)

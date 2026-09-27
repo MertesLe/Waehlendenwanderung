@@ -179,7 +179,7 @@ hist_plot <- ggplot(local_residual_metrics, aes(x = local_residual_index)) +
     x = "Relativer Rekonstruktionsfehler",
     y = "Anzahl der Aggregationseinheiten"
   ) +
-  theme_minimal()
+  theme_minimal(base_size = 16)
 
 ggsave(
   hist_file,
@@ -348,7 +348,7 @@ map_plot <- ggplot() +
     name = "Relativer\nRekonstruktionsfehler"
   ) +
   coord_sf(datum = NA) +
-  theme_void()
+  theme_void(base_size = 16)
 
 ggsave(
   map_file,

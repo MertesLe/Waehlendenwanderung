@@ -361,7 +361,7 @@ hist_plot <- ggplot(ehet_unit_metrics, aes(x = ehet_index)) +
     x = "Relativer Heterogenit\u00e4tsindex",
     y = "Anzahl der Aggregationseinheiten"
   ) +
-  theme_minimal()
+  theme_minimal(base_size = 16)
 
 size_plot <- ggplot(ehet_unit_metrics, aes(x = wahlberechtigte, y = ehet_index)) +
   geom_point(alpha = 0.45, size = 1.2) +
@@ -371,7 +371,7 @@ size_plot <- ggplot(ehet_unit_metrics, aes(x = wahlberechtigte, y = ehet_index))
     x = "Wahlberechtigte (logarithmische Skala)",
     y = "Relativer Heterogenit\u00e4tsindex"
   ) +
-  theme_minimal()
+  theme_minimal(base_size = 16)
 
 top_plot <- ehet_unit_metrics %>%
   slice_max(ehet_index, n = 25, with_ties = FALSE) %>%
@@ -383,7 +383,7 @@ top_plot <- ehet_unit_metrics %>%
     x = "Relativer Heterogenit\u00e4tsindex",
     y = "Aggregationsschl\u00fcssel"
   ) +
-  theme_minimal()
+  theme_minimal(base_size = 16)
 
 region_plot <- ehet_unit_metrics %>%
   filter(.data$region != "Berlin") %>%
@@ -394,7 +394,7 @@ region_plot <- ehet_unit_metrics %>%
     x = NULL,
     y = "Relativer Heterogenit\u00e4tsindex"
   ) +
-  theme_minimal()
+  theme_minimal(base_size = 16)
 
 if (save_diagnostic_plots) {
   ggsave(chart_file("histogramm.png"), hist_plot, width = 9, height = 6, dpi = 300, bg = "white")
@@ -564,11 +564,20 @@ if (!save_map_plot) {
     saveRDS(ehet_map_data, data_file("karte_geometrien.rds"))
   }
 
+  # Beim reinen Ostfit nur die fuenf ostdeutschen Flaechenlaender als Hintergrund zeigen.
+  ost_fit <- nrow(ehet_unit_metrics) > 0 &&
+    all(is_ostdeutschland_ohne_berlin(ehet_unit_metrics$agg_schluessel))
+  karten_hintergrund <- if (ost_fit) {
+    gemeinde_geometrien %>%
+      filter(substr(.data$gemeindeschluessel, 1, 2) %in% c("12", "13", "14", "15", "16"))
+  } else {
+    gemeinde_geometrien
+  }
+
   map_plot <- ggplot() +
-    # Die komplette 2025-Gemeindeflaeche wird grau unterlegt. Dadurch sind
-    # nicht im jeweiligen Testfit enthaltene Regionen sichtbar statt weiss.
+    # Nicht im Fit enthaltene Gemeinden der dargestellten Region bleiben grau.
     geom_sf(
-      data = gemeinde_geometrien,
+      data = karten_hintergrund,
       fill = "grey88",
       color = NA
     ) +
@@ -588,13 +597,13 @@ if (!save_map_plot) {
       name = "Relativer\nHeterogenit\u00e4tsindex"
     ) +
     coord_sf(datum = NA) +
-    theme_void()
+    theme_void(base_size = 16)
 
   ggsave(
     chart_file("deutschlandkarte_agg.png"),
     map_plot,
     width = 9,
-    height = 11,
+    height = if (ost_fit) 9 else 11,
     dpi = 300,
     bg = "white"
   )

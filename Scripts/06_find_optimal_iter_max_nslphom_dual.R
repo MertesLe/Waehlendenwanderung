@@ -21,20 +21,13 @@ dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 dir.create(chart_dir, recursive = TRUE, showWarnings = FALSE)
 
 threshold <- getOption("waehlendenwanderung.party_threshold", 0.12)
-max_iter <- as.integer(getOption("waehlendenwanderung.itermax_dual_max_iter", 100L))
+max_iter <- as.integer(getOption("waehlendenwanderung.itermax_dual_max_iter", 80L))
 solver <- getOption(
   "waehlendenwanderung.itermax_dual_solver",
   getOption("waehlendenwanderung.nslphom_solver", "osqp")
 )
 solver <- match.arg(solver, c("osqp", "lp_solve", "symphony"))
-osqp_local_solver <- if (solver == "osqp") {
-  match.arg(
-    getOption("waehlendenwanderung.osqp_local_solver", "lp_solve"),
-    c("lp_solve", "symphony", "osqp")
-  )
-} else {
-  NA_character_
-}
+osqp_local_solver <- if (solver == "osqp") "lp_solve" else NA_character_
 selection_mode <- getOption("waehlendenwanderung.itermax_dual_selection", "all")
 selection_mode <- match.arg(selection_mode, c("all", "first", "last", "random"))
 n_units <- getOption("waehlendenwanderung.itermax_dual_units", Inf)
@@ -398,9 +391,9 @@ settings <- tibble(
   keep_parties = paste(validation$kept_parties, collapse = ", "),
   lphom_package_version = as.character(utils::packageVersion("lphom")),
   osqp_package_version = if (solver == "osqp") as.character(utils::packageVersion("osqp")) else NA_character_,
-  osqp_max_iter = if (solver == "osqp") as.integer(getOption("waehlendenwanderung.osqp_max_iter", 100000L)) else NA_integer_,
-  osqp_eps_abs = if (solver == "osqp") getOption("waehlendenwanderung.osqp_eps_abs", 1e-3) else NA_real_,
-  osqp_eps_rel = if (solver == "osqp") getOption("waehlendenwanderung.osqp_eps_rel", 1e-3) else NA_real_,
+  osqp_max_iter = if (solver == "osqp") as.integer(getOption("waehlendenwanderung.osqp_max_iter", 300000L)) else NA_integer_,
+  osqp_eps_abs = if (solver == "osqp") getOption("waehlendenwanderung.osqp_eps_abs", 1e-5) else NA_real_,
+  osqp_eps_rel = if (solver == "osqp") getOption("waehlendenwanderung.osqp_eps_rel", 1e-5) else NA_real_,
   osqp_polishing = if (solver == "osqp") isTRUE(getOption("waehlendenwanderung.osqp_polishing", TRUE)) else NA,
   note = paste(
     "iter_max wird aus einem vollstaendigen nslphom_dual-Lauf rekonstruiert;",
@@ -531,7 +524,7 @@ iter_plot <- ggplot(plot_data, aes(x = iter_max, y = HETe, color = matrix_type, 
     color = "Kombination",
     linetype = "HETe-Wert"
   ) +
-  theme_minimal()
+  theme_minimal(base_size = 16)
 
 # Richtungsspezifisch zeigen, ob HETe bereits stabil ist oder nur ein einzelnes
 # spaetes Minimum die kombinierte Dual-Kurve bestimmt.
@@ -575,7 +568,7 @@ direction_plot <- ggplot(
     color = "Richtung",
     linetype = "HETe-Wert"
   ) +
-  theme_minimal()
+  theme_minimal(base_size = 16)
 
 saveRDS(sequence_table, file.path(output_dir, paste0(run_label, "_hete_sequence.rds")))
 saveRDS(best_iter, file.path(output_dir, paste0(run_label, "_best_iter_max.rds")))

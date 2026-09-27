@@ -174,7 +174,7 @@ make_transition_model_outputs <- function(
   afd_source_summary <- make_afd_source_summary(transitions)
   model_data <- prepare_afd_model_data(transitions, struktur, covariates)
 
-  # Fuer jede Herkunftsgruppe erklaeren, welcher Anteil 2025 zur AfD wechselt.
+  # Fuer jede Herkunftsgruppe die direkte lokale Uebergangswahrscheinlichkeit modellieren.
   fitted_models <- fit_grouped_transition_models(
     model_data,
     response_col = "transition_probability",

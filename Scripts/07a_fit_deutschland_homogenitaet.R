@@ -123,7 +123,7 @@ if (run_ehet && file.exists(endoutput_path)) {
     waehlendenwanderung.ehet_nslphom_output_path = endoutput_path,
     waehlendenwanderung.ehet_run_label = "deutschland"
   )
-  source("Scripts/09_visualize_homogenitaetsannahme.R", encoding = "UTF-8")
+  source("Scripts/07b_visualize_homogenitaetsannahme.R", encoding = "UTF-8")
   options(old_options)
 } else if (run_ehet) {
   message("EHet-Visualisierung uebersprungen, weil noch kein Deutschland-Endoutput vorliegt.")

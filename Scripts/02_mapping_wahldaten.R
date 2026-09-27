@@ -341,7 +341,7 @@ data25_clean <- data2025
 mapping_gebietsaenderungen_pfad <- file.path(data_dir_cleaned, "mapping_gebietsaenderungen.rds")
 
 if (!file.exists(mapping_gebietsaenderungen_pfad)) {
-  source("Scripts/mapping_gebiete.R", encoding = "UTF-8")
+  source("Scripts/01_mapping_gebiete.R", encoding = "UTF-8")
 }
 
 mapping_gebietsaenderungen <- readRDS(mapping_gebietsaenderungen_pfad)
