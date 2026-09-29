@@ -609,4 +609,93 @@ if (!save_map_plot) {
   )
 
   message("EHet-Karte gespeichert unter: ", chart_file("deutschlandkarte_agg.png"))
+
+  # Die signierte Union-Zielabweichung aus EHet durch die Wahlberechtigten teilen.
+  # Fuer Berlin und Hamburg ohne eigene Teilgeometrien erst die Zaehler und
+  # Nenner aller betroffenen Wahleinheiten addieren.
+  union_metrics <- ehet_cells %>%
+    filter(.data$to == "Union") %>%
+    group_by(.data$agg_schluessel) %>%
+    summarise(union_ehet_count = sum(.data$ehet_deviation_count), .groups = "drop") %>%
+    left_join(wahlberechtigte_by_unit, by = "agg_schluessel") %>%
+    mutate(union_ehet_rel = .data$union_ehet_count / .data$wahlberechtigte)
+
+  if (nrow(union_metrics) != nrow(ehet_unit_metrics) ||
+      any(!is.finite(union_metrics$union_ehet_rel))) {
+    stop("Die Union-EHet-Werte sind nicht fuer alle Aggregationseinheiten vorhanden.")
+  }
+
+  direct_union_map <- direct_map %>%
+    select(agg_schluessel) %>%
+    left_join(union_metrics, by = "agg_schluessel") %>%
+    select(agg_schluessel, union_ehet_rel)
+
+  substitute_union_metrics <- ehet_ags_long %>%
+    group_by(.data$agg_schluessel) %>%
+    filter(!any(.data$hat_direkte_geometrie)) %>%
+    ungroup() %>%
+    filter(!is.na(.data$ersatz_geometrie)) %>%
+    distinct(.data$ersatz_geometrie, .data$agg_schluessel) %>%
+    left_join(union_metrics, by = "agg_schluessel") %>%
+    group_by(.data$ersatz_geometrie) %>%
+    summarise(
+      union_ehet_count = sum(.data$union_ehet_count),
+      wahlberechtigte = sum(.data$wahlberechtigte),
+      union_ehet_rel = .data$union_ehet_count / .data$wahlberechtigte,
+      .groups = "drop"
+    )
+
+  substitute_union_map <- substitute_map %>%
+    select(gemeindeschluessel) %>%
+    left_join(
+      substitute_union_metrics,
+      by = c("gemeindeschluessel" = "ersatz_geometrie")
+    ) %>%
+    mutate(agg_schluessel = NA_character_) %>%
+    select(agg_schluessel, union_ehet_rel)
+
+  union_map_data <- bind_rows(direct_union_map, substitute_union_map)
+  union_scale_limit <- as.numeric(stats::quantile(
+    abs(union_map_data$union_ehet_rel), 0.99, na.rm = TRUE
+  ))
+
+  if (!is.finite(union_scale_limit) || union_scale_limit <= 0) {
+    stop("Die Union-EHet-Farbskala konnte nicht bestimmt werden.")
+  }
+
+  union_map_plot <- ggplot() +
+    geom_sf(data = karten_hintergrund, fill = "grey88", color = NA) +
+    geom_sf(
+      data = union_map_data %>% filter(!is.na(.data$union_ehet_rel)),
+      aes(fill = .data$union_ehet_rel),
+      color = NA
+    ) +
+    scale_fill_gradient2(
+      low = "#2166ac",
+      mid = "#f7f7f7",
+      high = "#b2182b",
+      midpoint = 0,
+      limits = c(-union_scale_limit, union_scale_limit),
+      oob = scales::squish,
+      labels = scales::percent_format(accuracy = 1),
+      name = "Relative\nUnion-Abweichung"
+    ) +
+    coord_sf(datum = NA) +
+    theme_void(base_size = 16)
+
+  union_chart_dir <- file.path("Charts", "Homogenitaetsannahmentest")
+  dir.create(union_chart_dir, recursive = TRUE, showWarnings = FALSE)
+  union_chart_path <- file.path(
+    union_chart_dir,
+    paste0(run_label, "_union_ehet_deutschlandkarte_agg.png")
+  )
+  ggsave(
+    union_chart_path,
+    union_map_plot,
+    width = 9,
+    height = if (ost_fit) 9 else 11,
+    dpi = 300,
+    bg = "white"
+  )
+  message("Union-EHet-Karte gespeichert unter: ", union_chart_path)
 }

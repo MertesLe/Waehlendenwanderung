@@ -21,6 +21,7 @@ Alle selbst erzeugten Datensätze werden im Workflow als `.rds` gespeichert. CSV
 | 7 | `Scripts/07_estimate_transitions.R` | Schätzt den Ost-`nslphom_dual`-Fit ohne Berlin. Standardmäßig nutzt er OSQP global und `lp_solve` lokal; die EHet-Auswertung 07b wird bei aktiviertem `ost_ehet_run` automatisch aufgerufen. | `Data/modeloutput/nslphom/ostdeutschland/`: Fit, lokale und globale Matrizen, Settings, Checks; EHet-Diagnose unter `Data/validierung/homogenitaetsannahme/` und `Charts/homogenitaetsannahme/`. |
 | 8 | `Scripts/08_model_transitions.R` | Schätzt für jede Herkunftsgruppe ein eigenes gewichtetes lineares Modell des AfD-Zuflusses mit Strukturmerkmalen 2023. Speichert vollständige `lm`-Objekte für die Diagnostik. | `Data/modeloutput/regression/ostdeutschland/`: Modelldaten, Fits, Koeffizienten und Checks. |
 | 9 (separat, guter PC) | `Scripts/09_bootstrap_nslphom_regression.R` | Zieht Ost-Einheiten mit Zurücklegen, schätzt je Stichprobe `nslphom_dual` und danach dieselben AfD-Zuflussmodelle. Die Hauptpipeline startet diesen rechenintensiven Schritt nicht automatisch. | `Data/modeloutput/bootstrap/ostdeutschland/`: Beta-Ziehungen, Intervalle, Checks, Settings und Iterationsdateien; `Charts/bootstrap/ostdeutschland/`: Beta-Verteilungen. |
+| 10 (nach 8 und 9) | `Scripts/10_analyse_ergebnisse.R` | Vergleicht Hauptkoeffizienten mit den Bootstrapintervallen und beschreibt Einheiten mit erhoehten AfD-Uebergaengen. Erstellt Koeffizientengrafiken, Strukturprofile und paarweise Ost-Karten ohne erneuten Modellfit. | `Data/modeloutput/regression/ostdeutschland/ergebnisanalyse_afd_zufluss.rds`; Grafiken unter `Charts/Regression/ostdeutschland/ergebnisse/`. Das separate Kapitel `MeinMaterial/Ergebniskapitel.docx` kann danach mit `Tools/build_ergebniskapitel.py` erneut erstellt werden. |
 
 ## Ergänzende Skripte
 
@@ -28,9 +29,9 @@ Die Buchstaben ordnen optionale Diagnosen und Grafiken unmittelbar nach dem letz
 
 | Nach Schritt | Skriptname | Was es tut | Output |
 |--------------------:|-----------------|-----------------|-----------------|
-| 6 | `Scripts/06a_validate_final_method_dual_osqp.R` | Validiert die hybride Dual-Methode in Drei-Parteien-Simulationen mit bekannten Übergängen. Bewertet lokale Fehler, EI und die Wiedergewinnung der AfD-Koeffizienten. | `Data/validierung/final_method_dual_osqp/`: Simulationsresultate, Fehlermaße und Settings als RDS. |
+| 6 | `Scripts/06a_validate_final_method_dual_osqp.R` | Simuliert Drei-Parteien-Wahlen mit festgelegten moderaten lokalen Unterschieden und bekannten AfD-Zufluss-Betas. Prueft hybrides `nslphom_dual` und die anschliessende gewichtete Regression. | `Data/validierung/end_to_end_afd_validation/heterogeneity_50pct/`: lokale Fehler, EI, Beta-Recovery und Einstellungen als RDS; `Charts/validierung/end_to_end_afd_validation/heterogeneity_50pct/`: Grafiken. |
 | 7, guter PC | `Scripts/07a_fit_deutschland_homogenitaet.R` | Schätzt die nationale Dual-Matrix als Vergleich zum Ostfit. Ruft die EHet-Auswertung 07b für den Ost-West-Vergleich auf. | `Data/modeloutput/nslphom/deutschland/`: Fit und Matrizen; `Data/validierung/homogenitaetsannahme/`, `Charts/homogenitaetsannahme/`: EHet-Diagnose. |
-| 7 oder 7a | `Scripts/07b_visualize_homogenitaetsannahme.R` | Berechnet und visualisiert den relativen EHet des angegebenen Fits. Wird bei aktivierter EHet-Option durch 07 und 07a bereits automatisch aufgerufen. | `Data/validierung/homogenitaetsannahme/`: Kennzahlen; `Charts/homogenitaetsannahme/`: Karten und Diagnoseplots. |
+| 7 oder 7a | `Scripts/07b_visualize_homogenitaetsannahme.R` | Berechnet den relativen EHet des angegebenen Fits und visualisiert auch die signierte Union-Zielabweichung. Wird bei aktivierter EHet-Option durch 07 und 07a bereits automatisch aufgerufen. | `Data/validierung/homogenitaetsannahme/`: Kennzahlen; `Charts/homogenitaetsannahme/`: allgemeine Karte und Diagnoseplots; `Charts/Homogenitaetsannahmentest/`: Union-Karte. |
 | 7a | `Scripts/07c_visualize_afd_homogenitaetsannahme.R` | Visualisiert den AfD-bezogenen EHet der gespeicherten Schätzung. Für andere Fits kann der Inputpfad per Option gesetzt werden. | `Charts/Homogenitaetsannahmentest/deutschland_afd_ehet_deutschlandkarte_agg.png`: AfD-EHet-Karte. |
 | 7 | `Scripts/07d_validate_lokale_matrix_residuen.R` | Vergleicht die lokalen geschätzten Zielstimmen mit den beobachteten Rändern. Es ist eine Anpassungsdiagnose, kein Nachweis korrekter individueller Übergänge. | `Data/validierung/`: lokale Residuenkennzahlen; `Charts/homogenitaetsannahme/`: Residuenplots und Karte. |
 | 7 und 7a | `Scripts/07e_plot_global_matrices.R` | Zeichnet Ost- und Deutschlandmatrix als Flussgrafiken mit 2021 links und 2025 rechts. Beide gespeicherten Fits sind erforderlich. | `Charts/nslphom_global_matrix_ostdeutschland_ungeblockt.png`, `nslphom_global_matrix_deutschland_ungeblockt.png`, `nslphom_global_matrizen_ungeblockt.pdf`. |
@@ -57,6 +58,18 @@ source("Scripts/07g_compare_solver_outputs.R", encoding = "UTF-8")
 ```
 
 `iter_max = 2L` ist ein Beispiel; vor dem Start die Einstellungen des Hauptfits abgleichen und danach geänderte Optionen für reguläre Läufe zurücksetzen.
+
+## End-to-End-Validierung
+
+`06a` kann unabhaengig von den empirischen Wahl- und INKAR-Daten laufen. Der Standardlauf verwendet 150 Simulationen, 120 Einheiten und `iter_max = 10`:
+
+```r
+source("Scripts/06a_validate_final_method_dual_osqp.R", encoding = "UTF-8")
+```
+
+Die vorgegebenen Koeffizienten bestimmen die lokale Uebergangsheterogenitaet; die Grundniveaus bleiben separat festgelegt. Ob diese simulierte Heterogenitaet der unbekannten realen Heterogenitaet entspricht, ist nicht bekannt.
+
+Zuerst `final_validation_run_status.rds` auf Fehllauefe pruefen. In `final_validation_beta_summary.rds` soll `true_probability` praktisch null Bias haben; `realized_probability` misst die zusaetzliche Zufallsstreuung, `estimated_probability` die Recovery nach oekologischer Inferenz. Die Grafiken verwenden Rot fuer den vorgegebenen Beta-Wert und Blau fuer die aus den Simulationen geschaetzten Betas. Die gezeigten 95-%-Bereiche sind Quantile ueber erfolgreiche Simulationen, keine Konfidenzintervalle des empirischen Ostmodells. Das reduzierte 3x3-Szenario mit zwei Kovariaten ersetzt keine Validierung des empirischen 6x6-Fits mit zehn Kovariaten.
 
 ## Historische Tests
 

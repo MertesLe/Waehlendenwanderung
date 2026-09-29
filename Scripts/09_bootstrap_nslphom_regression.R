@@ -304,11 +304,11 @@ if (!run_bootstrap) {
   if (nrow(beta_draws) > 0) {
     beta_plot <- plot_bootstrap_beta_distributions(beta_draws)
     ggplot2::ggsave(
-      filename = file.path(chart_dir, "bootstrap_beta_verteilungen_ostdeutschland.pdf"),
+      filename = file.path(chart_dir, "bootstrap_beta_verteilungen_ostdeutschland.png"),
       plot = beta_plot,
       width = 16,
       height = 10,
-      device = grDevices::cairo_pdf
+      dpi = 300
     )
   }
 
