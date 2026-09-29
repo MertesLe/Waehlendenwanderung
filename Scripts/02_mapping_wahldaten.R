@@ -10,7 +10,12 @@ source("paths.R", encoding = "UTF-8")
 ensure_data_dirs()
 
 data2025 <- read.csv("Data//raw//btw25_wbz//btw25_wbz_ergebnisse.csv", header = TRUE, sep = ";", skip = 4)
-data2021 <- read.csv("Data//raw//btw21_wbz//btw21_wbz_ergebnisse.csv", header = TRUE, sep = ";")
+data2021 <- read.csv(
+  "Data//raw//btw21_wbz//btw21_wbz_ergebnisse.csv",
+  header = TRUE,
+  sep = ";",
+  fileEncoding = "UTF-8-BOM"
+)
 
 data2025 <- drop_empty_rows(data2025)
 data2021 <- drop_empty_rows(data2021)
@@ -674,12 +679,32 @@ mapping_manuelle_textkorrekturen <- tibble::tribble(
   "07138010", "07138010, 07138047", "Datzeroth wird 2025 separat ausgewiesen, 2021 aber bei Niederbreitbach (einschl. Datzeroth)."
 )
 
-unabgedeckte_basis_differenzen <- setdiff(
-  c(diff21_basis, diff25_basis),
-  mapping_manuelle_textkorrekturen$agg.basis
-)
+# Jede manuelle Ausnahme muss genau einen offenen Jahresunterschied und einen
+# eindeutigen amtlichen Einschluss im jeweils anderen Wahljahr erklaeren.
+if (anyDuplicated(mapping_manuelle_textkorrekturen$agg.basis) ||
+    !setequal(c(diff21_basis, diff25_basis), mapping_manuelle_textkorrekturen$agg.basis)) {
+  stop("Die manuellen Textkorrekturen passen nicht genau zu den offenen Jahresunterschieden.")
+}
 
-stopifnot(length(unabgedeckte_basis_differenzen) == 0)
+for (i in seq_len(nrow(mapping_manuelle_textkorrekturen))) {
+  basis <- mapping_manuelle_textkorrekturen$agg.basis[[i]]
+  ziel <- split_keys(mapping_manuelle_textkorrekturen$agg.schlüssel[[i]])
+  ausweisende_keys <- setdiff(ziel, split_keys(basis))
+  anderes_jahr <- if (basis %in% diff25_basis) 2021 else 2025
+
+  if (length(ausweisende_keys) == 0 ||
+      !all(split_keys(basis) %in% ziel) ||
+      !any(
+        textausweisungen_namensdiagnose$Jahr == anderes_jahr &
+          textausweisungen_namensdiagnose$namensmatch_status ==
+            "eindeutiger Namensmatch im selben Kreis" &
+          textausweisungen_namensdiagnose$einschluss_gemeindeschlüssel %in% split_keys(basis) &
+          textausweisungen_namensdiagnose$Gemeindeschlüssel %in% ausweisende_keys,
+        na.rm = TRUE
+      )) {
+    stop("Keine passende Textausweisung fuer die manuelle Korrektur: ", basis)
+  }
+}
 
 final_components <- bind_rows(
   mapping21_clean %>%
@@ -697,6 +722,14 @@ final_components <- bind_rows(
 
 final_lookup <- build_final_lookup(final_components)
 
+# Jede amtlich dokumentierte Alt-neu-Beziehung muss in derselben finalen Einheit liegen.
+gebietskanten <- readRDS(file.path(data_dir_cleaned, "mapping_gebietsaenderungen_gerichtet.rds"))
+alt_agg <- final_lookup$agg.final[match(gebietskanten$AGS_alt, final_lookup$Gemeindeschlüssel)]
+neu_agg <- final_lookup$agg.final[match(gebietskanten$AGS_neu, final_lookup$Gemeindeschlüssel)]
+if (anyNA(alt_agg) || anyNA(neu_agg) || any(alt_agg != neu_agg)) {
+  stop("Mindestens eine dokumentierte Gebietsänderung fehlt im finalen Mapping.")
+}
+
 final_lookup_check <- final_lookup %>%
   count(Gemeindeschlüssel) %>%
   filter(n > 1)
@@ -709,6 +742,14 @@ stopifnot(all(prelim_to_final$n_missing_final == 0))
 
 mapping21_new <- apply_final_mapping(mapping21_clean, prelim_to_final)
 mapping25_new <- apply_final_mapping(mapping25_clean, prelim_to_final)
+
+# Beide Wahljahre muessen nach der Harmonisierung exakt dieselben Einheiten haben.
+diff21_final <- setdiff(unique(mapping21_new$agg.schlüssel), unique(mapping25_new$agg.schlüssel))
+diff25_final <- setdiff(unique(mapping25_new$agg.schlüssel), unique(mapping21_new$agg.schlüssel))
+if (length(diff21_final) > 0 || length(diff25_final) > 0) {
+  stop("Finale Aggregationseinheiten unterscheiden sich zwischen 2021 und 2025: ",
+       length(diff21_final), " nur 2021, ", length(diff25_final), " nur 2025.")
+}
 
 mapping_wahldaten_final <- bind_rows(
   mapping21_new %>%
@@ -789,7 +830,8 @@ data25_agg <- data25_clean %>%
         Gemeindeschlüssel,
         agg.schlüssel
       ),
-    by = c("Wahlkreis", "Gemeindeschlüssel")
+    by = c("Wahlkreis", "Gemeindeschlüssel"),
+    relationship = "many-to-one"
   )
 
 data21_agg <- data21_clean %>%
@@ -800,8 +842,18 @@ data21_agg <- data21_clean %>%
         Gemeindeschlüssel,
         agg.schlüssel
       ),
-    by = c("Wahlkreis", "Gemeindeschlüssel")
+    by = c("Wahlkreis", "Gemeindeschlüssel"),
+    relationship = "many-to-one"
   )
+
+# Jede Rohdatenzeile muss genau einen nichtleeren finalen Schluessel erhalten.
+if (nrow(data25_agg) != nrow(data25_clean) ||
+    nrow(data21_agg) != nrow(data21_clean) ||
+    anyNA(data25_agg$agg.schlüssel) || anyNA(data21_agg$agg.schlüssel) ||
+    any(data25_agg$agg.schlüssel == "") || any(data21_agg$agg.schlüssel == "") ||
+    anyNA(data25_clean$Gemeindeschlüssel) || anyNA(data21_clean$Gemeindeschlüssel)) {
+  stop("Rohdatenzeilen wurden beim finalen Mapping verloren, vervielfacht oder nicht zugeordnet.")
+}
 
 wahldaten2025 <- data25_agg %>%
   group_by(agg.schlüssel) %>%
@@ -842,6 +894,21 @@ wahldaten2021 <- data21_agg %>%
 
     .groups = "drop"
   )
+
+# Alle numerischen Ergebnisse einschliesslich Wahlberechtigten und Stimmen
+# muessen vor und nach der Aggregation in jedem Jahr dieselbe Summe haben.
+if (!isTRUE(all.equal(
+      colSums(data25_clean[num_vars25], na.rm = TRUE),
+      colSums(wahldaten2025[num_vars25], na.rm = TRUE),
+      tolerance = 1e-8
+    )) ||
+    !isTRUE(all.equal(
+      colSums(data21_clean[num_vars21], na.rm = TRUE),
+      colSums(wahldaten2021[num_vars21], na.rm = TRUE),
+      tolerance = 1e-8
+    ))) {
+  stop("Wahlberechtigte oder Stimmenergebnisse stimmen vor und nach der Aggregation nicht ueberein.")
+}
 
 
 
