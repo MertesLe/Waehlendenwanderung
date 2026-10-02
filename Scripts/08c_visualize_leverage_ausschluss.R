@@ -10,7 +10,7 @@ source("Functions/general_functions.R", encoding = "UTF-8")
 model_data <- readRDS(file.path(data_dir_model_regression_ost, "modell_afd_zufluss_daten.rds"))
 model_fits <- readRDS(file.path(data_dir_model_regression_ost, "modell_afd_zufluss_fits.rds"))
 geometry_path <- "Data/raw/gebiete_visualisierung/vg250_01-01.utm32s.gpkg.ebenen/vg250_ebenen_0101/DE_VG250.gpkg"
-chart_dir <- "Charts/Regression/ostdeutschland/leverage_ausschluss"
+chart_dir <- "Charts/Regression/leverage_ausschluss"
 output_dir <- file.path(data_dir_validation, "regression_ostdeutschland")
 dir.create(chart_dir, recursive = TRUE, showWarnings = FALSE)
 dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)

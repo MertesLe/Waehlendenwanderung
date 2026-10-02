@@ -25,7 +25,6 @@ output_dir <- file.path(
 chart_dir <- file.path(
   "Charts",
   "Regression",
-  "ostdeutschland",
   "regressionsdiagnostik"
 )
 linearity_chart_dir <- file.path(chart_dir, "linearitaet")

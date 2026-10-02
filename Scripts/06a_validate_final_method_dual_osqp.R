@@ -14,14 +14,14 @@ if (!requireNamespace("ggplot2", quietly = TRUE)) {
   stop("Fuer die Beta-Recovery-Grafiken wird ggplot2 benoetigt.")
 }
 
-validation_output_dir <- file.path(data_dir_validation, "end_to_end_afd_validation", "heterogeneity_50pct")
-chart_output_dir <- file.path("Charts", "validierung", "end_to_end_afd_validation", "heterogeneity_50pct")
+validation_output_dir <- file.path(data_dir_validation, "end_to_end_afd_validation")
+chart_output_dir <- file.path("Charts", "validierung", "end_to_end_afd_validation")
 
 settings <- list(
   n_sim = getOption("waehlendenwanderung.final_validation_n_sim", 150L),
   n_units = getOption("waehlendenwanderung.final_validation_n_units", 120L),
   seed = getOption("waehlendenwanderung.final_validation_seed", 20260820L),
-  iter_max = getOption("waehlendenwanderung.final_validation_iter_max", getOption("waehlendenwanderung.nslphom_iter_max", 10L)),
+  iter_max = getOption("waehlendenwanderung.final_validation_iter_max", 10L),
   tol = getOption("waehlendenwanderung.final_validation_tol", getOption("waehlendenwanderung.nslphom_tol", 1e-5)),
   electorate_min = getOption("waehlendenwanderung.final_validation_electorate_min", 500L),
   electorate_max = getOption("waehlendenwanderung.final_validation_electorate_max", 2500L),

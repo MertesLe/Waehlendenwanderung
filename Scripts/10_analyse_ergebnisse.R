@@ -6,8 +6,8 @@ library(sf)
 library(tidyr)
 
 model_dir <- "Data/modeloutput/regression/ostdeutschland"
-bootstrap_dir <- "Data/modeloutput/bootstrap/ostdeutschland"
-chart_dir <- "Charts/Regression/ostdeutschland/ergebnisse"
+bootstrap_dir <- "Data/modeloutput/bootstrap"
+chart_dir <- "Charts/Regression/ergebnisse"
 dir.create(chart_dir, recursive = TRUE, showWarnings = FALSE)
 
 model_data <- readRDS(file.path(model_dir, "modell_afd_zufluss_daten.rds"))

@@ -11,8 +11,8 @@ source("paths.R", encoding = "UTF-8")
 ensure_data_dirs()
 
 # Kleine, bereits auf 2023 und relevante Indikatoren gefilterte INKAR-Basis laden.
-inkar_basis_rds <- file.path(data_dir_intermediate, "inkar_basis_gemeinden_kreise.rds")
-inkar_metadata_rds <- file.path(data_dir_intermediate, "inkar_basis_metadata.rds")
+inkar_basis_rds <- file.path(data_dir_cleaned, "inkar_basis_gemeinden_kreise.rds")
+inkar_metadata_rds <- file.path(data_dir_cleaned, "inkar_basis_metadata.rds")
 
 if (!file.exists(inkar_basis_rds) || !file.exists(inkar_metadata_rds)) {
   source("Scripts/04_cleaning_strukturdaten.R", encoding = "UTF-8")

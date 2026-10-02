@@ -1,4 +1,5 @@
-# Zentrale Skripte der Datenaufbereitung und Modellierung in festgelegter Reihenfolge ausfuehren.
+# Teilpipeline: Datenaufbereitung, Ostfit und Hauptregression ausfuehren.
+# Deutschlandfit, Validierungen, weitere Grafiken, Bootstrap und Ergebnisanalyse laufen separat.
 
 if (!interactive()) {
   View <- function(...) invisible(NULL)
@@ -11,8 +12,8 @@ source("Scripts/03_prepare_nslphom_input.R", encoding = "UTF-8")
 source("Scripts/04_cleaning_strukturdaten.R", encoding = "UTF-8")
 source("Scripts/05_prepare_inkar_covariates.R", encoding = "UTF-8")
 
-# Die optionale iter_max-Diagnose in Skript 06 zuvor separat auswerten und
-# den gewaehlten Wert per waehlendenwanderung.nslphom_iter_max setzen.
+# Die optionale iter_max-Diagnose in Skript 06 zuvor separat auswerten.
+# Der Hauptfit verwendet ohne abweichende Option iter_max = 2.
 source("Scripts/07_estimate_transitions.R", encoding = "UTF-8")
 source("Scripts/08_model_transitions.R", encoding = "UTF-8")
 

@@ -17,7 +17,7 @@ threshold <- getOption("waehlendenwanderung.party_threshold", 0.12)
 n_bootstrap <- getOption("waehlendenwanderung.bootstrap_n", 500L)
 sample_size_option <- getOption("waehlendenwanderung.bootstrap_sample_size", NULL)
 seed <- getOption("waehlendenwanderung.bootstrap_seed", 20260721L)
-iter_max <- getOption("waehlendenwanderung.bootstrap_nslphom_iter_max", 3L)
+iter_max <- getOption("waehlendenwanderung.bootstrap_nslphom_iter_max", 2L)
 tol <- getOption("waehlendenwanderung.bootstrap_nslphom_tol", 1e-5)
 solver <- getOption("waehlendenwanderung.bootstrap_nslphom_solver", getOption("waehlendenwanderung.nslphom_solver", "osqp"))
 solver <- match.arg(solver, c("osqp", "symphony", "lp_solve"))
@@ -27,9 +27,9 @@ model_type <- "nslphom_dual"
 analysis_region <- "ostdeutschland_ohne_berlin"
 cache_version <- "ost_dual_osqp_linke_gruene_raw_response_v5"
 
-output_dir <- data_dir_model_bootstrap_ost
+output_dir <- data_dir_model_bootstrap
 iteration_dir <- file.path(output_dir, "iterations")
-chart_dir <- file.path("Charts", "bootstrap", "ostdeutschland")
+chart_dir <- file.path("Charts", "bootstrap")
 dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 dir.create(iteration_dir, recursive = TRUE, showWarnings = FALSE)
 dir.create(chart_dir, recursive = TRUE, showWarnings = FALSE)

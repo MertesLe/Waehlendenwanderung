@@ -25,8 +25,7 @@ output_dir <- file.path(
 )
 chart_dir <- file.path(
   "Charts",
-  "Strukturvariablen",
-  "deskriptiv"
+  "Strukturvariablen"
 )
 
 dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)

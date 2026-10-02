@@ -13,7 +13,7 @@ check_lphom_available()
 check_osqp_available()
 
 threshold <- getOption("waehlendenwanderung.party_threshold", 0.12)
-iter_max <- getOption("waehlendenwanderung.speed_comparison_iter_max", 3L)
+iter_max <- getOption("waehlendenwanderung.speed_comparison_iter_max", 2L)
 tol <- getOption("waehlendenwanderung.speed_comparison_tol", 1e-5)
 n_repetitions <- getOption("waehlendenwanderung.speed_comparison_repetitions", 3L)
 n_test_units <- getOption("waehlendenwanderung.speed_comparison_units", Inf)

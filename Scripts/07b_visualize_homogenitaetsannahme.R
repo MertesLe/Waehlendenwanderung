@@ -400,7 +400,12 @@ if (save_diagnostic_plots) {
   ggsave(chart_file("histogramm.png"), hist_plot, width = 9, height = 6, dpi = 300, bg = "white")
   ggsave(chart_file("groesse_scatter.png"), size_plot, width = 9, height = 6, dpi = 300, bg = "white")
   ggsave(chart_file("top25.png"), top_plot, width = 10, height = 8, dpi = 300, bg = "white")
-  ggsave(chart_file("ost_west_boxplot.png"), region_plot, width = 8, height = 6, dpi = 300, bg = "white")
+  boxplot_name <- if (n_distinct(ehet_unit_metrics$region[ehet_unit_metrics$region != "Berlin"]) == 1L) {
+    "verteilung_boxplot.png"
+  } else {
+    "ost_west_boxplot.png"
+  }
+  ggsave(chart_file(boxplot_name), region_plot, width = 8, height = 6, dpi = 300, bg = "white")
 }
 
 if (save_data_outputs) {
