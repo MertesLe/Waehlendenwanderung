@@ -145,7 +145,7 @@ analysis_signature_components <- tibble::tibble(
 )
 
 # Bootstrap-Idee: Pro Wiederholung werden ostdeutsche agg.schluessel ohne Berlin
-# mit Zuruecklegen gezogen. nslphom_dual wird ohne Blockaufteilung auf dieser
+# mit Zuruecklegen gezogen. nslphom_dual wird auf dieser
 # Bootstrap-Stichprobe geschaetzt. Danach werden die kuenstlichen Bootstrap-IDs
 # vor der Regression wieder auf die originalen agg.schluessel gemappt.
 # Vollstaendige Einstellungen speichern, damit ein unterbrochener Lauf reproduzierbar fortsetzbar ist.

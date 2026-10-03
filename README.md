@@ -65,21 +65,27 @@ Die Buchstaben kennzeichnen optionale Diagnosen und Grafiken; die Spalte „Nach
 | 8 | `Scripts/08c_visualize_leverage_ausschluss.R` | Untersucht die Sensitivität der Regressionskoeffizienten beim Ausschluss auffälliger Einheiten. Kennzeichnet diese Einheiten in einer Ostkarte. | `Data/validierung/regression_ostdeutschland/leverage_sensitivitaet_afd_zufluss.rds`; `Charts/Regression/leverage_ausschluss/`: Vergleichsplots und Karte. |
 | 5 und 7 | `Scripts/08d_visualize_struktur_und_uebergaenge.R` | Kartiert ausgewählte Strukturvariablen und lokale Übergänge für die ostdeutschen Flächenländer. Vereinigt zusammengesetzte Aggregationsschlüssel über Gemeindegeometrien. | `Charts/Strukturvariablen/`: eine PNG-Karte je ausgewählter Variable bzw. Übergang. |
 
-Für 07g zunächst einen separaten `lp_solve`-Fit mit denselben Einstellungen wie in `Data/modeloutput/nslphom/ostdeutschland/nslphom_settings.rds` erzeugen:
+Für 07g zunächst einen separaten `lp_solve`-Fit mit denselben Einstellungen wie in `Data/modeloutput/nslphom/ostdeutschland/nslphom_settings.rds` erzeugen und anschließend vergleichen:
 
 ```r
-options(
+alte_optionen <- options(
   waehlendenwanderung.nslphom_solver = "lp_solve",
   waehlendenwanderung.nslphom_iter_max = 2L,
   waehlendenwanderung.nslphom_tol = 1e-5,
-  waehlendenwanderung.ost_nslphom_output_dir = "Data/modeloutput/nslphom/ostdeutschland_lp_solve",
+  waehlendenwanderung.ost_nslphom_output_dir =
+    "Data/modeloutput/nslphom/ostdeutschland_lp_solve",
   waehlendenwanderung.ost_ehet_run = FALSE
 )
-source("Scripts/07_estimate_transitions.R", encoding = "UTF-8")
+
+tryCatch(
+  source("Scripts/07_estimate_transitions.R", encoding = "UTF-8"),
+  finally = options(alte_optionen)
+)
+
 source("Scripts/07g_compare_solver_outputs.R", encoding = "UTF-8")
 ```
 
-`iter_max = 2L` entspricht dem Standard des Hauptfits. Nach einem Vergleichslauf geänderte Optionen für reguläre Läufe zurücksetzen.
+`iter_max = 2L` und `tol = 1e-5` sind die Skript-Defaults, werden hier aber explizit gesetzt, damit zuvor gesetzte R-Optionen den Vergleich nicht veraendern. Bei abweichenden Einstellungen des gespeicherten Hauptfits stattdessen dessen Werte verwenden. `tryCatch()` stellt die vorherigen Optionen auch bei einem Fehler wieder her.
 
 ## End-to-End-Validierung
 

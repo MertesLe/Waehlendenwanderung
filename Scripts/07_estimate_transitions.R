@@ -48,7 +48,7 @@ inputs <- list(
 )
 
 # Hauptanalyse auf die ostdeutschen Flaechenlaender begrenzen. Berlin bleibt
-# wegen der nur gesamtstaedtisch vorliegenden Strukturwerte ausgeschlossen.
+# wegen der nur gesamtstaedtisch vorliegenden Strukturwerte und inkonsistenter Stichtage ausgeschlossen.
 ost_ids <- inputs$input2021$agg_schluessel[
   is_ostdeutschland_ohne_berlin(inputs$input2021$agg_schluessel)
 ]

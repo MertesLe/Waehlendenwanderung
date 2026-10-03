@@ -258,7 +258,6 @@ influential_units <- diagnostic_rows %>%
   ungroup()
 
 # Partielle Residuen zeigen den bedingten Zusammenhang jeder Kovariate bei konstanten anderen Variablen.
-# Die bivariaten Scatterplots in Skript 15 bleiben eine Vorpruefung, reichen hierfuer aber nicht aus.
 partial_residuals <- bind_rows(lapply(origin_groups, function(origin) {
   fit <- model_fits[[origin]]
   origin_data <- model_data %>%

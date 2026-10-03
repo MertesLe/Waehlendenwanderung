@@ -24,7 +24,7 @@ valid_col2021 <- first_existing(wahldaten2021, c("^Z_G.ltige$"))
 invalid_col2025 <- first_existing(wahldaten2025, c("^Ung.ltige\\.\\.\\.Zweitstimmen$"))
 valid_col2025 <- first_existing(wahldaten2025, c("^G.ltige\\.\\.\\.Zweitstimmen$"))
 
-# Get second vote columns
+# Zweitstimmen Spalten
 party_cols2021 <- setdiff(
   grep("^Z_", names(wahldaten2021), value = TRUE),
   c(invalid_col2021, valid_col2021)

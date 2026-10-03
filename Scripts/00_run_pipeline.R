@@ -17,5 +17,5 @@ source("Scripts/05_prepare_inkar_covariates.R", encoding = "UTF-8")
 source("Scripts/07_estimate_transitions.R", encoding = "UTF-8")
 source("Scripts/08_model_transitions.R", encoding = "UTF-8")
 
-# Der speicherintensive Deutschlandfit mit EHet-Diagnose wird separat ueber
-# Scripts/07a_fit_deutschland_homogenitaet.R auf dem leistungsstaerkeren PC ausgefuehrt.
+# Der speicherintensive Deutschlandfit mit EHet-Diagnose kann separat ueber
+# Scripts/07a_fit_deutschland_homogenitaet.R ausgefuehrt werden.

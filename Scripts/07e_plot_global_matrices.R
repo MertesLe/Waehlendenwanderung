@@ -1,4 +1,4 @@
-# Globale ungeblockte Uebergangsmatrizen als Sankey-aehnliche Flussgrafik darstellen.
+# Globale Uebergangsmatrizen als Sankey-aehnliche Flussgrafik darstellen.
 
 library(dplyr)
 library(ggplot2)

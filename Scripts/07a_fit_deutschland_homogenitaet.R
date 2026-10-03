@@ -12,6 +12,7 @@ ensure_data_dirs()
 threshold <- getOption("waehlendenwanderung.party_threshold", 0.12)
 iter_max <- getOption("waehlendenwanderung.nslphom_iter_max", 2L)
 tol <- getOption("waehlendenwanderung.nslphom_tol", 1e-5)
+osqp_max_iter_deutschland <- 1000000L
 solver <- match.arg(
   getOption("waehlendenwanderung.nslphom_solver", "osqp"),
   c("osqp", "symphony", "lp_solve")
@@ -19,8 +20,26 @@ solver <- match.arg(
 run_fit <- isTRUE(getOption("waehlendenwanderung.deutschland_nslphom_run_fit", TRUE))
 run_ehet <- isTRUE(getOption("waehlendenwanderung.deutschland_ehet_run", TRUE))
 
-# Dieselben vorbereiteten Inputs wie im Ost-Hauptlauf verwenden, aber nicht regional filtern.
+# Dieselben vorbereiteten Inputs wie im Ost-Hauptlauf verwenden.
 inputs <- read_prepared_nslphom_inputs()
+
+# Kruft (07137057) 2025: 2801 Waehlende bei nur 2667 Wahlberechtigten.
+# Die Bundeswahlleiterin weist darauf hin, dass Wahlbezirksdaten auf Meldungen
+# der Laender beruhen und nicht alle Inkonsistenzen beseitigt werden konnten (Hinweismaterial 
+# der Daten 2025). Die Einheit wird im Deutschlandfit rausgelassen.
+kruft_id <- "07137057"
+kruft_check <- inputs$input_checks %>%
+  filter(.data$Jahr == 2025, .data$agg_schluessel == kruft_id)
+if (nrow(kruft_check) != 1 ||
+    !isTRUE(kruft_check$flag_waehlende_groesser_wahlberechtigte[[1]])) {
+  stop("Der Kruft-Sonderfall ist in den vorbereiteten Inputs nicht wie erwartet vorhanden.")
+}
+
+inputs$input2021 <- inputs$input2021 %>% filter(.data$agg_schluessel != kruft_id)
+inputs$input2025 <- inputs$input2025 %>% filter(.data$agg_schluessel != kruft_id)
+inputs$input_long <- inputs$input_long %>% filter(.data$agg_schluessel != kruft_id)
+inputs$input_checks <- inputs$input_checks %>% filter(.data$agg_schluessel != kruft_id)
+
 validation <- validate_prepared_nslphom_inputs(inputs, threshold = threshold)
 settings <- make_unblocked_settings(
   inputs = inputs,
@@ -34,7 +53,9 @@ settings <- make_unblocked_settings(
 ) %>%
   mutate(
     analysis_region = "deutschland",
-    berlin_included = TRUE
+    berlin_included = TRUE,
+    excluded_agg_schluessel = kruft_id,
+    osqp_max_iter = if (solver == "osqp") osqp_max_iter_deutschland else NA_integer_,
   )
 
 endoutput_path <- file.path(
@@ -58,14 +79,21 @@ if (!run_fit) {
     " Aggregationseinheiten und Solver ", solver, "."
   )
 
-  fit <- fit_nslphom_dual_model(
-    origin_counts,
-    destination_counts,
-    iter_max = iter_max,
-    tol = tol,
-    solver = solver,
-    verbose = TRUE,
-    method = method
+  alte_osqp_optionen <- options(
+    waehlendenwanderung.osqp_max_iter = osqp_max_iter_deutschland
+  )
+  
+  fit <- tryCatch(
+    fit_nslphom_dual_model(
+      origin_counts,
+      destination_counts,
+      iter_max = iter_max,
+      tol = tol,
+      solver = solver,
+      verbose = TRUE,
+      method = method
+    ),
+    finally = options(alte_osqp_optionen)
   )
 
   # Lokale Matrizen, globale Matrix und EHet fuer die Deutschlanddiagnose aufbereiten.

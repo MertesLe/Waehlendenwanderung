@@ -169,31 +169,9 @@ mapping25 <-
   ) %>%
   select(-agg.schlüssel.bw)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#################################################################################
 # Bereinigung Bundestagswahl 2021
 # Der Gemeindeschlüssel wurde bereits oben mit make_ags() erzeugt.
-
-
 
 # beteiligte Gemeinden: 9xx-Datensatz mit den normalen Gemeinden desselben Kreises
 # und derselben Briefwahlzugehörigkeit verbinden
@@ -227,8 +205,6 @@ bw_groups21 <- kgemeinden21 %>%
     egemeinden21,
     by = c("Land", "Regierungsbezirk", "Kreis", "Wahlkreis", "Kennziffer.Briefwahlzugehörigkeit")
   )
-
-
 
 
 # Shifts innerhalb und außerhalb der Gemeinde. Wichtig ist außerhalb der Gemeinde
@@ -269,7 +245,7 @@ if (nrow(missing_bw_members21) > 0) {
 
 ###############################################################################
 #Mapping-Datensatz erstellen
-###############################################################################
+
 mapping21 <- data2021 %>%
   select(Wahlkreis, Gemeinde, Gemeindeschlüssel) %>%
   distinct()
@@ -323,12 +299,6 @@ mapping21 <-
   ) %>%
   select(-agg.schlüssel.bw)
 
-
-
-
-
-
-
 # Keine Beschränkung auf die Schnittmenge der Gemeinden:
 # Gebietsänderungen sollen über Aggregationen harmonisiert werden,
 # nicht durch Löschen von Gemeinden oder Wahlbezirkszeilen.
@@ -336,11 +306,6 @@ mapping21_clean <- mapping21
 mapping25_clean <- mapping25
 data21_clean <- data2021
 data25_clean <- data2025
-
-
-
-
-
 
 ## Aggregation anpassen
 mapping_gebietsaenderungen_pfad <- file.path(data_dir_cleaned, "mapping_gebietsaenderungen.rds")
@@ -789,10 +754,7 @@ saveRDS(
   file = file.path(data_dir_validation, "textausweisungen_inkonsistenzen.rds")
 )
 
-
-
-
-
+##############################################################################
 # Aggregation der Wahldaten
 id_vars <- c(
   "Wahlkreis",
@@ -911,10 +873,6 @@ if (!isTRUE(all.equal(
 }
 
 
-
-
-
-
 # Mapping Größe untersuchen
 wahldaten2025 %>%
   summarise(
@@ -939,9 +897,6 @@ hist(
   xlab = "Gültige Zweitstimmen"
 )
 
-
-
-
 # Bundestagswahl 2025 abspeichern
 saveRDS(
   wahldaten2025,
@@ -963,5 +918,3 @@ saveRDS(
   wahldaten2021,
   file = file.path(data_dir_cleaned, "wahldaten2021_gemappt.rds")
 )
-
-
