@@ -56,6 +56,8 @@ settings <- make_unblocked_settings(
     berlin_included = TRUE,
     excluded_agg_schluessel = kruft_id,
     osqp_max_iter = if (solver == "osqp") osqp_max_iter_deutschland else NA_integer_,
+    osqp_eps_abs = if (solver == "osqp") getOption("waehlendenwanderung.osqp_eps_abs", 1e-3) else NA_real_,
+    osqp_eps_rel = if (solver == "osqp") getOption("waehlendenwanderung.osqp_eps_rel", 1e-3) else NA_real_,
   )
 
 endoutput_path <- file.path(

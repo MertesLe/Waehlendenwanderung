@@ -391,9 +391,9 @@ settings <- tibble(
   keep_parties = paste(validation$kept_parties, collapse = ", "),
   lphom_package_version = as.character(utils::packageVersion("lphom")),
   osqp_package_version = if (solver == "osqp") as.character(utils::packageVersion("osqp")) else NA_character_,
-  osqp_max_iter = if (solver == "osqp") as.integer(getOption("waehlendenwanderung.osqp_max_iter", 300000L)) else NA_integer_,
-  osqp_eps_abs = if (solver == "osqp") getOption("waehlendenwanderung.osqp_eps_abs", 1e-5) else NA_real_,
-  osqp_eps_rel = if (solver == "osqp") getOption("waehlendenwanderung.osqp_eps_rel", 1e-5) else NA_real_,
+  osqp_max_iter = if (solver == "osqp") as.integer(getOption("waehlendenwanderung.osqp_max_iter", 100000L)) else NA_integer_,
+  osqp_eps_abs = if (solver == "osqp") getOption("waehlendenwanderung.osqp_eps_abs", 1e-3) else NA_real_,
+  osqp_eps_rel = if (solver == "osqp") getOption("waehlendenwanderung.osqp_eps_rel", 1e-3) else NA_real_,
   osqp_polishing = if (solver == "osqp") isTRUE(getOption("waehlendenwanderung.osqp_polishing", TRUE)) else NA,
   note = paste(
     "iter_max wird aus einem vollstaendigen nslphom_dual-Lauf rekonstruiert;",

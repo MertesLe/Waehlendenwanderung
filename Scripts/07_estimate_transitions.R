@@ -76,7 +76,10 @@ settings <- make_unblocked_settings(
   mutate(
     analysis_region = "ostdeutschland_ohne_berlin",
     included_state_prefixes = "12, 13, 14, 15, 16",
-    berlin_included = FALSE
+    berlin_included = FALSE,
+    osqp_max_iter = if (solver == "osqp") as.integer(getOption("waehlendenwanderung.osqp_max_iter", 100000L)) else NA_integer_,
+    osqp_eps_abs = if (solver == "osqp") getOption("waehlendenwanderung.osqp_eps_abs", 1e-3) else NA_real_,
+    osqp_eps_rel = if (solver == "osqp") getOption("waehlendenwanderung.osqp_eps_rel", 1e-3) else NA_real_
   )
 
 message("Ost-Hauptanalyse umfasst ", nrow(inputs$input2021), " Aggregationseinheiten ohne Berlin.")

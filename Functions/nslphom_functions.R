@@ -178,9 +178,9 @@ solve_lp_osqp <- function(
 
   settings <- osqp::osqpSettings(
     verbose = isTRUE(getOption("waehlendenwanderung.osqp_verbose", FALSE)),
-    max_iter = as.integer(getOption("waehlendenwanderung.osqp_max_iter", 300000L)),
-    eps_abs = getOption("waehlendenwanderung.osqp_eps_abs", 1e-5),
-    eps_rel = getOption("waehlendenwanderung.osqp_eps_rel", 1e-5),
+    max_iter = as.integer(getOption("waehlendenwanderung.osqp_max_iter", 100000L)),
+    eps_abs = getOption("waehlendenwanderung.osqp_eps_abs", 1e-3),
+    eps_rel = getOption("waehlendenwanderung.osqp_eps_rel", 1e-3),
     polishing = isTRUE(getOption("waehlendenwanderung.osqp_polishing", TRUE))
   )
 

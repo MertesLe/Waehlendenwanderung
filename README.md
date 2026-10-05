@@ -26,6 +26,8 @@ Data/raw/gebiete_visualisierung/vg250_01-01.utm32s.gpkg.ebenen/vg250_ebenen_0101
 
 `Scripts/00_run_pipeline.R` ist eine **Teillauf-Pipeline**: Sie führt nur 01 bis 05 sowie 07 und 08 aus. Sie startet weder den Deutschlandfit noch die optionalen Diagnosen, die Simulation, die übrigen Grafiken, den Bootstrap oder die Ergebnisanalyse. `07` erstellt seine EHet-Grafiken über `07b` standardmäßig bereits mit. Ostfit, Deutschlandfit und Bootstrap verwenden ohne abweichende Option `iter_max = 2`; die separate Validierung 06a verwendet `iter_max = 10`.
 
+Die Standardwerte des globalen OSQP-Solvers sind `eps_abs = eps_rel = 1e-3` und `osqp_max_iter = 100000`. Nur der Deutschlandfit setzt die OSQP-Iterationsgrenze auf `1000000`; das `nslphom`-`iter_max = 2` ist davon unabhängig. Aktive R-Optionen können die Standardwerte weiterhin überschreiben.
+
 ```r
 source("Scripts/00_run_pipeline.R", encoding = "UTF-8")
 ```

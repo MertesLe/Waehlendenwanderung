@@ -182,9 +182,19 @@ save_pair_map <- function(variable, origin, label, filename, probability = FALSE
   stopifnot(nrow(map_data) == 1078, !anyNA(map_data$value))
   labels <- if (probability) scales::label_percent(accuracy = 1) else
     scales::label_number(big.mark = ".", decimal.mark = ",", accuracy = 0.1)
+  legend_guide <- if (variable == "distanz_staatsgrenze_km_2023") {
+    guide_colorbar(
+      title.position = "top",
+      title.hjust = 0.5,
+      barwidth = grid::unit(3.5, "in")
+    )
+  } else {
+    guide_colorbar()
+  }
   p <- ggplot(map_data) +
     geom_sf(aes(fill = value), color = "white", linewidth = 0.03) +
-    scale_fill_viridis_c(option = "C", labels = labels, name = label) +
+    scale_fill_viridis_c(option = "C", labels = labels, name = label,
+                         guide = legend_guide) +
     coord_sf(datum = NA, expand = FALSE) +
     theme_void(base_size = 11) +
     theme(legend.position = "bottom", legend.title = element_text(size = 11),

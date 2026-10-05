@@ -225,6 +225,9 @@ settings <- tibble(
   selection_mode = selection_mode,
   seed = seed,
   osqp_local_solver = "lp_solve",
+  osqp_max_iter = as.integer(getOption("waehlendenwanderung.osqp_max_iter", 100000L)),
+  osqp_eps_abs = getOption("waehlendenwanderung.osqp_eps_abs", 1e-3),
+  osqp_eps_rel = getOption("waehlendenwanderung.osqp_eps_rel", 1e-3),
   speedup_lphom_over_osqp = speedup_lphom_over_osqp,
   lphom_version = as.character(utils::packageVersion("lphom")),
   osqp_version = as.character(utils::packageVersion("osqp"))

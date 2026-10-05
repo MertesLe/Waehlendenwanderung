@@ -275,17 +275,34 @@ summarise_bootstrap_betas <- function(beta_draws) {
 
 # Verteilungen der Bootstrap-Koeffizienten mit Nullreferenz und signifikantem Hintergrund plotten.
 plot_bootstrap_beta_distributions <- function(beta_draws) {
+  term_labels <- c(
+    einwohnerdichte_2023_z = "Einwohnerdichte",
+    supermarktEntfernung_2023_z = "Supermarktentfernung",
+    alterMean_2023_z = "Durchschnittsalter",
+    wanderungssaldo_2023_z = "Wanderungssaldo",
+    pendler50_2023_z = "Fernpendleranteil",
+    steuereinnahmen_2023_z = "Kommunale Steuerkraft im Kreis",
+    haushaltsgroesseMean_2023_z = "Haushaltsgr\u00f6\u00dfe",
+    anteilHaushalteNiedrigesEinkommen_2023_z = "Niedrige Haushaltseinkommen",
+    arbeitslosenanteilErwerbsfaehige_2023_z = "Arbeitslosenanteil",
+    distanz_staatsgrenze_km_2023_z = "Entfernung zur Staatsgrenze"
+  )
   plot_data <- beta_draws %>%
     dplyr::filter(
       .data$term != "(Intercept)",
       .data$model_target == "origin_to_AfD_probability"
     ) %>%
     dplyr::mutate(
-      variable = sub("_2023_z$", "", .data$term),
-      from_label = label_party_group(.data$from),
-      row_label = .data$variable,
-      row_label = factor(.data$row_label, levels = unique(.data$row_label))
+      from_label = dplyr::if_else(
+        .data$from == "Nichtwaehler", "Nichtw\u00e4hlende", label_party_group(.data$from)
+      ),
+      row_label = unname(term_labels[.data$term]),
+      row_label = factor(.data$row_label, levels = rev(unname(term_labels)))
     )
+
+  if (anyNA(plot_data$row_label)) {
+    stop("Fuer mindestens einen Bootstrap-Koeffizienten fehlt die Variablenbeschriftung.")
+  }
 
   # Ein Hintergrund wird eingefaerbt, wenn das 95-Prozent-Bootstrapintervall Null ausschliesst.
   panel_backgrounds <- plot_data %>%
