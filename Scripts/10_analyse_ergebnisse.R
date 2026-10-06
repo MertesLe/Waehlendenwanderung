@@ -180,7 +180,7 @@ save_pair_map <- function(variable, origin, label, filename, probability = FALSE
     transmute(agg_schluessel, value = .data[[variable]])
   map_data <- agg_geometry %>% inner_join(values, by = "agg_schluessel")
   stopifnot(nrow(map_data) == 1078, !anyNA(map_data$value))
-  labels <- if (probability) scales::label_percent(accuracy = 1) else
+  labels <- if (probability) scales::label_percent(accuracy = 1, suffix = "") else
     scales::label_number(big.mark = ".", decimal.mark = ",", accuracy = 0.1)
   legend_guide <- if (variable == "distanz_staatsgrenze_km_2023") {
     guide_colorbar(

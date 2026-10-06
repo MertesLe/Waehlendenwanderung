@@ -357,9 +357,6 @@ make_block_plot <- function(
     )
 }
 
-pdf_path <- file.path(charts_dir, "nslphom_global_matrizen_ungeblockt.pdf")
-grDevices::pdf(pdf_path, width = 12, height = 7, onefile = TRUE)
-
 message("Erzeuge globale Matrix fuer Ostdeutschland ohne Berlin.")
 ost_matrix <- endoutput_to_matrix(ost_output_path)
 ost_plot <- make_block_plot(
@@ -375,8 +372,6 @@ ggplot2::ggsave(
   dpi = 300,
   bg = "white"
 )
-
-print(ost_plot)
 
 message("Erzeuge globale Matrix fuer Deutschland.")
 deutschland_matrix <- endoutput_to_matrix(deutschland_output_path)
@@ -394,8 +389,4 @@ ggplot2::ggsave(
   bg = "white"
 )
 
-print(deutschland_plot)
-
-grDevices::dev.off()
-
-message("Fertig. Sammel-PDF gespeichert unter: ", pdf_path)
+message("Fertig. PNG-Grafiken gespeichert unter: ", charts_dir)

@@ -50,11 +50,6 @@ map_file <- file.path(
   paste0(run_label, "_lokale_matrix_residuen_deutschlandkarte_agg.png")
 )
 
-hist_file <- file.path(
-  chart_dir,
-  paste0(run_label, "_lokale_matrix_residuen_histogramm.png")
-)
-
 metrics_file <- file.path(
   output_dir,
   paste0(run_label, "_lokale_matrix_residuen.rds")
@@ -171,24 +166,6 @@ local_residual_summary <- local_residual_metrics %>%
 
 saveRDS(local_residual_metrics, metrics_file)
 saveRDS(local_residual_summary, summary_file)
-
-hist_plot <- ggplot(local_residual_metrics, aes(x = local_residual_index)) +
-  geom_histogram(bins = 60, fill = "grey55", color = "white") +
-  scale_x_continuous(labels = percent_format(accuracy = 0.000001)) +
-  labs(
-    x = "Relativer Rekonstruktionsfehler",
-    y = "Anzahl der Aggregationseinheiten"
-  ) +
-  theme_minimal(base_size = 16)
-
-ggsave(
-  hist_file,
-  hist_plot,
-  width = 8,
-  height = 5,
-  dpi = 300,
-  bg = "white"
-)
 
 gemeinde_geometrien <- sf::st_read(
   geometry_path,
