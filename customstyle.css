@@ -1,0 +1,48 @@
+/*-- scss:defaults --*/
+
+/*-- scss:rules --*/
+
+.reveal .title {
+  font-size: 1.4em;
+}
+
+body {
+  text-align: justify;
+}
+
+.reveal .slide-number {
+  bottom: 12px !important;
+  right: 8px !important;
+  top: unset !important;
+}
+
+.reveal .slide-logo {
+  height: 100px !important;
+  width: 100px!important;
+  max-width: unset !important;
+  max-height: unset !important;
+  top: 14px !important;
+  right: 50px !important;
+}
+
+.reveal .footer {
+  font-size: 0.4em !important;
+  text-align: justify !important;
+  display: block;
+}
+
+.custom-smaller {
+    font-size: 0.8em;
+}
+
+/* Center the whole table */
+.reveal table {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Justify cell text */
+.reveal table td,
+.reveal table th {
+  text-align: center;   /* or: center, right, justify */
+}
