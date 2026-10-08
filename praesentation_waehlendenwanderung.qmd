@@ -3,7 +3,7 @@ title: 'Schätzung struktureller Einflüsse auf die Wählerwanderung zwischen de
 author:
     name: "Leonie Mertes"
     affiliation: "Verteidigung der Bachelorarbeit"
-institute: "Betreuer: Prof. Dr. Göran Kauermann"
+institute: "Betreuer: Prof. Dr. Göran Kauermann<br>Cobetreuer: Jan Anders"
 date: "2026-11-06"
 date-format: "DD.MM.YYYY"
 format: 
@@ -18,37 +18,215 @@ format:
         margin-left: 10%; margin-right: 10%;">
       <span style="text-align: left;">Leonie Mertes</span>
       <span style="text-align: center;"
-      >Models for Network Diffusion and Social Influence</span>
-      <span style="text-align: right;">16.06.2026</span>
+      >Strukturelle Zusammenhänge mit AfD-Wählerwanderungen</span>
+      <span style="text-align: right;">06.11.2026</span>
       </div>
 editor: source
 ---
 
-## Grafik einfügen {.custom-smaller}
+## Zweitstimmenanteile der Bundestagswahlen 2021 und 2025 {.custom-smaller}
 
 ```{r, echo=FALSE, out.width="100%"}
-#knitr::include_graphics("Images/11flows1.png")
+knitr::include_graphics("Charts/bundestagswahl_zweitstimmen_deutschland_2021_2025.png")
 ```
+
+## Agenda {.custom-smaller}
+
+1.  Ökologische Inferenz und \texttt{nslphom}
+
+2.  Datengrundlage und -aufbereitung
+
+3.  Ost-Fokussierung und \texttt{nslphom}-Ergebnisse
+
+4.  Regressionsmodell und Bootstrap
+
+5.  Ergebnisse
+
+6.  Disskusion
+
+7.  Fazit
+
+## Ökologische Inferenz: Das Grundproblem {.custom-smaller}
+
+::::: columns
+::: {.column width="52%"}
+
+Für jede räumliche Einheit $i$:
+
+$$
+\begin{array}{c|ccc|c}
+ & k=1 & \cdots & k=K & \text{2021} \\ \hline
+j=1 & N_{i11} & \cdots & N_{i1K} & x_{i1} \\
+\vdots & \vdots & & \vdots & \vdots \\
+j=J & N_{iJ1} & \cdots & N_{iJK} & x_{iJ} \\ \hline
+\text{2025} & y_{i1} & \cdots & y_{iK} & n_i
+\end{array}
+$$
+
+:::
+
+::: {.column width="48%"}
+
+**Beobachtet**
+
+- Wahlergebnisse 2021: $x_{ij}$
+- Wahlergebnisse 2025: $y_{ik}$
+
+**Unbekannt**
+
+- Übergänge $N_{ijk}$ zwischen beiden Wahlen
+
+$$
+\sum_k N_{ijk}=x_{ij},
+\qquad
+\sum_j N_{ijk}=y_{ik}
+$$
+
+:::
+:::::
+
+::: {.fragment}
+**Gleiche Randverteilungen können zu unterschiedlichen Übergangsmatrizen gehören.**
+:::
+
+## Woher kommt die Information? {.custom-smaller}
+
+::::: columns
+::: {.column width="47%"}
+
+### Eine räumliche Einheit
+
+Gesuchte Übergangsrate:
+
+$$
+p_{ijk} = \frac{N_{ijk}}{x_{ij}}
+$$
+
+Beobachteter Zielrand:
+
+$$
+y_{ik}
+=
+\sum_{j=1}^{J} x_{ij}p_{ijk}
+$$
+
+Nur eine gewichtete Summe mehrerer unbekannter Übergangsraten
+
+**$\Rightarrow$ nicht eindeutig identifiziert**
+
+:::
+
+::: {.column width="6%"}
+:::
+
+::: {.column width="47%"}
+
+### Viele räumliche Einheiten
+
+In Anteilen:
+
+$$
+t_{ik}
+=
+\sum_{j=1}^{J}s_{ij}p_{ijk}
+$$
+
+Die Zusammensetzung variiert zwischen den Einheiten:
+
+$$
+(s_{i1},\ldots,s_{iJ})
+\qquad
+(t_{i1},\ldots,t_{iK})
+$$
+
+**$\Rightarrow$ gemeinsame Variation liefert Information**
+
+:::
+:::::
+
+## nslphom: Globale Referenz, lokale Übergänge {.custom-smaller}
+
+::::: columns
+::: {.column width="45%"}
+
+**1. Globale Ausgangsschätzung**
+
+$$
+\hat P^G =
+\left(\hat p^G_{jk}\right)
+$$
+
+Gemeinsames Übergangsmuster über alle räumlichen Einheiten
+
+<br>
+
+**2. Lokale Schätzung**
+
+$$
+\hat N_i
+=
+\arg\min_{N_i \in \mathcal F_i}
+\sum_{j,k}
+\left|
+N_{ijk}-x_{ij}\hat p^G_{jk}
+\right|
+$$
+
+mit exakt eingehaltenen lokalen Rändern.
+
+:::
+
+::: {.column width="55%"}
+```{r, echo=FALSE, out.width="100%"}
+knitr::include_graphics("Charts/Tomography/tomography_nslphom_principle_ostdeutschland.png")
+```
+:::
+:::::
+
+## Verwendete Variante: duales nslphom {.custom-smaller}
+
+nslphom wird in **beiden mathematischen Richtungen** geschätzt:
+
+$$
+2021 \longrightarrow 2025
+\qquad\text{und}\qquad
+2025 \longrightarrow 2021
+$$
+
+Nach Transposition der Rückwärtsschätzung:
+
+$$
+\hat N_i^{(w)}
+=
+\frac{
+H_{12}^{-1}\hat N_i^{(12)}
++
+H_{21}^{-1}\hat N_i^{(21,T)}
+}{
+H_{12}^{-1}+H_{21}^{-1}
+}
+$$
+
+::: {.fragment}
+
+### Ergebnis für jede räumliche Einheit
+
+$$
+\hat p_{ijk}^{(w)}
+=
+\frac{\hat N_{ijk}^{(w)}}{x_{ij}}
+$$
+
+**Lokale Übergangsraten**  
+z. B. Union $\rightarrow$ AfD, SPD $\rightarrow$ AfD, Nichtwählende $\rightarrow$ AfD
+
+:::
 
 ## Ungezählte weitere Folie {.custom-smaller visibility="uncounted"}
 
 ```{r, echo=FALSE, out.width="100%"}
 #knitr::include_graphics("Images/11flows2.png")
 ```
-
-## Agenda {.custom-smaller}
-
-1.  SIR model
-
-1.1 Network topology effects\
-1.2 Simulation Models
-
-2.  Stochastic Actor-Oriented Models (SAOMs)
-
-2.1 Model Components\
-2.2 Interpretation\
-2.3 Extensions\
-2.4 Criticism on SAOMs
 
 ## Bild + Text {.custom-smaller}
 
@@ -66,43 +244,12 @@ $\frac{dR}{dt} = \gamma I$
 reproductive number $R_0 = \frac{\beta}{\gamma}$
 :::
 
-## Varying infection behavior {.custom-smaller}
-
-::: {style="font-size: 0.8em; text-align: left;"}
-$\beta = vc$,\
-$v =$ virulence = transmission probability given contact, $c =$ average contact rate
-
-$R_0 = v\bar{c}d$
-:::
-
-network diffusion process governed by:\
-1. topology of the network structure\
-2. the timing of relations of infection (i.e., duration and sequence)
-
 ## Bildunterschrift und Quellenangabe {.custom-smaller}
-
-```{r, echo=FALSE, out.width="100%"}
-#knitr::include_graphics("Images/141avgdeg.jpg")
-```
 
 ::: {style="font-size: 0.6em; color: gray;"}
 Average degree and component size.\
 Source: https://networksciencebook.com/chapter/3#evolution-network
 :::
-
-## Model Components {.custom-smaller}
-
-::: {style="font-size: 0.8em; text-align: middle;"}
-$X = (x_{ij})$, $(x_{ij}) = \begin{cases} 0 & \text{no tie exists} \\ 1 & \text{tie exists} \end{cases}$
-
-Actor features $v_i$\
-Dyadic features $w_{ij}$
-:::
-
--   Rate function: Rate of change of the network by actor $i$ is denoted $λ_i$
-
--   Objective function $f_i(β,x)$ indicates preferred ‘directions’ of change
-
 
 ## Tabelle {.custom-smaller}
 
@@ -139,9 +286,7 @@ Influence-Effekte:
 :::
 
 ::: {.column width="50%\""}
-```{r, echo=FALSE, out.width="100%"}
-#knitr::include_graphics("Images/behaviorQuadratic.png")
-```
+Spalte 2
 :::
 :::::
 
