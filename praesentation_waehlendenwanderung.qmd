@@ -30,7 +30,25 @@ editor: source
 knitr::include_graphics("Charts/bundestagswahl_zweitstimmen_deutschland_2021_2025.png")
 ```
 
-## Agenda {.custom-smaller}
+## Zweitstimmenanteile der Bundestagswahlen 2021 und 2025 {.custom-smaller .research-slide visibility="uncounted"}
+
+```{r, echo=FALSE, out.width="100%"}
+knitr::include_graphics("Charts/bundestagswahl_zweitstimmen_deutschland_2021_2025.png")
+```
+
+::: {.research-box}
+**Schätzung struktureller Einflüsse auf die Wählerwanderung zwischen den Bundestagswahlen 2021 und 2025 mittels ökologischer Inferenz**
+:::
+
+::: {.research-details .fragment}
+- Welche regionalen Strukturmerkmale stehen mit den Übergangsraten zur AfD in Zusammenhang?
+- Unterscheiden sich die Zusammenhänge zwischen den Herkunftsgruppen?
+- Welche Methodik ist zur Schätzung von Übergangsraten und strukturellen Einflüssen auf diese nötig?
+:::
+
+---
+
+## Agenda {.custom-smaller .top-slide}
 
 1.  Ökologische Inferenz und \texttt{nslphom}
 
@@ -42,11 +60,13 @@ knitr::include_graphics("Charts/bundestagswahl_zweitstimmen_deutschland_2021_202
 
 5.  Ergebnisse
 
-6.  Disskusion
+6.  Diskussion
 
 7.  Fazit
 
-## Ökologische Inferenz: Das Grundproblem {.custom-smaller}
+---
+
+## Ökologische Inferenz: Das Grundproblem {.custom-smaller .top-slide}
 
 ::::: columns
 ::: {.column width="52%"}
@@ -54,6 +74,7 @@ knitr::include_graphics("Charts/bundestagswahl_zweitstimmen_deutschland_2021_202
 Für jede räumliche Einheit $i$:
 
 $$
+\small
 \begin{array}{c|ccc|c}
  & k=1 & \cdots & k=K & \text{2021} \\ \hline
 j=1 & N_{i11} & \cdots & N_{i1K} & x_{i1} \\
@@ -85,7 +106,7 @@ $$
 :::
 :::::
 
-::: {.fragment}
+::: {.fragment .ei-takeaway}
 **Gleiche Randverteilungen können zu unterschiedlichen Übergangsmatrizen gehören.**
 :::
 
@@ -110,7 +131,7 @@ y_{ik}
 \sum_{j=1}^{J} x_{ij}p_{ijk}
 $$
 
-Nur eine gewichtete Summe mehrerer unbekannter Übergangsraten
+Gewichtete Summe mehrerer unbekannter Übergangsraten
 
 **$\Rightarrow$ nicht eindeutig identifiziert**
 
@@ -183,17 +204,15 @@ knitr::include_graphics("Charts/Tomography/tomography_nslphom_principle_ostdeuts
 :::
 :::::
 
-## Verwendete Variante: duales nslphom {.custom-smaller}
+## Duales nslphom {.custom-smaller}
 
-nslphom wird in **beiden mathematischen Richtungen** geschätzt:
+nslphom in beide mathematischen Richtungen schätzen und kombinieren:
 
 $$
 2021 \longrightarrow 2025
-\qquad\text{und}\qquad
+\qquad \text{und} \qquad
 2025 \longrightarrow 2021
 $$
-
-Nach Transposition der Rückwärtsschätzung:
 
 $$
 \hat N_i^{(w)}
@@ -209,24 +228,394 @@ $$
 
 ::: {.fragment}
 
-### Ergebnis für jede räumliche Einheit
-
 $$
 \hat p_{ijk}^{(w)}
 =
 \frac{\hat N_{ijk}^{(w)}}{x_{ij}}
 $$
 
-**Lokale Übergangsraten**  
-z. B. Union $\rightarrow$ AfD, SPD $\rightarrow$ AfD, Nichtwählende $\rightarrow$ AfD
+Lokale Übergangsraten, z. B. Union $\rightarrow$ AfD, SPD $\rightarrow$ AfD, Nichtwählende $\rightarrow$ AfD
+:::
+
+## Datengrundlage & räumliche Harmonisierung {.custom-smaller .prep-uniform}
+
+::: {.data-cards}
+
+::: {.data-card}
+**Bundestagswahlen 2021 & 2025**
+
+Bundeswahlleiterin · Wahlbezirksebene
+
+Amtliche Wahlbezirksergebnisse  
+(Zweitstimmen)
+:::
+
+::: {.data-card}
+**Regionale Strukturmerkmale**
+
+INKAR · Berichtsjahr **2023**
+
+10 Merkmale aus Demografie,  
+Wirtschaft, Siedlungsstruktur,  
+Mobilität und Grenzlage
+:::
+
+::: {.data-card-stack}
+
+::: {.data-card .data-card-small}
+**Geometrien**
+
+BKG · Gebietsstand **01.01.2025**
+
+kartografische Darstellung
+:::
+
+::: {.data-card .data-card-small}
+**Gemeindegebietsänderungen**
+
+Statistisches Bundesamt · <br>
+**2021–2024**
+:::
 
 :::
 
-## Ungezählte weitere Folie {.custom-smaller visibility="uncounted"}
+:::
+
+
+::: {.data-flow .fragment}
+
+::: {.flow-box}
+**Räumliche Harmonisierung**
+
+- Briefwahlauszählungen  
+- Gemeindegebietsänderungen  
+- §68 BWO
+:::
+
+::: {.flow-arrow}
+→
+:::
+
+::: {.flow-box}
+<span class="data-number">5.965</span>
+
+vergleichbare räumliche Einheiten  
+in Deutschland
+:::
+
+::: {.flow-arrow}
+→
+:::
+
+::: {.flow-box .flow-main}
+<span class="data-number">1.078</span>
+
+Aggregationseinheiten in  
+Ostdeutschland ohne Berlin
+:::
+
+:::
+
+
+## Vom Wahlergebnis zum Modellinput {.custom-smaller .prep-uniform}
+
+**Wahloptionen in beiden Wahljahren**
+
+<div class="category-grid">
+  <div class="category-chip">AfD</div>
+  <div class="category-chip">SPD</div>
+  <div class="category-chip">Union</div>
+  <div class="category-chip">Linke/Grüne</div>
+  <div class="category-chip">Andere</div>
+  <div class="category-chip">Nichtwählende</div>
+</div>
+
+::: {.prep-flow}
+
+::: {.prep-box}
+**Zusammenfassung**
+
+CDU + CSU → **Union**
+
+Linke + Grüne → **Linke/Grüne**
+
+übrige Parteien (<12%) + ungültige Zweitstimmen → **Andere**
+
+**Nichtwählende**
+:::
+
+::: {.prep-arrow}
+→
+:::
+
+::: {.prep-box}
+**Gleiche Gesamtmasse**
+
+2025 wird innerhalb jeder Einheit auf die Gesamtmasse von 2021 skaliert
+:::
+
+::: {.prep-arrow}
+→
+:::
+
+::: {.prep-box .prep-result}
+**Input für nslphom**
+
+2021: $1078 \times 6$
+
+2025: $1078 \times 6$
+
+gleiche Einheiten  
+gleiche Kategorien  
+gleiche Gesamtmassen
+:::
+
+:::
+
+## Heterogenität der deutsch\-landweiten Schätzung {.custom-smaller .hete-map-slide}
+
+::: {.hete-map-large}
 
 ```{r, echo=FALSE, out.width="100%"}
-#knitr::include_graphics("Images/11flows2.png")
+knitr::include_graphics("Charts/homogenitaetsannahme/deutschland_ehet_deutschlandkarte_agg.png")
 ```
+
+:::
+
+
+## nslphom-Ergebnisse für Ostdeutschland {.custom-smaller .top-slide}
+
+```{r, echo=FALSE, out.width="95%"}
+knitr::include_graphics("Charts/nslphom_global_matrix_ostdeutschland_ungeblockt.png")
+```
+
+## Regionale Strukturmerkmale 2023 {.custom-smaller .top-slide}
+
+::: {style="font-size: 0.8em; line-height: 1.08;"}
+
+| Thema | Strukturmerkmal | Aufbereitung |
+|---|---|---|
+| Siedlungsstruktur | **Einwohnerdichte** | INKAR-Indikator |
+| Peripherie / Nahversorgung | **Supermarktentfernung** | bevölkerungsgewichtet |
+| Demografie | **Durchschnittsalter** | bevölkerungsgewichtet |
+| Bevölkerungsdynamik | **Wanderungssaldo** | bevölkerungsgewichtet |
+| Pendelmobilität | **Fernpendleranteil** | gewichtet nach Beschäftigten am Wohnort |
+| Regionale Wirtschaftslage | **Kommunale Steuerkraft im Kreis** | Kreiswert; ggf. bevölkerungsgewichtet |
+| Haushaltsstruktur | **Haushaltsgröße** | rekonstruiert / aggregiert |
+| Materielle Lage | **Niedrige Haushaltseinkommen** | gewichtet nach geschätzter Haushaltszahl |
+| Arbeitsmarkt | **Arbeitslosenanteil 15–64** | $\sum$ Arbeitslose / $\sum$ Bevölkerung 15–<65 |
+| Grenzlage | **Entfernung zur Staatsgrenze** | Distanz ab bevölkerungsgewichtetem Mittelpunkt |
+
+:::
+
+## Zielgrößen: Übergangsraten zur AfD {.custom-smaller}
+
+```{r, echo=FALSE, out.width="112%", fig.align="center"}
+knitr::include_graphics("Charts/Strukturvariablen/afd_uebergangswahrscheinlichkeiten_verteilungen.png")
+```
+
+::: {.research-details .target-note-position .fragment}
+Die Zielgrößen sind **mit nslphom geschätzte lokale Übergangsraten** und damit nicht direkt beobachtet.
+:::
+
+
+## Gewichtetes lineares Regressionsmodell {.custom-smaller}
+
+Für jede Herkunftsgruppe $j$ wird ein eigenes Modell geschätzt:
+
+$$
+\hat p_{ij\rightarrow AfD}
+=
+\alpha_j
++
+\sum_{r=1}^{10}
+\beta_{jr}z_{ir}
++
+\varepsilon_{ij}
+$$
+
+::::: columns
+
+::: {.column width="50%"}
+
+**Prädiktoren**
+
+- 10 z-standardisierte Strukturmerkmale
+- identische Modellspezifikation für alle Herkunftsgruppen
+- keine Interaktionen
+
+:::
+
+::: {.column width="50%"}
+
+**Gewichtung**
+
+$$
+w_{ij}=x_{ij}
+$$
+
+Einheiten mit einer größeren jeweiligen **Herkunftsgruppe** erhalten stärkeres Gewicht.
+
+:::
+
+:::::
+
+::: {.fragment}
+**Interpretation von $\beta_{jr}$:**  
+Bedingte Änderung der geschätzten Übergangsrate bei einer Erhöhung des Strukturmerkmals um **eine Standardabweichung**, c. p.
+
+$$
+\beta_{jr}=0{,}01
+\quad\Rightarrow\quad
+1\ \text{Prozentpunkt}
+$$
+:::
+
+
+## Regressionsdiagnostik {.custom-smaller}
+
+::::: columns
+
+::: {.column width="46%"}
+
+**Zu prüfen**
+
+- funktionale Form
+- Varianzstruktur der Residuen
+- einflussreiche Beobachtungen
+- Multikollinearität
+- Vorhersagen außerhalb $[0,1]$
+
+<br>
+
+Mit
+
+$$
+\hat\varepsilon_{ij}
+=
+\hat p_{ij\rightarrow AfD}
+-
+\hat p^{\,reg}_{ij\rightarrow AfD}
+$$
+
+:::
+
+::: {.column width="54%"}
+
+```{r, echo=FALSE, out.width="100%"}
+knitr::include_graphics("Charts/Regression/regressionsdiagnostik/residuen_gegen_vorhersage.png")
+```
+
+:::
+
+:::::
+
+::: {.fragment}
+Die Regressionsmodelle beschreiben **bedingte regionale Zusammenhänge** – keine individuellen oder kausalen Effekte.
+:::
+
+
+## Warum ein Bootstrap der vollständigen Schätzkette? {.custom-smaller}
+
+Die abhängigen Variablen der Regression sind **selbst geschätzt**:
+
+$$
+\text{Wahldaten}
+\longrightarrow
+\text{nslphom}
+\longrightarrow
+\hat p_{ij\rightarrow AfD}
+\longrightarrow
+\text{Regression}
+$$
+
+Konventionelle Unsicherheitsmaße einer einmalig geschätzten Regression berücksichtigen nur die **zweite Stufe**.
+
+::: {.fragment}
+
+Für jede Bootstrapwiederholung $b$:
+
+$$
+I^{(b)}
+=
+\left(i_1^{(b)},\ldots,i_I^{(b)}\right),
+\qquad
+i_l^{(b)}
+\overset{iid}{\sim}
+\mathrm{Uniform}\{1,\ldots,1078\}
+$$
+
+**1.078 Aggregationseinheiten werden mit Zurücklegen gezogen.**
+
+:::
+
+
+## Bootstrap: vollständige Wiederholung der Analyse {.custom-smaller}
+
+::: {.prep-flow}
+
+::: {.prep-box}
+**1. Resampling**
+
+1.078 räumliche Einheiten  
+mit Zurücklegen ziehen
+
+Wahlränder + Strukturmerkmale  
+gemeinsam übernehmen
+:::
+
+::: {.prep-arrow}
+→
+:::
+
+::: {.prep-box}
+**2. Ökologische Inferenz**
+
+nslphom-Input  
+neu zusammensetzen
+
+duale nslphom-Schätzung  
+erneut durchführen
+:::
+
+::: {.prep-arrow}
+→
+:::
+
+::: {.prep-box .prep-result}
+**3. Regression**
+
+fünf gewichtete  
+Regressionsmodelle
+
+Koeffizienten  
+$\hat\beta_{jr}^{(b)}$
+:::
+
+:::
+
+<br>
+
+**$B=500$ erfolgreiche Bootstrapwiederholungen**
+
+::: {.fragment}
+
+Für jeden Koeffizienten:
+
+$$
+CI_{0.95}(\beta_{jr})
+=
+\left[
+Q_{0.025}\left(\hat\beta_{jr}^{(1)},\ldots,\hat\beta_{jr}^{(B)}\right),
+\;
+Q_{0.975}\left(\hat\beta_{jr}^{(1)},\ldots,\hat\beta_{jr}^{(B)}\right)
+\right]
+$$
+
+**95-%-Perzentilintervall aus der empirischen Bootstrapverteilung**
+
+:::
+
 
 ## Bild + Text {.custom-smaller}
 
@@ -301,3 +690,27 @@ Rawlings, C. M., Smith, J. A., Moody, J., & McFarland, D. A. (2023). **Chapters 
 https://networksciencebook.com/chapter/3#evolution-network
 
 ## Anhang
+
+## EHet Ostdeutschlandschätzung {.custom-smaller}
+
+```{r, echo=FALSE, out.width="90%"}
+knitr::include_graphics("Charts/homogenitaetsannahme/ostdeutschland_ohne_berlin_ehet_deutschlandkarte_agg.png")
+```
+
+## EHet Deutschlandschätzung {.custom-smaller}
+
+```{r, echo=FALSE, out.width="90%"}
+knitr::include_graphics("Charts/homogenitaetsannahme/deutschland_ehet_ost_west_boxplot.png")
+```
+
+## EHet Ostdeutschlandschätzung {.custom-smaller}
+
+```{r, echo=FALSE, out.width="90%"}
+knitr::include_graphics("Charts/homogenitaetsannahme/ostdeutschland_ohne_berlin_ehet_verteilung_boxplot.png")
+```
+
+## Deutschlandweite Übergangsschätzung {.custom-smaller}
+
+```{r, echo=FALSE, out.width="90%"}
+knitr::include_graphics("Charts/nslphom_global_matrix_deutschland_ungeblockt.png")
+```
