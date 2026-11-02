@@ -385,9 +385,12 @@ knitr::include_graphics("Charts/homogenitaetsannahme/deutschland_ehet_deutschlan
 
 ## nslphom-Ergebnisse für Ostdeutschland {.custom-smaller .top-slide}
 
-```{r, echo=FALSE, out.width="95%"}
-knitr::include_graphics("Charts/nslphom_global_matrix_ostdeutschland_ungeblockt.png")
-```
+<div style="text-align: center; margin-top: -0.4em;">
+
+<img src="Charts/nslphom_global_matrix_ostdeutschland_ungeblockt.png"
+     style="width: 109%; max-width: none;">
+
+</div>
 
 ## Regionale Strukturmerkmale 2023 {.custom-smaller .top-slide}
 
@@ -576,77 +579,222 @@ knitr::include_graphics("Charts/bootstrap/bootstrap_beta_verteilungen_ostdeutsch
 
 ## Bootstrap-Stabilität der Regressionsbefunde {.full-image-slide visibility="uncounted" background-image="Charts/bootstrap/bootstrap_beta_verteilungen_ostdeutschland.png" background-size="contain" background-position="center" background-repeat="no-repeat"}
 
-## Bild + Text {.custom-smaller}
+## Diskussion: Inhaltliche Einordnung {.custom-smaller .prep-uniform}
 
-```{r, echo=FALSE, out.width="100%"}
-#knitr::include_graphics("Images/13SIR.png")
-```
+::: {.data-cards}
 
-::: {style="font-size: 0.8em; text-align: left;"}
-$\frac{dS}{dt} = - \frac{\beta SI}{N}$
+::: {.data-card}
+**Kein einheitliches Strukturprofil**
 
-$\frac{dI}{dt} = \frac{\beta SI}{N} - \gamma I$
+Zusammenhänge unterscheiden sich  
+nach **politischer Herkunft**
 
-$\frac{dR}{dt} = \gamma I$
+Union / SPD: ähnliche Muster
 
-reproductive number $R_0 = \frac{\beta}{\gamma}$
+Nichtwählende / Andere:  
+abweichende Zusammenhänge
 :::
 
-## Bildunterschrift und Quellenangabe {.custom-smaller}
+::: {.data-card}
+**Keine Individual- oder Kausalaussagen**
 
-::: {style="font-size: 0.6em; color: gray;"}
-Average degree and component size.\
-Source: https://networksciencebook.com/chapter/3#evolution-network
 :::
 
-## Tabelle {.custom-smaller}
-
-Choose possible network effects for actor $i$:
-
-|  |  |
-|:-----------------------------------|:-----------------------------------|
-| Outdegree | $s_{i1}(x) = x_{i+} = \sum_j x_{ij}$ |
-| Reciprocity | $s_{i2}(x) = \sum_j x_{ij}x_{ji}$ |
-| Transitivity (triplets) | $s_{i3}(x) = \sum_{j, h} x_{ij}\ x_{jh}\ x_{ih}$ |
-| Balance | $s_{i4}(x) = \sum_{j = 1}^n x_{ij} \sum_{\substack{h=1\\ h\neq i,j}}^n (1\ -\ |x_{ih}\ -\ x_{jh}|)$ |
-| covariate-related popularity 'alter' | $s_{i5}(x) = \sum_j x_{ij}\ v_j$ |
-
-transitivity (ties), indirect ties, in-degree related popularity, out-degree related popularity, out-degree related activity, in-degree related activity, three-cycle, covariate-related activity, covariate-related similarity, covariate-related interaction, covariate-related preference ($w_{ij}$), ...
+:::
 
 
-## Zwei Spalten {.custom-smaller visibility="uncounted"}
+## Diskussion: Zentrale Einschränkungen {.custom-smaller .prep-uniform}
 
-Behavior $Z = (z_1, ..., z_2)$
+::: {.data-cards}
 
-2.  Objective Function: $f_i^Z(\beta, x, z(i, h \rightsquigarrow v)) = \sum_k \beta_k\ s_{ik}(x, z(i, h \rightsquigarrow v))$
+::: {.data-card}
+**Ökologische Inferenz**
+
+exakte Reproduktion der Ränder  
+validiert nicht die tatsächlichen  
+individuellen Übergänge
+:::
+
+::: {.data-card}
+**Zweistufige Analyse**
+
+geschätzte Übergangsraten werden  
+selbst zur Zielgröße der Regression
+
+Bootstrap reduziert dieses Problem  
+nicht grundsätzlich
+:::
+
+::: {.data-card}
+**Daten & Modell**
+
+Sammelkategorien  
+**Andere** und **Linke/Grüne**
+
+Skalierung auf gleiche Gesamtmasse
+
+Strukturmerkmale nur für **2023**
+
+lineares Modell trotz  
+Zielgröße in $[0,1]$
+
+Einschränkung auf Ostdeutschland
+:::
+
+:::
+
+::: {.fragment}
+**Besonders vorsichtig:** Linke/Grüne wegen der starken Häufung sehr kleiner geschätzter Übergangsraten.
+:::
+
+
+## Diskussion: Robustheit und weiterer Forschungsbedarf {.custom-smaller .prep-uniform}
+
+::: {.data-cards}
+
+::: {.data-card}
+**Robustheit prüfen**
+
+alternative Parteigruppierungen
+
+andere räumliche Zuschnitte
+
+andere EI-Spezifikationen
+
+systematischere Variablenauswahl
+:::
+
+::: {.data-card}
+**Regression erweitern**
+
+Fractional-Response-Modelle
+
+nichtlineare Zusammenhänge
+
+multinomiale Modelle
+:::
+
+::: {.data-card}
+**Ökologische Inferenz verbessern**
+
+Kontextvariablen bereits  
+in der ersten Stufe berücksichtigen
+
+Sensitivität gegenüber  
+verbleibendem Confounding prüfen
+
+externe Wahldaten zur  
+Plausibilisierung nutzen
+:::
+
+:::
+
+::: {.research-details .fragment}
+**Unterschiedliche Validierungsbausteine:**  
+Simulationen prüfen die Schätzbarkeit unter künstlicher Wahrheit, Heterogenitätsmaße die möglichst einheitliche Kompatibilität mit der globalen Referenzstruktur und der Bootstrap die Stabilität der implementierten Schätzkette und der daraus resultierenden Koeffizientenschätzungen.
+:::
+
+## Fazit {.custom-smaller .top-slide}
+
+- **Lokale Übergangsraten zur AfD sind aus Aggregatdaten schätzbar**, bleiben aber modellbasiert und nicht direkt beobachtet.
+
+- Die Zusammenhänge mit regionalen Strukturmerkmalen **unterscheiden sich nach Herkunftsgruppe**.
+
+- Mehrere bedingte Zusammenhänge zeigen sich im **Bootstrap richtungsstabil**.
+
+- Die Ergebnisse sind **regional und nicht kausal** zu interpretieren.
+
+- Methodisch entscheidend sind **räumliche Harmonisierung, Heterogenitätsdiagnose und Unsicherheitsquantifizierung der Schätzkette**.
+
+
+## Datenquellen {.custom-smaller .top-slide}
+
+::: {style="font-size: 0.62em; line-height: 1.28;"}
+
+**Die Bundeswahlleiterin (2021).**  
+*Bundestagswahl 2021: Wahlbezirksergebnisse, Datensatzbeschreibung und endgültiges Ergebnis Deutschland.*  
+Datensatz „Ergebnisse nach Wahlbezirken“; Abruf am 21.09.2026.
+
+**Die Bundeswahlleiterin (2025).**  
+*Bundestagswahl 2025: Wahlbezirksergebnisse, Datensatzbeschreibung und endgültiges Ergebnis Deutschland.*  
+Datensatz „Ergebnisse nach Wahlbezirken“; Abruf am 21.09.2026.
+
+**Statistisches Bundesamt (2021–2024).**  
+*Namens- und Gebietsänderungen der Gemeinden, Jahresdateien 2021 bis 2024.*  
+Gebietsänderungen im Zeitraum 01.01.2021 bis 31.12.2024; Abruf am 14.09.2026.
+
+**Bundesinstitut für Bau-, Stadt- und Raumforschung (BBSR) (2025).**  
+*Laufende Raumbeobachtung des BBSR – INKAR, Ausgabe 07/2025.*  
+Berichtsjahr der verwendeten Strukturindikatoren: 2023; Abruf am 15.07.2026.
+
+**Bundesamt für Kartographie und Geodäsie (BKG) (2025).**  
+*Verwaltungsgebiete 1:250 000 (VG250), Stand 01.01.2025.*  
+Abruf am 14.09.2026.
+
+:::
+
+## Quellen und Literatur – Auswahl {.custom-smaller .top-slide}
 
 ::::: columns
 ::: {.column width="50%"}
-Influence-Effekte:
 
--   Linear Tendency $z_i$
+::: {style="font-size: 0.58em; line-height: 1.18;"}
 
--   Quadratic Tendency $z_i^2$
+**Ökologische Inferenz und nslphom**
 
--   Average Similarity $\frac{1}{x_{i+}}\sum_j x_{ij}\ \text{sim}(z_i, z_j)$\
-    similarity between $v_i$ and $v_j$:\
-    $\text{sim}(z_{ih}, z_{jh}) = 1 - \frac{|z_{ih}-z_{jh}|}{R_{Z^h}}$
+**Pavía, J. M. & Romero, R. (2024a).**  
+Improving Estimates Accuracy of Voter Transitions: Two New Algorithms for Ecological Inference Based on Linear Programming.  
+*Sociological Methods & Research, 53*(3), 1491–1533.
+
+**Pavía, J. M. & Romero, R. (2023).**  
+Data Wrangling, Computational Burden, Automation, Robustness and Accuracy in Ecological Inference Forecasting of R×C Tables.  
+*SORT, 47*(1), 151–186.
+
+**Pavía, J. M. & Romero, R. (2024b).**  
+Symmetry Estimating R×C Vote Transfer Matrices from Aggregate Data.  
+*JRSS Series A, 187*(4), 919–943.
+
+**Gschwend, T. (2006).**  
+Ökologische Inferenz.  
+In: *Methoden der Politikwissenschaft*, 227–237.
+
+**Forcina, A. & Pellegrino, D. (2019).**  
+Estimation of Voter Transitions and the Ecological Fallacy.  
+*Quality & Quantity, 53*, 1859–1874.
+
+:::
 :::
 
-::: {.column width="50%\""}
-Spalte 2
+::: {.column width="50%"}
+
+::: {style="font-size: 0.58em; line-height: 1.18;"}
+
+**Unsicherheit, Identifikation und Anwendung**
+
+**Bracalente, B., Forcina, A. & Falocci, N. (2026).**  
+Determinants of Vote Transitions by Ecological Inference within Small Areas.  
+*Spatial Statistics, 71*, 100950.
+
+**Herron, M. C. & Shotts, K. W. (2003).**  
+Using Ecological Inference Point Estimates as Dependent Variables in Second-Stage Linear Regressions.  
+*Political Analysis, 11*(1), 44–64.
+
+**Kuriwaki, S. & McCartan, C. (2026).**  
+The Role of Confounders and Linearity in Ecological Inference: A Reassessment.  
+*arXiv:2601.07668*.
+
+**Klima, A. et al. (2016).**  
+Estimation of Voter Transitions Based on Ecological Inference: An Empirical Assessment of Different Approaches.  
+*AStA Advances in Statistical Analysis, 100*(2), 133–159.
+
+
+**Cho, W. K. T. & Gaines, B. J. (2004).**  
+The Limits of Ecological Inference: The Case of Split-Ticket Voting.  
+*American Journal of Political Science, 48*(1), 152–171.
+
+:::
 :::
 :::::
-
-## Quellen und Literatur {.custom-smaller}
-
-Rawlings, C. M., Smith, J. A., Moody, J., & McFarland, D. A. (2023). **Chapters 14 and 15** *Network analysis: integrating social network theory, method, and application with R*. Cambridge University Press
-
-\[Snijders (2010) *An Introduction to Stochastic Actor Oriented Models*, Oxford Course Notes\] [https://www.stats.ox.ac.uk/\~snijders/siena/IntroSAOM_h.pdf](extension://efaidnbmnnnibpcajpcglclefindmkaj/https://www.stats.ox.ac.uk/~snijders/siena/IntroSAOM_h.pdf)
-
-\[Indlekofer (2014) *Methods for Diagnosis and Interpretation of Stochastic Actor-oriented Models for Dynamic Networks*, Dissertation\] <https://kops.uni-konstanz.de/server/api/core/bitstreams/8bb51a2c-f3ba-4d27-bd39-d9bad9dfb9ff/content>
-
-https://networksciencebook.com/chapter/3#evolution-network
 
 ## Anhang: EHet Ostdeutschlandschätzung {.custom-smaller}
 
@@ -672,16 +820,32 @@ knitr::include_graphics("Charts/homogenitaetsannahme/ostdeutschland_ohne_berlin_
 knitr::include_graphics("Charts/nslphom_global_matrix_deutschland_ungeblockt.png")
 ```
 
+## Anhang: Verteilung der Strukturvariablen {.custom-smaller}
 
+```{r, echo=FALSE, out.width="90%"}
+knitr::include_graphics("Charts/Strukturvariablen/strukturvariablen_verteilungen_z_standardisiert - 1.png")
+```
+
+## {.custom-smaller}
+
+```{r, echo=FALSE, out.width="90%"}
+knitr::include_graphics("Charts/Strukturvariablen/strukturvariablen_verteilungen_z_standardisiert - 2.png")
+```
+
+## Korrelationsmatrix der Strukturvariablen {.custom-smaller}
+
+```{r, echo=FALSE, out.width="100%"}
+knitr::include_graphics("Charts/Strukturvariablen/strukturvariablen_korrelation.png")
+```
 ---
 
 ## Anhang: vollständige Regressionskoeffizienten {.custom-smaller .top-slide}
 
-::: {style="font-size: 0.62em; line-height: 1.08;"}
+::: {style="font-size: 0.85em; line-height: 1.08;"}
 
 | Merkmal | Union | SPD | Nichtwählende | Andere | Linke/Grüne |
-|---|---:|---:|---:|---:|---:|
-| **Konstante** | 33,12 | 23,42 | 16,20 | 11,97 | 2,97 |
+|:---|---:|---:|---:|---:|---:|
+| Intercept | 33,12 | 23,42 | 16,20 | 11,97 | 2,97 |
 | Durchschnittsalter | +1,05 | +0,97 | +0,32 | -0,20 | +0,65 |
 | Niedrige Haushaltseinkommen | +1,39 | +1,90 | +0,42 | +0,18 | -0,13 |
 | Arbeitslosenanteil | +0,28 | +0,36 | +1,15 | -0,22 | -0,06 |
@@ -695,8 +859,6 @@ knitr::include_graphics("Charts/nslphom_global_matrix_deutschland_ungeblockt.png
 
 :::
 
-Steigungskoeffizienten in **Prozentpunkten je Standardabweichung** des jeweiligen Strukturmerkmals, c. p.  
-Die Konstante bezeichnet die Modellvorhersage bei durchschnittlichen Ausprägungen aller z-standardisierten Strukturmerkmale.
 
 ---
 
@@ -706,16 +868,251 @@ Die Konstante bezeichnet die Modellvorhersage bei durchschnittlichen Ausprägung
 knitr::include_graphics("Charts/Regression/regressionsdiagnostik/qq_plots.png")
 ```
 
----
+## Anhang: Bootstrapverteilungen {.custom-smaller .top-slide}
 
-## Anhang: Bootstrapverteilungen – alternative Darstellung {.custom-smaller .top-slide}
+```{r, echo=FALSE, out.width="100%"}
+knitr::include_graphics("Charts/Regression/ergebnisse/koeffizienten_andere_linke_gruene.png")
+```
+
+## {.custom-smaller .top-slide}
 
 ```{r, echo=FALSE, out.width="100%"}
 knitr::include_graphics("Charts/Regression/ergebnisse/koeffizienten_union_spd_nichtwaehlende.png")
 ```
 
-## Anhang: Bootstrapverteilungen – alternative Darstellung {.custom-smaller .top-slide}
+## Anhang: Solververgleich OSQP vs. lp_solve {.custom-smaller .top-slide}
+
+Überprüfung der eigenen OSQP-Implementierung
+
+::::: columns
+::: {.column width="68%"}
+
+```{r, echo=FALSE, out.width="80%"}
+knitr::include_graphics("Charts/Validierung/nslphom_dual_speed_comparison/ost_all_n1078_iter2_local_probability_comparison.png")
+```
+
+:::
+
+::: {.column width="32%"}
+
+<br>
+
+**Übereinstimmung**
+
+- Korrelation: **$r = 0{,}99984$**
+- mittlere absolute Abweichung: **0,00137**
+- entspricht ca. **0,14 Prozentpunkten**
+
+:::
+:::::
+
+## Anhang: Speicherbedarf und Laufzeit der Solver {.custom-smaller .top-slide}
+
+OSQP liefert nahezu identische Ergebnisse bei deutlich geringerem Speicherbedarf
+
+::::: columns
+::: {.column width="62%"}
 
 ```{r, echo=FALSE, out.width="100%"}
-knitr::include_graphics("Charts/Regression/ergebnisse/koeffizienten_andere_linke_gruene.png")
+knitr::include_graphics("Charts/Validierung/nslphom_dual_speed_comparison/ost_all_n1078_iter2_runtime_comparison.png")
 ```
+
+:::
+
+::: {.column width="38%"}
+
+### Speicherbedarf
+
+**lp_solve:** ca. 4,90 GB  
+**OSQP:** ca. 1,07 GB
+
+$\Rightarrow$ **ca. 78 % weniger Speicher**
+
+:::
+:::::
+
+## Anhang: Regressionsdiagnostik – Leverage {.custom-smaller .top-slide}
+
+::::: columns
+::: {.column width="70%"}
+
+```{r, echo=FALSE, out.width="100%"}
+knitr::include_graphics("Charts/Regression/leverage_ausschluss/ausgeschlossene_leverage_einheiten_ostdeutschland.png")
+```
+
+:::
+
+::: {.column width="30%"}
+
+<br>
+
+Je Herkunftsmodell: **oberste 3 % der Leverage-Werte**
+
+<br>
+
+In mindestens einem Modell auffällig: **47 Aggregationseinheiten**
+
+<br>
+
+darunter Leipzig, Dresden, Potsdam, Magdeburg, Halle (Saale), etc.
+
+:::
+:::::
+
+## Anhang: Regressionsdiagnostik – Cook-Distanz {.custom-smaller .top-slide}
+
+::::: columns
+::: {.column width="70%"}
+
+```{r, echo=FALSE, out.width="100%", fig.align="center"}
+knitr::include_graphics("Charts/Regression/leverage_ausschluss/cook_distanz_top5_je_modell.png")
+```
+:::
+
+::: {.column width="22%"}
+<div style="font-size: 0.72em; line-height: 1.3; margin-top: 4.5em;">
+Einfluss einzelner Aggregationseinheiten auf die Regressionsschätzung
+</div>
+:::
+:::::
+  
+## Anhang: Sensitivität zu Leverage-Points {.custom-smaller .top-slide}
+
+::::: columns
+::: {.column width="70%"}
+
+<div style="margin-top: -1em;">
+
+```{r, echo=FALSE, out.width="105%", fig.align="center"}
+knitr::include_graphics("Charts/Regression/leverage_ausschluss/koeffizienten_vor_nach_leverage_ausschluss.png")
+```
+
+</div>
+:::
+
+::: {.column width="22%"}
+
+**Sensitivitätsanalyse**
+
+Je Herkunftsmodell erneute Schätzung ohne die obersten 3 % der Leverage-Werte.
+:::
+:::::
+
+::: {.research-details .fragment}
+Alle vorzeichenwechselnden Koeffizienten enthalten 0 im 95-%-Bootstrapintervall.
+:::
+
+## Anhang: Simulationsbasierter Recovery-Test {.custom-smaller .prep-uniform}
+
+**Kann die zweistufige Schätzkette bekannte strukturelle Zusammenhänge rekonstruieren?**
+
+::: {.prep-flow}
+
+::: {.prep-box}
+**1. Bekannte Wahrheit**
+
+120 räumliche Einheiten
+
+3 Wahloptionen:  
+Union · SPD · AfD
+
+2 Kovariaten
+
+bekannte lokale  
+Übergangswahrscheinlichkeiten
+:::
+
+::: {.prep-arrow}
+→
+:::
+
+::: {.prep-box}
+**2. Ökologische Inferenz**
+
+nur die simulierten  
+Wahlränder verwenden
+
+`nslphom_dual_osqp`
+
+`iter_max = 10`
+:::
+
+::: {.prep-arrow}
+→
+:::
+
+::: {.prep-box .prep-result}
+**3. Regression**
+
+Regression einmal auf
+
+**wahren realisierten Übergängen**
+
+und einmal auf
+
+**nslphom-Schätzungen**
+:::
+
+:::
+
+## Anhang: Recovery-Test – Ergebniswerte {.custom-smaller .top-slide}
+
+::: {.data-cards}
+
+::: {.data-card}
+**Fehler der lokalen EI**
+
+<span class="data-number">9,13 %</span>
+
+$EI_{loc}$
+
+Anteil der Übergangsmasse,  
+der über die lokalen Zellen  
+falsch zugeordnet wird
+:::
+
+::: {.data-card}
+**Regression auf wahren Übergängen**
+
+<span class="data-number">0,01</span>
+
+Prozentpunkte
+
+mittlere absolute Abweichung  
+der sechs vorgegebenen  
+Regressionskoeffizienten
+:::
+
+::: {.data-card}
+**Regression nach nslphom**
+
+<span class="data-number">2,13</span>
+
+Prozentpunkte
+
+mittlere absolute Abweichung  
+der sechs vorgegebenen  
+Regressionskoeffizienten
+:::
+
+:::
+
+<br>
+
+**$\Rightarrow$ Die Regressionsstufe selbst rekonstruiert die Zusammenhänge nahezu exakt; größere Abweichungen entstehen durch die vorgeschaltete ökologische Inferenz.**
+
+
+## Anhang: Recovery-Test – Koeffizienten {.custom-smaller .top-slide}
+
+**Vorgegebene Koeffizienten vs. Schätzungen über 149 erfolgreiche Simulationen**
+
+```{r, echo=FALSE, out.width="100%", fig.align="center"}
+knitr::include_graphics("Charts/Validierung/end_to_end_afd_validation/beta_recovery_intervalle.png")
+```
+
+- **Rot:** vorgegebener wahrer Wert
+- **Punkt:** Median der Simulationen
+- **Linie:** 2,5-%- bis 97,5-%-Quantil
+
+**Realisierte Übergänge:** enge Rekonstruktion der Wahrheit  
+**nslphom-Schätzungen:** deutlich größere Verschiebungen
