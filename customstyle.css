@@ -298,3 +298,14 @@ body {
 .target-note-position {
   top: 40% !important;
 }
+
+/* Vollbild-Grafik: nur Logo bleibt sichtbar */
+
+.reveal .slides section.full-image-slide h2 {
+  display: none !important;
+}
+
+body:has(.reveal .slides section.full-image-slide.present) .reveal .footer,
+body:has(.reveal .slides section.full-image-slide.present) .reveal .slide-number {
+  display: none !important;
+}
