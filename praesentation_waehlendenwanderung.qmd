@@ -424,7 +424,7 @@ Die Zielgrößen sind **mit nslphom geschätzte lokale Übergangsraten** und dam
 Für jede Herkunftsgruppe $j$ wird ein eigenes Modell geschätzt:
 
 $$
-\hat p_{ij\rightarrow AfD}
+\hat p_{ij\rightarrow \mathrm{AfD}}
 =
 \alpha_j
 +
@@ -434,108 +434,49 @@ $$
 \varepsilon_{ij}
 $$
 
-::::: columns
-
-::: {.column width="50%"}
-
-**Prädiktoren**
-
-- 10 z-standardisierte Strukturmerkmale
-- identische Modellspezifikation für alle Herkunftsgruppen
-- keine Interaktionen
-
-:::
-
-::: {.column width="50%"}
-
-**Gewichtung**
+<div style="font-size: 0.85em; margin-top: -0.35em; margin-bottom: -0.15em;">
 
 $$
-w_{ij}=x_{ij}
+\hat{\boldsymbol\beta}_j
+=
+\arg\min_{\boldsymbol\beta_j}
+\sum_{i=1}^{I}
+x_{ij}
+\left(
+\hat p_{ij\rightarrow \mathrm{AfD}}
+-
+\alpha_j
+-
+\sum_{r=1}^{10}\beta_{jr}z_{ir}
+\right)^2
 $$
 
-Einheiten mit einer größeren jeweiligen **Herkunftsgruppe** erhalten stärkeres Gewicht.
+</div>
 
-:::
-
-:::::
+- $z_{ir}$: **z-standardisiertes Strukturmerkmal** $r$ in Aggregationseinheit $i$
+- **Gewichtung:** mit $x_{ij}$ = Größe der Herkunftsgruppe $j$ in Einheit $i$ (2021)
 
 ::: {.fragment}
 **Interpretation von $\beta_{jr}$:**  
-Bedingte Änderung der geschätzten Übergangsrate bei einer Erhöhung des Strukturmerkmals um **eine Standardabweichung**, c. p.
-
-$$
-\beta_{jr}=0{,}01
-\quad\Rightarrow\quad
-1\ \text{Prozentpunkt}
-$$
+Mittlere Änderung der geschätzten Übergangsrate bei einer Erhöhung des Strukturmerkmals um eine Standardabweichung, c. p.
 :::
 
 
 ## Regressionsdiagnostik {.custom-smaller}
 
-::::: columns
-
-::: {.column width="46%"}
-
-**Zu prüfen**
-
-- funktionale Form
-- Varianzstruktur der Residuen
-- einflussreiche Beobachtungen
-- Multikollinearität
-- Vorhersagen außerhalb $[0,1]$
-
-<br>
-
-Mit
-
-$$
-\hat\varepsilon_{ij}
-=
-\hat p_{ij\rightarrow AfD}
--
-\hat p^{\,reg}_{ij\rightarrow AfD}
-$$
-
-:::
-
-::: {.column width="54%"}
-
 ```{r, echo=FALSE, out.width="100%"}
 knitr::include_graphics("Charts/Regression/regressionsdiagnostik/residuen_gegen_vorhersage.png")
 ```
 
-:::
 
-:::::
+## Warum ein Bootstrap der vollständigen Schätzkette? {.custom-smaller .prep-uniform}
 
-::: {.fragment}
-Die Regressionsmodelle beschreiben **bedingte regionale Zusammenhänge** – keine individuellen oder kausalen Effekte.
-:::
-
-
-## Warum ein Bootstrap der vollständigen Schätzkette? {.custom-smaller}
-
-Die abhängigen Variablen der Regression sind **selbst geschätzt**:
+<p style="font-size: 1.65rem;">
+Für jede Bootstrapwiederholung $b$ ($B=500$ erfolgreiche Wiederholungen):
+</p>
 
 $$
-\text{Wahldaten}
-\longrightarrow
-\text{nslphom}
-\longrightarrow
-\hat p_{ij\rightarrow AfD}
-\longrightarrow
-\text{Regression}
-$$
-
-Konventionelle Unsicherheitsmaße einer einmalig geschätzten Regression berücksichtigen nur die **zweite Stufe**.
-
-::: {.fragment}
-
-Für jede Bootstrapwiederholung $b$:
-
-$$
+\large
 I^{(b)}
 =
 \left(i_1^{(b)},\ldots,i_I^{(b)}\right),
@@ -545,13 +486,6 @@ i_l^{(b)}
 \mathrm{Uniform}\{1,\ldots,1078\}
 $$
 
-**1.078 Aggregationseinheiten werden mit Zurücklegen gezogen.**
-
-:::
-
-
-## Bootstrap: vollständige Wiederholung der Analyse {.custom-smaller}
-
 ::: {.prep-flow}
 
 ::: {.prep-box}
@@ -560,7 +494,7 @@ $$
 1.078 räumliche Einheiten  
 mit Zurücklegen ziehen
 
-Wahlränder + Strukturmerkmale  
+Wahlränder und Strukturmerkmale  
 gemeinsam übernehmen
 :::
 
@@ -588,21 +522,17 @@ erneut durchführen
 fünf gewichtete  
 Regressionsmodelle
 
-Koeffizienten  
-$\hat\beta_{jr}^{(b)}$
-:::
-
-:::
-
-<br>
-
-**$B=500$ erfolgreiche Bootstrapwiederholungen**
-
-::: {.fragment}
-
-Für jeden Koeffizienten:
+Koeffizienten
 
 $$
+\hat\beta_{jr}^{(b)}
+$$
+:::
+
+:::
+
+$$
+\large
 CI_{0.95}(\beta_{jr})
 =
 \left[
@@ -611,10 +541,6 @@ Q_{0.025}\left(\hat\beta_{jr}^{(1)},\ldots,\hat\beta_{jr}^{(B)}\right),
 Q_{0.975}\left(\hat\beta_{jr}^{(1)},\ldots,\hat\beta_{jr}^{(B)}\right)
 \right]
 $$
-
-**95-%-Perzentilintervall aus der empirischen Bootstrapverteilung**
-
-:::
 
 
 ## Bild + Text {.custom-smaller}
