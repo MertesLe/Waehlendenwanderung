@@ -796,6 +796,13 @@ The Limits of Ecological Inference: The Case of Split-Ticket Voting.
 :::
 :::::
 
+
+## Anhang: Wahl von iter_max {.custom-smaller}
+
+```{r, echo=FALSE, out.width="100%"}
+knitr::include_graphics("Charts/iter_max/ost_dual_osqp_local_lp_solve_all_hete_iter_max.png")
+```
+
 ## Anhang: EHet Ostdeutschlandschätzung {.custom-smaller}
 
 ```{r, echo=FALSE, out.width="90%"}
@@ -832,12 +839,18 @@ knitr::include_graphics("Charts/Strukturvariablen/strukturvariablen_verteilungen
 knitr::include_graphics("Charts/Strukturvariablen/strukturvariablen_verteilungen_z_standardisiert - 2.png")
 ```
 
-## Korrelationsmatrix der Strukturvariablen {.custom-smaller}
+## Anhang: Korrelationsmatrix der Strukturvariablen {.custom-smaller}
 
 ```{r, echo=FALSE, out.width="100%"}
 knitr::include_graphics("Charts/Strukturvariablen/strukturvariablen_korrelation.png")
 ```
 ---
+
+## Anhang: Merkmalsabweichung der Einheiten mit 25% der größten Übergangsraten {.custom-smaller}
+
+```{r, echo=FALSE, out.width="100%"}
+knitr::include_graphics("Charts/Regression/ergebnisse/profil_oberes_viertel.png")
+```
 
 ## Anhang: vollständige Regressionskoeffizienten {.custom-smaller .top-slide}
 
@@ -1029,8 +1042,8 @@ bekannte lokale
 ::: {.prep-box}
 **2. Ökologische Inferenz**
 
-nur die simulierten  
-Wahlränder verwenden
+simulierte 
+Wahlränder
 
 `nslphom_dual_osqp`
 
@@ -1099,20 +1112,15 @@ Regressionskoeffizienten
 
 <br>
 
-**$\Rightarrow$ Die Regressionsstufe selbst rekonstruiert die Zusammenhänge nahezu exakt; größere Abweichungen entstehen durch die vorgeschaltete ökologische Inferenz.**
+**$\Rightarrow$ Die Regressionsstufe selbst rekonstruiert die Zusammenhänge nahezu exakt.**
+
+**$\Rightarrow$ Größere Abweichungen entstehen durch die vorgeschaltete ökologische Inferenz.**
 
 
 ## Anhang: Recovery-Test – Koeffizienten {.custom-smaller .top-slide}
 
-**Vorgegebene Koeffizienten vs. Schätzungen über 149 erfolgreiche Simulationen**
+**Vorgegebene Koeffizienten vs. Schätzungen** (149 Simulationen)
 
 ```{r, echo=FALSE, out.width="100%", fig.align="center"}
 knitr::include_graphics("Charts/Validierung/end_to_end_afd_validation/beta_recovery_intervalle.png")
 ```
-
-- **Rot:** vorgegebener wahrer Wert
-- **Punkt:** Median der Simulationen
-- **Linie:** 2,5-%- bis 97,5-%-Quantil
-
-**Realisierte Übergänge:** enge Rekonstruktion der Wahrheit  
-**nslphom-Schätzungen:** deutlich größere Verschiebungen
