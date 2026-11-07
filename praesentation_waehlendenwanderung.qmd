@@ -30,11 +30,23 @@ editor: source
 knitr::include_graphics("Charts/bundestagswahl_zweitstimmen_deutschland_2021_2025.png")
 ```
 
+<div style="font-size: 0.48em; text-align: center; margin-top: -0.7em;">
+
+Daten: Die Bundeswahlleiterin (2021, 2025)
+
+</div>
+
 ## Zweitstimmenanteile der Bundestagswahlen 2021 und 2025 {.custom-smaller .research-slide visibility="uncounted"}
 
 ```{r, echo=FALSE, out.width="100%"}
 knitr::include_graphics("Charts/bundestagswahl_zweitstimmen_deutschland_2021_2025.png")
 ```
+
+<div style="font-size: 0.48em; text-align: center; margin-top: -0.7em;">
+
+Daten: Die Bundeswahlleiterin (2021, 2025)
+
+</div>
 
 ::: {.research-box}
 **Schätzung struktureller Einflüsse auf die Wählerwanderung zwischen den Bundestagswahlen 2021 und 2025 mittels ökologischer Inferenz**
@@ -50,11 +62,11 @@ knitr::include_graphics("Charts/bundestagswahl_zweitstimmen_deutschland_2021_202
 
 ## Agenda {.custom-smaller .top-slide}
 
-1.  Ökologische Inferenz und \texttt{nslphom}
+1.  Ökologische Inferenz und nslphom
 
 2.  Datengrundlage und -aufbereitung
 
-3.  Ost-Fokussierung und \texttt{nslphom}-Ergebnisse
+3.  Ost-Fokussierung und nslphom-Ergebnisse
 
 4.  Regressionsmodell und Bootstrap
 
@@ -203,6 +215,11 @@ knitr::include_graphics("Charts/Tomography/tomography_nslphom_principle_ostdeuts
 ```
 :::
 :::::
+<div style="font-size: 0.48em; text-align: center; margin-top: -0.7em;">
+
+Darstellung nach King (1997)
+
+</div>
 
 ## Duales nslphom {.custom-smaller}
 
@@ -233,6 +250,7 @@ $$
 =
 \frac{\hat N_{ijk}^{(w)}}{x_{ij}}
 $$
+$H_{12},H_{21}$: HETe-Werte der beiden Schätzrichtungen
 
 Lokale Übergangsraten, z. B. Union $\rightarrow$ AfD, SPD $\rightarrow$ AfD, Nichtwählende $\rightarrow$ AfD
 :::
@@ -374,13 +392,9 @@ gleiche Gesamtmassen
 
 ## Heterogenität der deutsch\-landweiten Schätzung {.custom-smaller .hete-map-slide}
 
-::: {.hete-map-large}
-
 ```{r, echo=FALSE, out.width="100%"}
 knitr::include_graphics("Charts/homogenitaetsannahme/deutschland_ehet_deutschlandkarte_agg.png")
 ```
-
-:::
 
 
 ## nslphom-Ergebnisse für Ostdeutschland {.custom-smaller .top-slide}
@@ -579,29 +593,6 @@ knitr::include_graphics("Charts/bootstrap/bootstrap_beta_verteilungen_ostdeutsch
 
 ## Bootstrap-Stabilität der Regressionsbefunde {.full-image-slide visibility="uncounted" background-image="Charts/bootstrap/bootstrap_beta_verteilungen_ostdeutschland.png" background-size="contain" background-position="center" background-repeat="no-repeat"}
 
-## Diskussion: Inhaltliche Einordnung {.custom-smaller .prep-uniform}
-
-::: {.data-cards}
-
-::: {.data-card}
-**Kein einheitliches Strukturprofil**
-
-Zusammenhänge unterscheiden sich  
-nach **politischer Herkunft**
-
-Union / SPD: ähnliche Muster
-
-Nichtwählende / Andere:  
-abweichende Zusammenhänge
-:::
-
-::: {.data-card}
-**Keine Individual- oder Kausalaussagen**
-
-:::
-
-:::
-
 
 ## Diskussion: Zentrale Einschränkungen {.custom-smaller .prep-uniform}
 
@@ -612,17 +603,17 @@ abweichende Zusammenhänge
 
 exakte Reproduktion der Ränder  
 validiert nicht die tatsächlichen  
-individuellen Übergänge
+individuellen Übergänge (Simulation)
+
+zu anderen Verfahren relativ robuste nslphom Schätzungen
 :::
 
 ::: {.data-card}
 **Zweistufige Analyse**
 
-geschätzte Übergangsraten werden  
-selbst zur Zielgröße der Regression
+geschätzte Übergangsraten als Zielgröße der Regression
 
-Bootstrap reduziert dieses Problem  
-nicht grundsätzlich
+Bootstrap entfernt keinen systematischen ökologischen Bias
 :::
 
 ::: {.data-card}
@@ -644,7 +635,8 @@ Einschränkung auf Ostdeutschland
 :::
 
 ::: {.fragment}
-**Besonders vorsichtig:** Linke/Grüne wegen der starken Häufung sehr kleiner geschätzter Übergangsraten.
+**vorsichtige Interpretation:** Linke/Grüne wegen der starken Häufung sehr kleiner geschätzter Übergangsraten.
+Keine Individual- oder Kausalaussagen möglich.
 :::
 
 
@@ -691,7 +683,7 @@ Plausibilisierung nutzen
 
 ::: {.research-details .fragment}
 **Unterschiedliche Validierungsbausteine:**  
-Simulationen prüfen die Schätzbarkeit unter künstlicher Wahrheit, Heterogenitätsmaße die möglichst einheitliche Kompatibilität mit der globalen Referenzstruktur und der Bootstrap die Stabilität der implementierten Schätzkette und der daraus resultierenden Koeffizientenschätzungen.
+Simulationen (Recovery-Tests, Methodenvergleiche), Heterogenitätsmaße, Bootstrap.
 :::
 
 ## Fazit {.custom-smaller .top-slide}
@@ -875,6 +867,20 @@ knitr::include_graphics("Charts/Regression/ergebnisse/profil_oberes_viertel.png"
 
 ---
 
+## Anhang: Übergangsraten und Modellanpassung {.custom-smaller .top-slide}
+
+::: {style="font-size: 1em; line-height: 1.4;"}
+
+| Herkunft | Median | IQR | Gew. Mittel | $R^2$ |
+|:---|---:|---:|---:|---:|
+| Union | 33,5 % | 30,9–36,1 % | 31,6 % | 0,513 |
+| SPD | 23,0 % | 19,9–26,7 % | 21,1 % | 0,494 |
+| Nichtwählende | 14,7 % | 11,3–19,9 % | 14,1 % | 0,634 |
+| Andere | 12,0 % | 7,6–15,8 % | 11,0 % | 0,507 |
+| Linke/Grüne | 1,0 % | 0,4–4,8 % | 2,3 % | 0,178 |
+
+:::
+
 ## Anhang: Regressionsdiagnostik – Q-Q-Plots {.custom-smaller .top-slide}
 
 ```{r, echo=FALSE, out.width="100%"}
@@ -1033,6 +1039,10 @@ Union · SPD · AfD
 
 bekannte lokale  
 Übergangswahrscheinlichkeiten
+
+$\downarrow$
+
+multinomiale Realisierung der Übergangszellen
 :::
 
 ::: {.prep-arrow}
