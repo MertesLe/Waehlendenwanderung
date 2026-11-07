@@ -26,25 +26,30 @@ editor: source
 
 ## Zweitstimmenanteile der Bundestagswahlen 2021 und 2025 {.custom-smaller}
 
+<div style="position: relative; width: 110%; margin-top: -1.2em;">
+
 ```{r, echo=FALSE, out.width="100%"}
 knitr::include_graphics("Charts/bundestagswahl_zweitstimmen_deutschland_2021_2025.png")
 ```
 
-<div style="font-size: 0.48em; text-align: center; margin-top: -0.7em;">
-
+<div style="position: absolute; left: 0; right: 0; bottom: -0.8em; text-align: center; font-size: 0.53em; line-height: 1;">
 Daten: Die Bundeswahlleiterin (2021, 2025)
+</div>
 
 </div>
 
+
 ## Zweitstimmenanteile der Bundestagswahlen 2021 und 2025 {.custom-smaller .research-slide visibility="uncounted"}
+
+<div style="position: relative; width: 110%; margin-top: -1.2em;">
 
 ```{r, echo=FALSE, out.width="100%"}
 knitr::include_graphics("Charts/bundestagswahl_zweitstimmen_deutschland_2021_2025.png")
 ```
 
-<div style="font-size: 0.48em; text-align: center; margin-top: -0.7em;">
-
+<div style="position: absolute; left: 0; right: 0; bottom: -0.8em; text-align: center; font-size: 0.53em; line-height: 1;">
 Daten: Die Bundeswahlleiterin (2021, 2025)
+</div>
 
 </div>
 
@@ -156,23 +161,17 @@ Gewichtete Summe mehrerer unbekannter Übergangsraten
 
 ### Viele räumliche Einheiten
 
-In Anteilen:
-
 $$
 t_{ik}
 =
-\sum_{j=1}^{J}s_{ij}p_{ijk}
+\sum_{j=1}^{J}
+s_{ij}\,p^G_{jk},
+\qquad i=1,\ldots,I
 $$
 
-Die Zusammensetzung variiert zwischen den Einheiten:
+$\Rightarrow$ unterschiedliche Zusammensetzungen ($I$ Einheiten) liefern unterschiedliche Restriktionen auf dasselbe Übergangsmuster
 
-$$
-(s_{i1},\ldots,s_{iJ})
-\qquad
-(t_{i1},\ldots,t_{iK})
-$$
-
-**$\Rightarrow$ gemeinsame Variation liefert Information**
+**Annahme:** lokale Übergangsmuster variieren nicht beliebig zwischen den Einheiten $\Rightarrow$ **gemeinsame Variation liefert Information**
 
 :::
 :::::
@@ -210,16 +209,21 @@ mit exakt eingehaltenen lokalen Rändern.
 :::
 
 ::: {.column width="55%"}
+
+<div style="position: relative; width: 100%;">
+
 ```{r, echo=FALSE, out.width="100%"}
 knitr::include_graphics("Charts/Tomography/tomography_nslphom_principle_ostdeutschland.png")
 ```
-:::
-:::::
-<div style="font-size: 0.48em; text-align: center; margin-top: -0.7em;">
 
+<div style="position: absolute; left: 0; right: 0; bottom: -0.9em; text-align: center; font-size: 0.53em; line-height: 1;">
 Darstellung nach King (1997)
+</div>
 
 </div>
+
+:::
+:::::
 
 ## Duales nslphom {.custom-smaller}
 
@@ -392,10 +396,30 @@ gleiche Gesamtmassen
 
 ## Heterogenität der deutsch\-landweiten Schätzung {.custom-smaller .hete-map-slide}
 
+::: {.hete-map-large}
+
 ```{r, echo=FALSE, out.width="100%"}
 knitr::include_graphics("Charts/homogenitaetsannahme/deutschland_ehet_deutschlandkarte_agg.png")
 ```
 
+:::
+
+::: {.research-details style="top: 57%; left: 78%; width: 40%; transform: translateX(-50%); font-size: 0.7em; line-height: 1.18; padding: 0.6em 0.8em;"}
+
+$$
+EHet_i^{rel}
+=
+100 \cdot
+\frac{
+\frac{1}{2}\sum_k \left|y_{ik}-\hat y_{ik}\right|
+}{
+\sum_k y_{ik}
+}
+$$
+
+**Anteil der Zielmasse**, der umverteilt werden müsste, damit globale Erwartung und beobachteter Zielrand übereinstimmen.
+
+:::
 
 ## nslphom-Ergebnisse für Ostdeutschland {.custom-smaller .top-slide}
 
@@ -598,36 +622,39 @@ knitr::include_graphics("Charts/bootstrap/bootstrap_beta_verteilungen_ostdeutsch
 
 ::: {.data-cards}
 
-::: {.data-card}
+::: {.data-card style="text-align: left;"}
+<div style="text-align: center;">
 **Ökologische Inferenz**
+</div>
 
-exakte Reproduktion der Ränder  
-validiert nicht die tatsächlichen  
-individuellen Übergänge (Simulation)
+exakte Reproduktion der Ränder validiert nicht die tatsächlichen individuellen Übergänge (Simulation)
 
 zu anderen Verfahren relativ robuste nslphom Schätzungen
 :::
 
-::: {.data-card}
+::: {.data-card style="text-align: left;"}
+<div style="text-align: center;">
 **Zweistufige Analyse**
+</div>
 
 geschätzte Übergangsraten als Zielgröße der Regression
 
 Bootstrap entfernt keinen systematischen ökologischen Bias
 :::
 
-::: {.data-card}
+::: {.data-card style="text-align: left;"}
+<div style="text-align: center;">
 **Daten & Modell**
+</div>
 
 Sammelkategorien  
 **Andere** und **Linke/Grüne**
 
 Skalierung auf gleiche Gesamtmasse
 
-Strukturmerkmale nur für **2023**
+Strukturmerkmale nur für 2023
 
-lineares Modell trotz  
-Zielgröße in $[0,1]$
+lineares Modell trotz Zielgröße in $[0,1]$
 
 Einschränkung auf Ostdeutschland
 :::
@@ -635,7 +662,10 @@ Einschränkung auf Ostdeutschland
 :::
 
 ::: {.fragment}
-**vorsichtige Interpretation:** Linke/Grüne wegen der starken Häufung sehr kleiner geschätzter Übergangsraten.
+**vorsichtige Interpretation:** Linke/Grüne wegen der starken Häufung sehr kleiner geschätzter Übergangsraten.  
+
+<br>  
+
 Keine Individual- oder Kausalaussagen möglich.
 :::
 
@@ -644,8 +674,10 @@ Keine Individual- oder Kausalaussagen möglich.
 
 ::: {.data-cards}
 
-::: {.data-card}
+::: {.data-card style="text-align: left;"}
+<div style="text-align: center;">
 **Robustheit prüfen**
+</div>
 
 alternative Parteigruppierungen
 
@@ -656,8 +688,10 @@ andere EI-Spezifikationen
 systematischere Variablenauswahl
 :::
 
-::: {.data-card}
+::: {.data-card style="text-align: left;"}
+<div style="text-align: center;">
 **Regression erweitern**
+</div>
 
 Fractional-Response-Modelle
 
@@ -666,22 +700,19 @@ nichtlineare Zusammenhänge
 multinomiale Modelle
 :::
 
-::: {.data-card}
+::: {.data-card style="text-align: left;"}
+<div style="text-align: center;">
 **Ökologische Inferenz verbessern**
+</div>
 
-Kontextvariablen bereits  
-in der ersten Stufe berücksichtigen
+Kontextvariablen bereits in der ersten Stufe berücksichtigen
 
-Sensitivität gegenüber  
-verbleibendem Confounding prüfen
-
-externe Wahldaten zur  
-Plausibilisierung nutzen
+Sensitivität gegenüber verbleibendem Confounding prüfen
 :::
 
 :::
 
-::: {.research-details .fragment}
+::: {.research-details .fragment style="top: 64%;"}
 **Unterschiedliche Validierungsbausteine:**  
 Simulationen (Recovery-Tests, Methodenvergleiche), Heterogenitätsmaße, Bootstrap.
 :::
@@ -794,6 +825,108 @@ The Limits of Ecological Inference: The Case of Split-Ticket Voting.
 ```{r, echo=FALSE, out.width="100%"}
 knitr::include_graphics("Charts/iter_max/ost_dual_osqp_local_lp_solve_all_hete_iter_max.png")
 ```
+
+## Anhang: HETe und relativer EHet {.custom-smaller .top-slide}
+
+::::: columns
+
+::: {.column width="49%"}
+
+::: {.prep-box style="font-size: 0.66em; line-height: 1.14; padding: 0.5em 0.65em;"}
+
+**HETe**
+
+<div style="font-size: 0.82em;">
+
+$$
+HETe^{(m)}
+=
+100 \cdot
+\frac{
+\frac{1}{2}
+\sum_{i=1}^{I}
+\sum_{j=1}^{J}
+\sum_{k=1}^{K}
+\left|
+\hat N_{ijk}^{(m)}
+-
+x_{ij}\hat p_{jk}^{(m)}
+\right|
+}{
+\sum_{i=1}^{I}
+\sum_{j=1}^{J}
+x_{ij}
+}
+$$
+
+</div>
+
+**Vergleich**
+
+geschätzte lokale Übergangszellen  
+vs. globales Übergangsmuster
+
+**Verwendung**
+
+- Auswahl der nslphom-Iteration
+- Gewichtung im dualen nslphom
+- kleinerer HETe $\Rightarrow$ geringere geschätzte Heterogenität
+
+:::
+
+:::
+
+
+::: {.column width="49%"}
+
+::: {.prep-box style="font-size: 0.66em; line-height: 1.14; padding: 0.5em 0.65em;"}
+
+**Relativer EHet** 
+
+<div style="font-size: 0.82em;">
+
+$$
+EHet_i^{rel}
+=
+100 \cdot
+\frac{
+\frac{1}{2}
+\sum_{k=1}^{K}
+\left|
+y_{ik}-\hat y_{ik}
+\right|
+}{
+\sum_{k=1}^{K} y_{ik}
+}
+$$
+
+$$
+\hat y_{ik}
+=
+\sum_{j=1}^{J}
+x_{ij}\hat p^G_{jk}
+$$
+
+</div>
+
+**Vergleich**
+
+beobachteter Zielrand einer Einheit  
+vs. Zielrand unter der globalen Matrix
+
+**Verwendung**
+
+- räumliche EHet-Diagnose
+- Ost-West-Vergleich
+- Begründung der Ost-Fokussierung
+
+:::
+
+:::
+
+:::::
+
+keine Validierung der unbekannten inneren Zellen
 
 ## Anhang: EHet Ostdeutschlandschätzung {.custom-smaller}
 
