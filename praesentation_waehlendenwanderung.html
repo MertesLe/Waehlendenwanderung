@@ -1118,42 +1118,6 @@ y_{ik}
 
 </div><div class="column" style="width:47%;">
 <h3 id="viele-räumliche-einheiten">Viele räumliche Einheiten</h3>
-<p>In Anteilen:</p>
-<p><span class="math display">\[
-t_{ik}
-=
-\sum_{j=1}^{J}s_{ij}p_{ijk}
-\]</span></p>
-<p>Die Zusammensetzung variiert zwischen den Einheiten:</p>
-<p><span class="math display">\[
-(s_{i1},\ldots,s_{iJ})
-\qquad
-(t_{i1},\ldots,t_{iK})
-\]</span></p>
-<p><strong><span class="math inline">\(\Rightarrow\)</span> gemeinsame Variation liefert Information</strong></p>
-</div></div>
-</section>
-<section id="woher-kommt-die-information-1" class="slide level2 custom-smaller">
-<h2>Woher kommt die Information?</h2>
-<div class="columns">
-<div class="column" style="width:47%;">
-<h3 id="eine-räumliche-einheit-1">Eine räumliche Einheit</h3>
-<p>Gesuchte Übergangsrate:</p>
-<p><span class="math display">\[
-p_{ijk} = \frac{N_{ijk}}{x_{ij}}
-\]</span></p>
-<p>Beobachteter Zielrand:</p>
-<p><span class="math display">\[
-y_{ik}
-=
-\sum_{j=1}^{J} x_{ij}p_{ijk}
-\]</span></p>
-<p>Gewichtete Summe mehrerer unbekannter Übergangsraten</p>
-<p><strong><span class="math inline">\(\Rightarrow\)</span> nicht eindeutig identifiziert</strong></p>
-</div><div class="column" style="width:6%;">
-
-</div><div class="column" style="width:47%;">
-<h3 id="viele-räumliche-einheiten-1">Viele räumliche Einheiten</h3>
 <p><span class="math display">\[
 t_{ik}
 =
@@ -1169,14 +1133,17 @@ s_{ij}\,p^G_{jk},
 <h2>nslphom: Globale Referenz, lokale Übergänge</h2>
 <div class="columns">
 <div class="column" style="width:45%;">
-<p><strong>1. Globale Ausgangsschätzung</strong></p>
+<strong>1. Globale Ausgangsschätzung</strong>
+<div style="font-size: 0.88em;">
 <p><span class="math display">\[
 \hat P^G =
 \left(\hat p^G_{jk}\right)
 \]</span></p>
+</div>
 <p>Gemeinsames Übergangsmuster über alle räumlichen Einheiten</p>
 <p><br></p>
-<p><strong>2. Lokale Schätzung</strong></p>
+<strong>2. Lokale Schätzung</strong>
+<div style="font-size: 0.88em;">
 <p><span class="math display">\[
 \hat N_i
 =
@@ -1186,6 +1153,7 @@ s_{ij}\,p^G_{jk},
 N_{ijk}-x_{ij}\hat p^G_{jk}
 \right|
 \]</span></p>
+</div>
 <p>mit exakt eingehaltenen lokalen Rändern.</p>
 </div><div class="column" style="width:55%;">
 <div style="position: relative; width: 100%;">
@@ -1203,6 +1171,9 @@ N_{ijk}-x_{ij}\hat p^G_{jk}
 </div>
 </div>
 </div></div>
+<div class="research-details" style="top: 80%; left: 74%; width: 40%; transform: translateX(-50%); font-size: 0.6em; line-height: 1.18; padding: 0.6em 0.8em;">
+<p>Lokale Matrizen <span class="math inline">\(\rightarrow\)</span> Aktualisierung der globalen Referenz <span class="math inline">\(\rightarrow\)</span> erneute lokale Schätzung <span class="math inline">\(\rightarrow \dots \rightarrow\)</span> Auswahl anhand des HETe</p>
+</div>
 </section>
 <section id="duales-nslphom" class="slide level2 custom-smaller">
 <h2>Duales nslphom</h2>
@@ -1468,7 +1439,7 @@ EHet_i^{rel}
 <p><span class="math display">\[
 \hat{\boldsymbol\beta}_j
 =
-\arg\min_{\boldsymbol\beta_j}
+\arg\min_{\alpha_j, \boldsymbol\beta_j}
 \sum_{i=1}^{I}
 x_{ij}
 \left(
@@ -1577,7 +1548,7 @@ Q_{0.975}\left(\hat\beta_{jr}^{(1)},\ldots,\hat\beta_{jr}^{(B)}\right)
 <p><strong>Ökologische Inferenz</strong></p>
 </div>
 <p>exakte Reproduktion der Ränder validiert nicht die tatsächlichen individuellen Übergänge (Simulation)</p>
-<p>zu anderen Verfahren relativ robuste nslphom Schätzungen</p>
+<p>Genauigkeit der nslphom-Ergebnisse abhängig von der Homogenitätsannahme</p>
 </div>
 <div class="data-card" style="text-align: left;">
 <div style="text-align: center;">
@@ -1640,7 +1611,7 @@ Simulationen (Recovery-Tests, Methodenvergleiche), Heterogenitätsmaße, Bootstr
 <section id="fazit" class="slide level2 custom-smaller top-slide">
 <h2>Fazit</h2>
 <ul>
-<li><p><strong>Lokale Übergangsraten zur AfD sind aus Aggregatdaten schätzbar</strong>, bleiben aber modellbasiert und nicht direkt beobachtet.</p></li>
+<li><p><strong>Lokale Übergangsraten zur AfD sind aus Aggregatdaten</strong> nur modellbasiert und unter zusätzlichen Annahmen <strong>schätzbar</strong>.</p></li>
 <li><p>Die Zusammenhänge mit regionalen Strukturmerkmalen <strong>unterscheiden sich nach Herkunftsgruppe</strong>.</p></li>
 <li><p>Mehrere bedingte Zusammenhänge zeigen sich im <strong>Bootstrap richtungsstabil</strong>.</p></li>
 <li><p>Die Ergebnisse sind <strong>regional und nicht kausal</strong> zu interpretieren.</p></li>

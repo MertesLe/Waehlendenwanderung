@@ -182,18 +182,18 @@ $\Rightarrow$ unterschiedliche Zusammensetzungen ($I$ Einheiten) liefern untersc
 ::: {.column width="45%"}
 
 **1. Globale Ausgangsschätzung**
-
+<div style="font-size: 0.88em;">
 $$
 \hat P^G =
 \left(\hat p^G_{jk}\right)
 $$
-
+</div>
 Gemeinsames Übergangsmuster über alle räumlichen Einheiten
 
 <br>
 
 **2. Lokale Schätzung**
-
+<div style="font-size: 0.88em;">
 $$
 \hat N_i
 =
@@ -203,7 +203,7 @@ $$
 N_{ijk}-x_{ij}\hat p^G_{jk}
 \right|
 $$
-
+</div>
 mit exakt eingehaltenen lokalen Rändern.
 
 :::
@@ -225,6 +225,9 @@ Darstellung nach King (1997)
 :::
 :::::
 
+::: {.research-details style="top: 80%; left: 74%; width: 40%; transform: translateX(-50%); font-size: 0.6em; line-height: 1.18; padding: 0.6em 0.8em;"}
+Lokale Matrizen $\rightarrow$ Aktualisierung der globalen Referenz $\rightarrow$ erneute lokale Schätzung $\rightarrow \dots \rightarrow$ Auswahl anhand des HETe
+:::
 ## Duales nslphom {.custom-smaller}
 
 nslphom in beide mathematischen Richtungen schätzen und kombinieren:
@@ -480,7 +483,7 @@ $$
 $$
 \hat{\boldsymbol\beta}_j
 =
-\arg\min_{\boldsymbol\beta_j}
+\arg\min_{\alpha_j, \boldsymbol\beta_j}
 \sum_{i=1}^{I}
 x_{ij}
 \left(
@@ -629,7 +632,7 @@ knitr::include_graphics("Charts/bootstrap/bootstrap_beta_verteilungen_ostdeutsch
 
 exakte Reproduktion der Ränder validiert nicht die tatsächlichen individuellen Übergänge (Simulation)
 
-zu anderen Verfahren relativ robuste nslphom Schätzungen
+Genauigkeit der nslphom-Ergebnisse abhängig von der Homogenitätsannahme
 :::
 
 ::: {.data-card style="text-align: left;"}
@@ -719,7 +722,7 @@ Simulationen (Recovery-Tests, Methodenvergleiche), Heterogenitätsmaße, Bootstr
 
 ## Fazit {.custom-smaller .top-slide}
 
-- **Lokale Übergangsraten zur AfD sind aus Aggregatdaten schätzbar**, bleiben aber modellbasiert und nicht direkt beobachtet.
+- **Lokale Übergangsraten zur AfD sind aus Aggregatdaten** nur modellbasiert und unter zusätzlichen Annahmen **schätzbar**.
 
 - Die Zusammenhänge mit regionalen Strukturmerkmalen **unterscheiden sich nach Herkunftsgruppe**.
 
