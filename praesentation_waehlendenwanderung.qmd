@@ -162,10 +162,10 @@ Gewichtete Summe mehrerer unbekannter Übergangsraten
 ### Viele räumliche Einheiten
 
 $$
-t_{ik}
+y_{ik}
 =
 \sum_{j=1}^{J}
-s_{ij}\,p^G_{jk},
+x_{ij}\,p^G_{jk},
 \qquad i=1,\ldots,I
 $$
 
@@ -414,7 +414,7 @@ EHet_i^{rel}
 =
 100 \cdot
 \frac{
-\frac{1}{2}\sum_k \left|y_{ik}-\hat y_{ik}\right|
+\frac{1}{2}\sum_k \left|y_{ik}-\hat y_{ik}^G\right|
 }{
 \sum_k y_{ik}
 }
@@ -586,28 +586,6 @@ Q_{0.975}\left(\hat\beta_{jr}^{(1)},\ldots,\hat\beta_{jr}^{(B)}\right)
 \right]
 $$
 
-## Räumliche Gegenüberstellung: Niedrige Haushaltseinkommen und Union $\rightarrow$ AfD {.custom-smaller .top-slide}
-
-```{r, echo=FALSE, out.width="100%"}
-knitr::include_graphics("Charts/Regression/ergebnisse/karten_niedrigeinkommen_union_afd.png")
-```
-
----
-
-## Räumliche Gegenüberstellung: Arbeitslosenanteil und Nichtwählende $\rightarrow$ AfD {.custom-smaller .top-slide}
-
-```{r, echo=FALSE, out.width="100%"}
-knitr::include_graphics("Charts/Regression/ergebnisse/karten_arbeitslosenanteil_nichtwaehlende_afd.png")
-```
-
----
-
-## Räumliche Gegenüberstellung: Grenzdistanz und Andere $\rightarrow$ AfD {.custom-smaller .top-slide}
-
-```{r, echo=FALSE, out.width="100%"}
-knitr::include_graphics("Charts/Regression/ergebnisse/karten_grenzdistanz_andere_afd.png")
-```
-
 ---
 
 ## Bootstrap-Stabilität der Regressionsbefunde {.custom-smaller .top-slide}
@@ -620,6 +598,352 @@ knitr::include_graphics("Charts/bootstrap/bootstrap_beta_verteilungen_ostdeutsch
 
 ## Bootstrap-Stabilität der Regressionsbefunde {.full-image-slide visibility="uncounted" background-image="Charts/bootstrap/bootstrap_beta_verteilungen_ostdeutschland.png" background-size="contain" background-position="center" background-repeat="no-repeat"}
 
+## Bootstrap-Stabilität der Regressionsbefunde {.full-image-slide visibility="uncounted" background-image="Charts/bootstrap/bootstrap_beta_verteilungen_ostdeutschland.png" background-size="contain" background-position="center" background-repeat="no-repeat"}
+
+<!-- ====================================================== -->
+<!-- UNION + SPD                                            -->
+<!-- Niedrige Einkommen, Alter, Supermarkt, Einwohnerdichte -->
+<!-- ====================================================== -->
+
+<!-- SPD: niedrige Haushaltseinkommen -->
+<div style="
+position:absolute;
+left:62.5%;
+top:18.9%;
+width:16.1%;
+height:9.5%;
+border:4px solid #41854A;
+border-radius:7px;
+background:transparent;
+z-index:20;
+pointer-events:none;">
+</div>
+
+<!-- Union: niedrige Haushaltseinkommen -->
+<div style="
+position:absolute;
+left:79.0%;
+top:18.9%;
+width:16.1%;
+height:9.5%;
+border:4px solid #41854A;
+border-radius:7px;
+background:transparent;
+z-index:20;
+pointer-events:none;">
+</div>
+
+<!-- SPD: Durchschnittsalter -->
+<div style="
+position:absolute;
+left:62.5%;
+top:68.6%;
+width:16.1%;
+height:9.5%;
+border:4px solid #41854A;
+border-radius:7px;
+background:transparent;
+z-index:20;
+pointer-events:none;">
+</div>
+
+<!-- Union: Durchschnittsalter -->
+<div style="
+position:absolute;
+left:79.0%;
+top:68.6%;
+width:16.1%;
+height:9.5%;
+border:4px solid #41854A;
+border-radius:7px;
+background:transparent;
+z-index:20;
+pointer-events:none;">
+</div>
+
+<!-- SPD: Supermarktentfernung -->
+<div style="
+position:absolute;
+left:62.5%;
+top:78.5%;
+width:16.1%;
+height:9.5%;
+border:4px solid #41854A;
+border-radius:7px;
+background:transparent;
+z-index:20;
+pointer-events:none;">
+</div>
+
+<!-- Union: Supermarktentfernung -->
+<div style="
+position:absolute;
+left:79.0%;
+top:78.5%;
+width:16.1%;
+height:9.5%;
+border:4px solid #41854A;
+border-radius:7px;
+background:transparent;
+z-index:20;
+pointer-events:none;">
+</div>
+
+<!-- SPD: Einwohnerdichte -->
+<div style="
+position:absolute;
+left:62.5%;
+top:88.5%;
+width:16.1%;
+height:9.5%;
+border:4px solid #41854A;
+border-radius:7px;
+background:transparent;
+z-index:20;
+pointer-events:none;">
+</div>
+
+<!-- Union: Einwohnerdichte -->
+<div style="
+position:absolute;
+left:79.0%;
+top:88.5%;
+width:16.1%;
+height:9.5%;
+border:4px solid #41854A;
+border-radius:7px;
+background:transparent;
+z-index:20;
+pointer-events:none;">
+</div>
+
+
+## Bootstrap-Stabilität der Regressionsbefunde {.full-image-slide visibility="uncounted" background-image="Charts/bootstrap/bootstrap_beta_verteilungen_ostdeutschland.png" background-size="contain" background-position="center" background-repeat="no-repeat"}
+
+<!-- ================================================ -->
+<!-- NICHTWÄHLENDE                                   -->
+<!-- Grenzdistanz, Arbeitslosenanteil, Supermarkt    -->
+<!-- ================================================ -->
+
+<!-- Nichtwählende: Entfernung zur Staatsgrenze -->
+<div style="
+position:absolute;
+left:45.9%;
+top:0%;
+width:16.1%;
+height:9.5%;
+border:4px solid #41854A;
+border-radius:7px;
+background:transparent;
+z-index:20;
+pointer-events:none;">
+</div>
+
+<!-- Nichtwählende: Arbeitslosenanteil -->
+<div style="
+position:absolute;
+left:45.9%;
+top:9.0%;
+width:16.1%;
+height:9.5%;
+border:4px solid #41854A;
+border-radius:7px;
+background:transparent;
+z-index:20;
+pointer-events:none;">
+</div>
+
+<!-- Nichtwählende: Supermarktentfernung -->
+<div style="
+position:absolute;
+left:45.9%;
+top:78.5%;
+width:16.1%;
+height:9.5%;
+border:4px solid #41854A;
+border-radius:7px;
+background:transparent;
+z-index:20;
+pointer-events:none;">
+</div>
+
+
+## Bootstrap-Stabilität der Regressionsbefunde {.full-image-slide visibility="uncounted" background-image="Charts/bootstrap/bootstrap_beta_verteilungen_ostdeutschland.png" background-size="contain" background-position="center" background-repeat="no-repeat"}
+
+<!-- ================================================ -->
+<!-- ANDERE                                          -->
+<!-- starke negative Grenzdistanz                    -->
+<!-- ================================================ -->
+
+<!-- Andere: Entfernung zur Staatsgrenze -->
+<div style="
+position:absolute;
+left:12.9%;
+top:0%;
+width:16.1%;
+height:9.5%;
+border:4px solid #41854A;
+border-radius:7px;
+background:transparent;
+z-index:20;
+pointer-events:none;">
+</div>
+
+
+## Bootstrap-Stabilität der Regressionsbefunde {.full-image-slide visibility="uncounted" background-image="Charts/bootstrap/bootstrap_beta_verteilungen_ostdeutschland.png" background-size="contain" background-position="center" background-repeat="no-repeat"}
+
+<!-- ================================================ -->
+<!-- GRUPPENÜBERGREIFENDE MUSTER                     -->
+<!-- Einwohnerdichte: alle 5                         -->
+<!-- Supermarktentfernung: 4 von 5                   -->
+<!-- ================================================ -->
+
+<!-- Einwohnerdichte: Andere -->
+<div style="
+position:absolute;
+left:12.9%;
+top:88.5%;
+width:16.1%;
+height:9.5%;
+border:4px solid #41854A;
+border-radius:7px;
+background:transparent;
+z-index:20;
+pointer-events:none;">
+</div>
+
+<!-- Einwohnerdichte: Linke/Grüne -->
+<div style="
+position:absolute;
+left:29.4%;
+top:88.5%;
+width:16.1%;
+height:9.5%;
+border:4px solid #41854A;
+border-radius:7px;
+background:transparent;
+z-index:20;
+pointer-events:none;">
+</div>
+
+<!-- Einwohnerdichte: Nichtwählende -->
+<div style="
+position:absolute;
+left:45.9%;
+top:88.5%;
+width:16.1%;
+height:9.5%;
+border:4px solid #41854A;
+border-radius:7px;
+background:transparent;
+z-index:20;
+pointer-events:none;">
+</div>
+
+<!-- Einwohnerdichte: SPD -->
+<div style="
+position:absolute;
+left:62.5%;
+top:88.5%;
+width:16.1%;
+height:9.5%;
+border:4px solid #41854A;
+border-radius:7px;
+background:transparent;
+z-index:20;
+pointer-events:none;">
+</div>
+
+<!-- Einwohnerdichte: Union -->
+<div style="
+position:absolute;
+left:79.0%;
+top:88.5%;
+width:16.1%;
+height:9.5%;
+border:4px solid #41854A;
+border-radius:7px;
+background:transparent;
+z-index:20;
+pointer-events:none;">
+</div>
+
+<!-- Supermarktentfernung: Linke/Grüne -->
+<div style="
+position:absolute;
+left:29.4%;
+top:78.5%;
+width:16.1%;
+height:9.5%;
+border:4px solid #41854A;
+border-radius:7px;
+background:transparent;
+z-index:20;
+pointer-events:none;">
+</div>
+
+<!-- Supermarktentfernung: Nichtwählende -->
+<div style="
+position:absolute;
+left:45.9%;
+top:78.5%;
+width:16.1%;
+height:9.5%;
+border:4px solid #41854A;
+border-radius:7px;
+background:transparent;
+z-index:20;
+pointer-events:none;">
+</div>
+
+<!-- Supermarktentfernung: SPD -->
+<div style="
+position:absolute;
+left:62.5%;
+top:78.5%;
+width:16.1%;
+height:9.5%;
+border:4px solid #41854A;
+border-radius:7px;
+background:transparent;
+z-index:20;
+pointer-events:none;">
+</div>
+
+<!-- Supermarktentfernung: Union -->
+<div style="
+position:absolute;
+left:79.0%;
+top:78.5%;
+width:16.1%;
+height:9.5%;
+border:4px solid #41854A;
+border-radius:7px;
+background:transparent;
+z-index:20;
+pointer-events:none;">
+</div>
+
+
+## Bootstrap-Stabilität der Regressionsbefunde {.full-image-slide visibility="uncounted" background-image="Charts/bootstrap/bootstrap_beta_verteilungen_ostdeutschland.png" background-size="contain" background-position="center" background-repeat="no-repeat"}
+
+<!-- ================================================ -->
+<!-- LINKE/GRÜNE                                     -->
+<!-- gesamte Herkunftsgruppe vorsichtig interpretieren -->
+<!-- ================================================ -->
+
+<div style="
+position:absolute;
+left:29.4%;
+top:0%;
+width:16.1%;
+height:98%;
+border:4px solid #41854A;
+border-radius:7px;
+background:transparent;
+z-index:20;
+pointer-events:none;">
+</div>
 
 ## Diskussion: Zentrale Einschränkungen {.custom-smaller .prep-uniform}
 
@@ -632,7 +956,7 @@ knitr::include_graphics("Charts/bootstrap/bootstrap_beta_verteilungen_ostdeutsch
 
 exakte Reproduktion der Ränder validiert nicht die tatsächlichen individuellen Übergänge (Simulation)
 
-Genauigkeit der nslphom-Ergebnisse abhängig von der Homogenitätsannahme
+Homogenitätsannahme
 :::
 
 ::: {.data-card style="text-align: left;"}
@@ -979,6 +1303,29 @@ knitr::include_graphics("Charts/Strukturvariablen/strukturvariablen_korrelation.
 ```{r, echo=FALSE, out.width="100%"}
 knitr::include_graphics("Charts/Regression/ergebnisse/profil_oberes_viertel.png")
 ```
+
+## Anhang: Räumliche Gegenüberstellung: Haushaltseinkommen und Union $\rightarrow$ AfD {.custom-smaller .top-slide}
+
+```{r, echo=FALSE, out.width="100%"}
+knitr::include_graphics("Charts/Regression/ergebnisse/karten_niedrigeinkommen_union_afd.png")
+```
+
+---
+
+## Anhang: Räumliche Gegenüberstellung: Arbeitslosenanteil und Nichtwählende $\rightarrow$ AfD {.custom-smaller .top-slide}
+
+```{r, echo=FALSE, out.width="100%"}
+knitr::include_graphics("Charts/Regression/ergebnisse/karten_arbeitslosenanteil_nichtwaehlende_afd.png")
+```
+
+---
+
+## Anhang: Räumliche Gegenüberstellung: Grenzdistanz und Andere $\rightarrow$ AfD {.custom-smaller .top-slide}
+
+```{r, echo=FALSE, out.width="100%"}
+knitr::include_graphics("Charts/Regression/ergebnisse/karten_grenzdistanz_andere_afd.png")
+```
+
 
 ## Anhang: vollständige Regressionskoeffizienten {.custom-smaller .top-slide}
 
